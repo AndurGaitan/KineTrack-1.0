@@ -1,0 +1,138 @@
+import React from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { useApp } from '../contexts/AppContext';
+import { Header } from '../components/ui/Header';
+import { Button } from '../components/ui/Button';
+import { Card } from '../components/ui/Card';
+import { WindIcon, TrendingUpIcon } from 'lucide-react';
+export function NIVHubPage() {
+  const {
+    patientId
+  } = useParams<{
+    patientId: string;
+  }>();
+  const navigate = useNavigate();
+  const {
+    patients,
+    getPatientNIVRecords,
+    sectors
+  } = useApp();
+  const patient = patients.find(p => p.id === patientId);
+  const sector = patient ? sectors.find(s => s.id === patient.sectorId) : null;
+  const records = patient ? getPatientNIVRecords(patient.id) : [];
+  if (!patient || patient.supportType !== 'niv') {
+    return <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+        <div className="text-center">
+          <p className="text-gray-600 mb-4">
+            Este módulo solo está disponible para pacientes en VNI
+          </p>
+          <Button onClick={() => navigate(`/patient/${patientId}`)}>
+            Volver al Paciente
+          </Button>
+        </div>
+      </div>;
+  }
+  const lastRecord = records[0];
+  return <div className="min-h-screen bg-gray-50">
+      <Header title="Monitorización VNI" showBack showPatientList sectorId={sector?.id} />
+
+      <main className="max-w-2xl mx-auto p-4 pb-24 space-y-6">
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <div className="text-sm text-gray-600 mb-1">Paciente</div>
+              <div className="text-2xl font-bold text-gray-900">
+                {patient.alias}
+              </div>
+            </div>
+            <WindIcon className="w-8 h-8 text-purple-600" />
+          </div>
+
+          {lastRecord && <div className="grid grid-cols-3 gap-4 pt-4 border-t border-gray-200">
+              <div>
+                <div className="text-xs text-gray-600 mb-1">Último HACOR</div>
+                <div className={`text-xl font-bold ${lastRecord.hacorScore > 5 ? 'text-red-600' : lastRecord.hacorScore >= 3 ? 'text-yellow-600' : 'text-green-600'}`}>
+                  {lastRecord.hacorScore}
+                </div>
+              </div>
+              <div>
+                <div className="text-xs text-gray-600 mb-1">IPAP/EPAP</div>
+                <div className="text-xl font-bold text-gray-900">
+                  {lastRecord.ipap}/{lastRecord.epap}
+                </div>
+              </div>
+              <div>
+                <div className="text-xs text-gray-600 mb-1">Estado Piel</div>
+                <div className="text-sm font-bold text-gray-900">
+                  {lastRecord.skinIntegrity === 'no-lesions' ? '✓' : '⚠'}
+                </div>
+              </div>
+            </div>}
+        </div>
+
+        <Button onClick={() => navigate(`/patient/${patient.id}/niv/new`)} fullWidth className="min-h-[64px] text-xl bg-purple-600">
+          + Nueva Monitorización
+        </Button>
+
+        <div>
+          <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+            <TrendingUpIcon className="w-6 h-6" />
+            Historial de Monitorizaciones
+          </h2>
+
+          {records.length === 0 ? <Card className="text-center py-12">
+              <p className="text-gray-500 text-lg">Sin registros aún</p>
+              <p className="text-gray-400 mt-2">
+                Registrá la primera monitorización de VNI
+              </p>
+            </Card> : <div className="space-y-4">
+              {records.map(record => {
+            const date = new Date(record.timestamp);
+            const formattedDate = date.toLocaleDateString('es-AR', {
+              day: '2-digit',
+              month: '2-digit',
+              year: 'numeric'
+            });
+            const formattedTime = date.toLocaleTimeString('es-AR', {
+              hour: '2-digit',
+              minute: '2-digit'
+            });
+            return <Card key={record.id} onClick={() => navigate(`/patient/${patient.id}/niv/${record.id}`)}>
+                    <div className="space-y-3">
+                      <div className="flex items-start justify-between">
+                        <div className="text-sm text-gray-600">
+                          {formattedDate} - {formattedTime}
+                        </div>
+                        <div className={`text-3xl font-bold ${record.hacorScore > 5 ? 'text-red-600' : record.hacorScore >= 3 ? 'text-yellow-600' : 'text-green-600'}`}>
+                          {record.hacorScore}
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-3 gap-4">
+                        <div>
+                          <div className="text-xs text-gray-600 mb-1">IPAP</div>
+                          <div className="text-lg font-bold text-gray-900">
+                            {record.ipap}
+                          </div>
+                        </div>
+                        <div>
+                          <div className="text-xs text-gray-600 mb-1">EPAP</div>
+                          <div className="text-lg font-bold text-gray-900">
+                            {record.epap}
+                          </div>
+                        </div>
+                        <div>
+                          <div className="text-xs text-gray-600 mb-1">FiO₂</div>
+                          <div className="text-lg font-bold text-gray-900">
+                            {record.fio2}%
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </Card>;
+          })}
+            </div>}
+        </div>
+      </main>
+    </div>;
+}
