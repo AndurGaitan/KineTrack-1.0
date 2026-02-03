@@ -41,7 +41,6 @@ const toNumberOrUndefined = (v: string): number | undefined => {
   return Number.isFinite(n) ? n : undefined;
 };
 
-// Optional: enforce min/max without breaking typing
 const clamp = (n: number, min: number, max: number) => Math.min(max, Math.max(min, n));
 
 export function VMIEntryPage() {
@@ -62,7 +61,7 @@ export function VMIEntryPage() {
     // PBW AUTO ONLY (no defaults in production)
     sex: '' as Sex | '',
     heightCm: undefined as number | undefined,
-    predictedBodyWeight: patient?.predictedBodyWeight || 0,
+    predictedBodyWeight: 0,
 
     // Vent params (no defaults)
     tidalVolumeSet: undefined as number | undefined,
@@ -98,9 +97,9 @@ export function VMIEntryPage() {
   }));
 
   // PBW auto-calc (single source of truth = predictedBodyWeight)
+  // IMPORTANT: PBW is OPTIONAL for saving. We still compute it when sex+height exist.
   useEffect(() => {
-    // If either missing, clear PBW (auto-only flow)
-    if (!formData.heightCm || !formData.sex) {
+    if (!formData.sex || formData.heightCm == null) {
       if (formData.predictedBodyWeight !== 0) {
         setFormData(prev => ({ ...prev, predictedBodyWeight: 0 }));
       }
@@ -108,15 +107,10 @@ export function VMIEntryPage() {
     }
 
     const pbw = calculatePBWKg(formData.heightCm, formData.sex as Sex);
-    if (pbw == null) {
-      if (formData.predictedBodyWeight !== 0) {
-        setFormData(prev => ({ ...prev, predictedBodyWeight: 0 }));
-      }
-      return;
-    }
+    const next = pbw ?? 0;
 
-    if (pbw !== formData.predictedBodyWeight) {
-      setFormData(prev => ({ ...prev, predictedBodyWeight: pbw }));
+    if (next !== formData.predictedBodyWeight) {
+      setFormData(prev => ({ ...prev, predictedBodyWeight: next }));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [formData.heightCm, formData.sex]);
@@ -129,7 +123,7 @@ export function VMIEntryPage() {
       ventMode: formData.ventMode as VentMode,
       controlVariable: formData.controlVariable as VentControlVariable,
       respiratoryRate: formData.respiratoryRate,
-      tidalVolumeExpired: formData.tidalVolumeExpired ?? 0, // safe for init; will be blocked by canCalculate anyway
+      tidalVolumeExpired: formData.tidalVolumeExpired ?? 0,
       peep: formData.peep ?? 0,
       plateauPressure: formData.plateauPressure ?? 0,
       peakPressure: formData.peakPressure
@@ -144,7 +138,6 @@ export function VMIEntryPage() {
     setAlerts(newAlerts);
 
     if (formData.ventMode && formData.controlVariable) {
-      // only try to compute if required numeric pieces exist
       const mp = calculateMechanicalPower({
         ventMode: formData.ventMode as VentMode,
         controlVariable: formData.controlVariable as VentControlVariable,
@@ -171,48 +164,26 @@ export function VMIEntryPage() {
         }));
       }
     } else if (formData.controlVariable) {
-      // if user clears mode, clear controlVariable too
       setFormData(prev => ({ ...prev, controlVariable: '' as VentControlVariable | '' }));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [formData.ventMode]);
 
-  const pbwOk = formData.predictedBodyWeight > 0;
-
-  // Minimal fields to consider the record "valid enough" to save (adjust to your policy)
-  const minVentOk =
+  // ✅ Minimal requirements (ONLY these 3)
+  const canSave =
     !!formData.ventMode &&
-    !!formData.controlVariable &&
     formData.peep != null &&
-    formData.fio2 != null &&
-    formData.tidalVolumeExpired != null &&
-    formData.plateauPressure != null;
-
-  const canSave = pbwOk && minVentOk;
+    formData.fio2 != null;
 
   const missingSummary = useMemo(() => {
     const missing: string[] = [];
     if (!formData.ventMode) missing.push('Modo ventilatorio');
-    if (!formData.controlVariable) missing.push('Variable de control');
-    if (!formData.sex) missing.push('Sexo');
-    if (formData.heightCm == null) missing.push('Talla');
-    if (!pbwOk) missing.push('PBW válido');
-    if (formData.tidalVolumeExpired == null) missing.push('Vt espirado');
-    if (formData.plateauPressure == null) missing.push('Pplat');
     if (formData.peep == null) missing.push('PEEP');
     if (formData.fio2 == null) missing.push('FiO₂');
     return missing;
-  }, [
-    formData.ventMode,
-    formData.controlVariable,
-    formData.sex,
-    formData.heightCm,
-    pbwOk,
-    formData.tidalVolumeExpired,
-    formData.plateauPressure,
-    formData.peep,
-    formData.fio2
-  ]);
+  }, [formData.ventMode, formData.peep, formData.fio2]);
+
+  const pbwOk = formData.predictedBodyWeight > 0;
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
@@ -231,21 +202,21 @@ export function VMIEntryPage() {
 
       ventMode: formData.ventMode as VentMode,
       ventModeOther: formData.ventModeOther || undefined,
-      controlVariable: formData.controlVariable as VentControlVariable,
+      controlVariable: formData.controlVariable ? (formData.controlVariable as VentControlVariable) : undefined,
 
-      // store PBW and (opcional) anthropometrics
-      predictedBodyWeight: formData.predictedBodyWeight,
-      // Si tu type/DB no lo soporta aún, comentá las 2 líneas siguientes:
-      // sex: formData.sex as Sex,
-      // heightCm: formData.heightCm,
+      // PBW is OPTIONAL (stored if available)
+      predictedBodyWeight: pbwOk ? formData.predictedBodyWeight : undefined,
+      // Si tu type/DB lo soporta, podés guardar antropometría:
+      // sex: formData.sex ? (formData.sex as Sex) : undefined,
+      // heightCm: formData.heightCm ?? undefined,
 
-      tidalVolumeSet: formData.tidalVolumeSet,
-      tidalVolumeExpired: formData.tidalVolumeExpired!,
-      plateauPressure: formData.plateauPressure!,
-      peakPressure: formData.peakPressure || undefined,
+      tidalVolumeSet: formData.tidalVolumeSet ?? undefined,
+      tidalVolumeExpired: formData.tidalVolumeExpired ?? undefined,
+      plateauPressure: formData.plateauPressure ?? undefined,
+      peakPressure: formData.peakPressure ?? undefined,
       peep: formData.peep!,
       fio2: formData.fio2!,
-      respiratoryRate: formData.respiratoryRate || undefined,
+      respiratoryRate: formData.respiratoryRate ?? undefined,
 
       hasAsynchrony: formData.hasAsynchrony,
       asynchronyTypes: formData.asynchronyTypes,
@@ -266,12 +237,15 @@ export function VMIEntryPage() {
       mobilizationLevel: formData.mobilizationLevel,
       mobilizationBarrier: formData.mobilizationBarrier || undefined,
 
-      vtPerKg: calculations.vtPerKg,
-      drivingPressure: calculations.drivingPressure,
+      // Derived metrics become OPTIONAL-friendly (if missing inputs, they will be 0/undefined)
+      vtPerKg: calculations.vtPerKg || undefined,
+      drivingPressure: calculations.drivingPressure || undefined,
       pfRatio: calculations.pfRatio,
       compliance: calculations.compliance,
-      // IMPORTANT: use MP from mpResult (edited requirement)
+
+      // IMPORTANT: use MP from mpResult
       mechanicalPower: mpResult.value,
+
       protectiveVentilation: calculations.protectiveVentilation,
       alerts
     });
@@ -417,23 +391,25 @@ export function VMIEntryPage() {
 
           {/* STEP 2: Lung Protection Parameters */}
           {formData.ventMode && (
-            <CollapsibleSection title="2) Protección Pulmonar" subtitle="Parámetros fundamentales de ventilación protectiva">
+            <CollapsibleSection
+              title="2) Protección Pulmonar"
+              subtitle="Parámetros fundamentales de ventilación protectiva (opcional)"
+            >
               <div className="space-y-4">
-                {/* AUTO PBW: sex + height */}
+                {/* AUTO PBW: sex + height (OPTIONAL) */}
                 <div className="grid grid-cols-2 gap-4">
                   <VMISelect
-                    label="Sexo"
+                    label="Sexo (opcional)"
                     options={[
                       { value: 'male', label: 'Masculino' },
                       { value: 'female', label: 'Femenino' }
                     ]}
                     value={formData.sex}
                     onChange={e => setFormData({ ...formData, sex: e.target.value as Sex })}
-                    required
                   />
 
                   <VMIField
-                    label="Talla"
+                    label="Talla (opcional)"
                     unit="cm"
                     type="number"
                     value={formData.heightCm ?? ''}
@@ -441,19 +417,18 @@ export function VMIEntryPage() {
                       const n = toNumberOrUndefined(e.target.value);
                       setFormData({ ...formData, heightCm: n == null ? undefined : clamp(n, 120, 220) });
                     }}
-                    required
                   />
                 </div>
 
-                {/* PBW display (readonly) */}
-                <div className={`p-4 rounded-xl ${canSave ? 'bg-blue-50' : 'bg-red-50'}`}>
+                {/* PBW display (readonly) - uses pbwOk, not canSave */}
+                <div className={`p-4 rounded-xl ${pbwOk ? 'bg-blue-50' : 'bg-gray-50'}`}>
                   <div className="text-sm text-gray-600 mb-1">PBW (Peso Predicho) calculado</div>
-                  <div className={`text-3xl font-bold ${canSave ? 'text-blue-900' : 'text-red-600'}`}>
-                    {canSave ? `${formData.predictedBodyWeight} kg` : '—'}
+                  <div className={`text-3xl font-bold ${pbwOk ? 'text-blue-900' : 'text-gray-400'}`}>
+                    {pbwOk ? `${formData.predictedBodyWeight} kg` : '—'}
                   </div>
-                  {!canSave && (
-                    <div className="text-sm text-red-700 mt-2">
-                      Completá talla y sexo con valores válidos para calcular PBW.
+                  {!pbwOk && (
+                    <div className="text-sm text-gray-600 mt-2">
+                      Completá <strong>sexo</strong> y <strong>talla</strong> si querés calcular Vt/kg (no bloquea el guardado).
                     </div>
                   )}
                 </div>
@@ -473,7 +448,6 @@ export function VMIEntryPage() {
                     type="number"
                     value={formData.tidalVolumeExpired ?? ''}
                     onChange={e => setFormData({ ...formData, tidalVolumeExpired: toNumberOrUndefined(e.target.value) })}
-                    required
                   />
                 </div>
 
@@ -494,7 +468,6 @@ export function VMIEntryPage() {
                     type="number"
                     value={formData.plateauPressure ?? ''}
                     onChange={e => setFormData({ ...formData, plateauPressure: toNumberOrUndefined(e.target.value) })}
-                    required
                   />
                   <VMIField
                     label="PEEP"
@@ -503,7 +476,6 @@ export function VMIEntryPage() {
                     type="number"
                     value={formData.peep ?? ''}
                     onChange={e => setFormData({ ...formData, peep: toNumberOrUndefined(e.target.value) })}
-                    required
                   />
                 </div>
 
@@ -844,7 +816,6 @@ export function VMIEntryPage() {
             </Button>
           </div>
 
-          {/* Optional: show missing fields hint */}
           {!canSave && (
             <div className="text-xs text-gray-500 -mt-2">
               Para guardar completá: {missingSummary.join(', ')}.
