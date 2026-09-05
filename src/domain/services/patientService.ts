@@ -15,14 +15,14 @@ import { createEpisode, closeAllEpisodes } from './episodeService';
 /**
  * Creates a new patient with an initial support episode
  */
-export function createPatient(alias: string, sectorId: string, bed: number, supportType: SupportType, predictedBodyWeight?: number): Patient {
+export function createPatient(alias: string, sectorId: string, bedId: string, supportType: SupportType, predictedBodyWeight?: number): Patient {
   const now = new Date().toISOString();
   const initialEpisode = createEpisode(supportType, now, 'Initial admission');
   return {
     id: `pat-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
     alias,
     sectorId,
-    bed,
+    bedId,
     supportType,
     status: 'active',
     createdAt: now,

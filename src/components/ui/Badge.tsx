@@ -1,4 +1,4 @@
-import React from 'react';
+import { ReactNode } from 'react';
 import { SupportType, RiskLevel } from '../../types';
 interface BadgeProps {
   children: ReactNode;

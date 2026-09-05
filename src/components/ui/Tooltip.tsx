@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { ReactNode, useState } from 'react';
 import { InfoIcon, XIcon } from 'lucide-react';
 import { EducationalContent } from '../../utils/vmiEducation';
 interface TooltipProps {

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState, FormEvent } from 'react';
 import { XIcon, AlertTriangleIcon } from 'lucide-react';
 import { Button } from './ui/Button';
 import { ClosureReason } from '../types';

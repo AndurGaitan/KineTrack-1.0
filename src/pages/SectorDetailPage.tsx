@@ -5,7 +5,7 @@ import { Header } from '../components/ui/Header';
 import { BedGrid } from '../components/BedGrid';
 import { FAB } from '../components/ui/FAB';
 import { filterPatientsBySector } from '../domain/services/patientService';
-import { Patient } from '../types';
+import { Bed, Patient } from '../types';
 export function SectorDetailPage() {
   const {
     id
@@ -24,13 +24,13 @@ export function SectorDetailPage() {
         <p className="text-gray-600">Sector no encontrado</p>
       </div>;
   }
-  const handleBedClick = (bedNumber: number, patient?: Patient) => {
+  const handleBedClick = (bed: Bed, patient?: Patient) => {
     if (patient) {
       // Si hay paciente, navegar a su detalle
       navigate(`/patient/${patient.id}`);
     } else {
       // Si está vacía, crear nuevo paciente en esa cama
-      navigate(`/patient/new?sectorId=${sector.id}&bed=${bedNumber}`);
+      navigate(`/patient/new?sectorId=${sector.id}&bedId=${bed.id}`);
     }
   };
   return <div className="min-h-screen bg-gray-50">
@@ -43,11 +43,11 @@ export function SectorDetailPage() {
               Camas del Sector
             </h2>
             <div className="text-sm text-gray-600">
-              {sectorPatients.length} / {sector.beds} ocupadas
+              {sectorPatients.length} / {sector.beds.length} ocupadas
             </div>
           </div>
 
-          <BedGrid totalBeds={sector.beds} patients={sectorPatients} onBedClick={handleBedClick} />
+          <BedGrid beds={sector.beds.filter(b => b.active)} patients={sectorPatients} onBedClick={handleBedClick} />
         </div>
 
         <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">

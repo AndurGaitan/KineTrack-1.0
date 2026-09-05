@@ -5,10 +5,13 @@ export interface HFNCCalculations {
 }
 export function calculateROXForHFNC(data: {
   spo2: number;
-  fio2: number;
+  fio2: number; // % (e.g. 40 = 40%)
   respiratoryRate: number;
 }): HFNCCalculations {
-  const roxIndex = data.spo2 / data.fio2 / data.respiratoryRate;
+  // ROX = (SpO2 / FiO2) / RR, where FiO2 must be a fraction (0.21-1.0).
+  // FiO2 is entered/stored here as a percentage, so it must be converted.
+  const fio2Fraction = data.fio2 / 100;
+  const roxIndex = data.spo2 / fio2Fraction / data.respiratoryRate;
 
   // Risk interpretation
   let risk: RiskLevel = 'low';

@@ -24,7 +24,7 @@ export function PatientCard({
           <h3 className="text-xl font-bold text-gray-900">{patient.alias}</h3>
           <div className="flex items-center gap-2 text-gray-600 mt-1">
             <BedDoubleIcon className="w-4 h-4" />
-            <span>Cama {patient.bed}</span>
+            <span>Cama {patient.bedLabel ?? patient.bedId}</span>
           </div>
         </div>
         <Badge variant="support" type={patient.supportType}>

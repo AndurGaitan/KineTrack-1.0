@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState, FormEvent } from 'react';
 import { Input, Select } from './ui/Input';
 import { Button } from './ui/Button';
 import { Patient, Sector, SupportType } from '../types';
@@ -6,7 +6,7 @@ interface PatientFormProps {
   sectors: Sector[];
   initialData?: Patient;
   prefilledSectorId?: string;
-  prefilledBed?: string;
+  prefilledBedId?: string;
   onSubmit: (data: Omit<Patient, 'id' | 'createdAt' | 'status' | 'episodes'>) => void;
   onCancel: () => void;
 }
@@ -14,30 +14,31 @@ export function PatientForm({
   sectors,
   initialData,
   prefilledSectorId,
-  prefilledBed,
+  prefilledBedId,
   onSubmit,
   onCancel
 }: PatientFormProps) {
   const [formData, setFormData] = useState({
     alias: initialData?.alias || '',
     sectorId: initialData?.sectorId || prefilledSectorId || '',
-    bed: initialData?.bed?.toString() || prefilledBed || '',
+    bedId: initialData?.bedId || prefilledBedId || '',
     supportType: initialData?.supportType || ''
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const selectedSector = sectors.find(s => s.id === formData.sectorId);
-  const bedOptions = selectedSector ? Array.from({
-    length: selectedSector.beds
-  }, (_, i) => ({
-    value: (i + 1).toString(),
-    label: `Cama ${i + 1}`
-  })) : [];
+  const bedOptions = (selectedSector?.beds ?? [])
+    .filter(b => b.active || b.id === initialData?.bedId)
+    .sort((a, b) => a.sortOrder - b.sortOrder)
+    .map(b => ({
+      value: b.id,
+      label: `Cama ${b.label}`
+    }));
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
     const newErrors: Record<string, string> = {};
     if (!formData.alias) newErrors.alias = 'Requerido';
     if (!formData.sectorId) newErrors.sectorId = 'Requerido';
-    if (!formData.bed) newErrors.bed = 'Requerido';
+    if (!formData.bedId) newErrors.bedId = 'Requerido';
     if (!formData.supportType) newErrors.supportType = 'Requerido';
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
@@ -46,7 +47,7 @@ export function PatientForm({
     onSubmit({
       alias: formData.alias,
       sectorId: formData.sectorId,
-      bed: parseInt(formData.bed),
+      bedId: formData.bedId,
       supportType: formData.supportType as SupportType
     });
   };
@@ -59,16 +60,16 @@ export function PatientForm({
       <Select label="Sector" value={formData.sectorId} onChange={e => setFormData({
       ...formData,
       sectorId: e.target.value,
-      bed: ''
+      bedId: ''
     })} options={sectors.map(s => ({
       value: s.id,
       label: s.name
     }))} error={errors.sectorId} />
 
-      {formData.sectorId && <Select label="Cama" value={formData.bed} onChange={e => setFormData({
+      {formData.sectorId && <Select label="Cama" value={formData.bedId} onChange={e => setFormData({
       ...formData,
-      bed: e.target.value
-    })} options={bedOptions} error={errors.bed} />}
+      bedId: e.target.value
+    })} options={bedOptions} error={errors.bedId} />}
 
       <Select label="Tipo de Soporte Respiratorio" value={formData.supportType} onChange={e => setFormData({
       ...formData,

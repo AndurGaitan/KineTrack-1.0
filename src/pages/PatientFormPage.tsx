@@ -20,7 +20,7 @@ export function PatientFormPage() {
   const isEdit = id && id !== 'new';
   const patient = isEdit ? patients.find(p => p.id === id) : undefined;
   const prefilledSectorId = searchParams.get('sectorId') || undefined;
-  const prefilledBed = searchParams.get('bed') || undefined;
+  const prefilledBedId = searchParams.get('bedId') || undefined;
   const handleSubmit = (data: any) => {
     if (isEdit && patient) {
       updatePatient(patient.id, data);
@@ -34,7 +34,7 @@ export function PatientFormPage() {
       <Header title={isEdit ? 'Editar Paciente' : 'Nuevo Paciente'} showBack />
 
       <main className="max-w-2xl mx-auto p-4">
-        <PatientForm sectors={sectors} initialData={patient} prefilledSectorId={prefilledSectorId} prefilledBed={prefilledBed} onSubmit={handleSubmit} onCancel={() => navigate(-1)} />
+        <PatientForm sectors={sectors} initialData={patient} prefilledSectorId={prefilledSectorId} prefilledBedId={prefilledBedId} onSubmit={handleSubmit} onCancel={() => navigate(-1)} />
       </main>
     </div>;
 }

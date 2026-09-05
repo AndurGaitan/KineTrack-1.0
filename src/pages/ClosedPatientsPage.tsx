@@ -55,7 +55,7 @@ export function ClosedPatientsPage() {
                     <div className="flex items-center gap-2 text-gray-600 mt-1">
                       <BedDoubleIcon className="w-4 h-4" />
                       <span className="text-sm">
-                        {sector?.name} - Cama {patient.bed}
+                        {sector?.name} - Cama {patient.bedLabel ?? patient.bedId}
                       </span>
                     </div>
                   </div>

@@ -1,4 +1,5 @@
 import { NIVRecord, RiskLevel } from '../types';
+import { calculateHACORScore } from './scores';
 export interface NIVCalculations {
   hacorScore: number;
   hacorRisk: RiskLevel;
@@ -6,33 +7,24 @@ export interface NIVCalculations {
 export function calculateHACORForNIV(data: {
   heartRate: number;
   ph: number;
-  consciousness: number;
+  consciousness: number; // GCS
   pao2: number;
-  fio2: number;
+  fio2: number; // %
   respiratoryRate: number;
 }): NIVCalculations {
-  let score = 0;
-
-  // Heart Rate
-  if (data.heartRate >= 120) score += 1;
-
-  // Acidosis (pH)
-  if (data.ph < 7.35) score += 1;
-
-  // Consciousness (GCS)
-  if (data.consciousness < 15) score += 1;
-
-  // Oxygenation (PaO2/FiO2)
+  // PaO2/FiO2 ratio (FiO2 stored as %, must be converted to fraction)
   const pfRatio = data.pao2 / (data.fio2 / 100);
-  if (pfRatio < 200) score += 1;
-  if (pfRatio < 150) score += 1;
 
-  // Respiratory Rate
-  if (data.respiratoryRate > 30) score += 1;
-
-  // Risk interpretation
-  let risk: RiskLevel = 'low';
-  if (score >= 5) risk = 'high';else if (score >= 3) risk = 'medium';
+  const {
+    score,
+    risk
+  } = calculateHACORScore({
+    heartRate: data.heartRate,
+    ph: data.ph,
+    gcs: data.consciousness,
+    pfRatio,
+    respiratoryRate: data.respiratoryRate
+  });
   return {
     hacorScore: score,
     hacorRisk: risk
@@ -43,12 +35,12 @@ export function generateNIVAlerts(record: Partial<NIVRecord>): string[] {
 
   // HACOR alerts
   if (record.hacorScore !== undefined) {
-    if (record.hacorScore > 5) {
-      alerts.push('HACOR > 5 - Alto riesgo de fracaso de VNI. Considerar escalada a VMI si no hay mejoría');
-    } else if (record.hacorScore >= 3) {
-      alerts.push('HACOR 3-5 - Riesgo moderado. Monitoreo estrecho y reevaluación frecuente');
+    if (record.hacorScore > 10) {
+      alerts.push('⚠️ HACOR > 10 - Alto riesgo de fracaso de VNI. Considerar escalada a VMI si no hay mejoría');
+    } else if (record.hacorScore > 5) {
+      alerts.push('HACOR 6-10 - Riesgo intermedio. Monitoreo estrecho y reevaluación frecuente');
     } else {
-      alerts.push('✓ HACOR < 3 - Bajo riesgo de fracaso de VNI');
+      alerts.push('✓ HACOR ≤ 5 - Bajo riesgo de fracaso de VNI (punto de corte validado a 1h de VNI)');
     }
   }
 

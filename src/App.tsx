@@ -17,15 +17,37 @@ import { HFNCHubPage } from './pages/HFNCHubPage';
 import { HFNCEntryPage } from './pages/HFNCEntryPage';
 import { HFNCRecordDetailPage } from './pages/HFNCRecordDetailPage';
 import { ClosedPatientsPage } from './pages/ClosedPatientsPage';
+import { PrestacionFormPage } from './pages/PrestacionFormPage';
+import { MrcAssessmentFormPage } from './pages/MrcAssessmentFormPage';
+import { CoordinatorDashboardPage } from './pages/coordinator/CoordinatorDashboardPage';
+import { SectorsAdminPage } from './pages/coordinator/SectorsAdminPage';
+import { ProtocolsAdminPage } from './pages/coordinator/ProtocolsAdminPage';
+import { UsersAdminPage } from './pages/coordinator/UsersAdminPage';
+import { SchedulePage } from './pages/coordinator/SchedulePage';
+
 function ProtectedRoute({
-  children
+  children,
+  requireCoordinador = false
 }: {
   children: React.ReactNode;
+  requireCoordinador?: boolean;
 }) {
   const {
-    user
+    user,
+    isLoading
   } = useApp();
-  return user ? <>{children}</> : <Navigate to="/" replace />;
+  if (isLoading) {
+    return <div className="min-h-screen flex items-center justify-center text-gray-500">Cargando...</div>;
+  }
+  if (!user) return <Navigate to="/" replace />;
+  if (requireCoordinador && user.role !== 'coordinador') {
+    return <div className="min-h-screen flex items-center justify-center p-4">
+        <p className="text-gray-600 text-center">
+          Esta sección es solo para coordinadores de servicio.
+        </p>
+      </div>;
+  }
+  return <>{children}</>;
 }
 function AppRoutes() {
   return <Routes>
@@ -85,6 +107,31 @@ function AppRoutes() {
       {/* Score Routes */}
       <Route path="/score/:type/:patientId" element={<ProtectedRoute>
             <ScoreCalculatorPage />
+          </ProtectedRoute>} />
+
+      {/* Team productivity / quality logging (any kinesiólogo) */}
+      <Route path="/patient/:patientId/prestacion/new" element={<ProtectedRoute>
+            <PrestacionFormPage />
+          </ProtectedRoute>} />
+      <Route path="/patient/:patientId/mrc/new" element={<ProtectedRoute>
+            <MrcAssessmentFormPage />
+          </ProtectedRoute>} />
+
+      {/* Coordinator module */}
+      <Route path="/coordinator/dashboard" element={<ProtectedRoute requireCoordinador>
+            <CoordinatorDashboardPage />
+          </ProtectedRoute>} />
+      <Route path="/coordinator/schedule" element={<ProtectedRoute>
+            <SchedulePage />
+          </ProtectedRoute>} />
+      <Route path="/coordinator/sectors" element={<ProtectedRoute requireCoordinador>
+            <SectorsAdminPage />
+          </ProtectedRoute>} />
+      <Route path="/coordinator/protocols" element={<ProtectedRoute requireCoordinador>
+            <ProtocolsAdminPage />
+          </ProtectedRoute>} />
+      <Route path="/coordinator/users" element={<ProtectedRoute requireCoordinador>
+            <UsersAdminPage />
           </ProtectedRoute>} />
     </Routes>;
 }

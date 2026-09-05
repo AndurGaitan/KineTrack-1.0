@@ -18,7 +18,7 @@ export interface Patient {
   id: string;
   alias: string;
   sectorId: string;
-  bed: number;
+  bedId: string;
   supportType: SupportType;
   status: PatientStatus;
   createdAt: string;

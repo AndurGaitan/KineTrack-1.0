@@ -1,11 +1,11 @@
-import React, { useState } from 'react';
+import { useState, FormEvent } from 'react';
 import { XIcon } from 'lucide-react';
 import { Button } from './ui/Button';
-import { SupportType } from '../types';
+import { AirwayEventInput, AirwayEventType, SupportType } from '../types';
 interface ChangeSupportModalProps {
   currentSupport: SupportType;
   onClose: () => void;
-  onConfirm: (newSupport: SupportType, reason: string, date: string) => void;
+  onConfirm: (newSupport: SupportType, reason: string, date: string, airwayEvent?: AirwayEventInput) => void;
 }
 const supportOptions = [{
   value: 'imv',
@@ -24,6 +24,15 @@ const supportOptions = [{
   label: 'Aire Ambiente'
 }];
 const reasonOptions = ['Extubación programada', 'Extubación no programada', 'Weaning exitoso', 'Escalamiento por deterioro', 'Mejoría clínica', 'Protocolo de destete', 'Otro'];
+
+// Which airway-event confirmation applies when downgrading FROM this support
+// type — backs QI-02 (reintubación ≤48h) and the destete VNI/HFNC achievements.
+const airwayEventByCurrentSupport: Partial<Record<SupportType, { type: AirwayEventType; question: string }>> = {
+  imv: { type: 'extubacion', question: '¿Este cambio fue una extubación?' },
+  niv: { type: 'destete-vni', question: '¿Este cambio fue un destete de VNI?' },
+  hfnc: { type: 'destete-hfnc', question: '¿Este cambio fue un destete de HFNC?' }
+};
+
 export function ChangeSupportModal({
   currentSupport,
   onClose,
@@ -36,12 +45,30 @@ export function ChangeSupportModal({
     const now = new Date();
     return now.toISOString().slice(0, 16);
   });
+  const airwayQuestion = airwayEventByCurrentSupport[currentSupport];
+  const [wasAirwayEvent, setWasAirwayEvent] = useState<'' | 'si' | 'no'>('');
+  const [classification, setClassification] = useState<'programada' | 'accidental' | ''>('');
+
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
     if (!newSupport) return;
     const finalReason = reason === 'Otro' ? customReason : reason;
-    onConfirm(newSupport as SupportType, finalReason, new Date(date).toISOString());
+
+    let airwayEvent: AirwayEventInput | undefined;
+    if (airwayQuestion && wasAirwayEvent === 'si') {
+      if (airwayQuestion.type === 'extubacion') {
+        if (!classification) return; // guard: classification required, submit button already disabled too
+        airwayEvent = { type: 'extubacion', classification };
+      } else {
+        airwayEvent = { type: airwayQuestion.type };
+      }
+    }
+
+    onConfirm(newSupport as SupportType, finalReason, new Date(date).toISOString(), airwayEvent);
   };
+
+  const canSubmit = !!newSupport && (!airwayQuestion || wasAirwayEvent !== '' ) && !(airwayQuestion?.type === 'extubacion' && wasAirwayEvent === 'si' && !classification);
+
   return <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 p-4">
       <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
         <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
@@ -103,11 +130,45 @@ export function ChangeSupportModal({
             <input type="datetime-local" value={date} onChange={e => setDate(e.target.value)} className="w-full min-h-[56px] px-4 text-lg border-2 border-gray-300 rounded-xl focus:border-blue-600 focus:outline-none" required />
           </div>
 
+          {airwayQuestion && <div className="bg-amber-50 border-2 border-amber-200 rounded-xl p-4 space-y-3">
+              <label className="block text-sm font-semibold text-amber-900">
+                {airwayQuestion.question} *
+              </label>
+              <div className="flex gap-3">
+                <button type="button" onClick={() => setWasAirwayEvent('si')} className={`flex-1 py-3 rounded-xl border-2 font-semibold transition-colors ${wasAirwayEvent === 'si' ? 'border-amber-600 bg-amber-100 text-amber-900' : 'border-gray-200 bg-white text-gray-600'}`}>
+                  Sí
+                </button>
+                <button type="button" onClick={() => {
+                setWasAirwayEvent('no');
+                setClassification('');
+              }} className={`flex-1 py-3 rounded-xl border-2 font-semibold transition-colors ${wasAirwayEvent === 'no' ? 'border-amber-600 bg-amber-100 text-amber-900' : 'border-gray-200 bg-white text-gray-600'}`}>
+                  No
+                </button>
+              </div>
+
+              {airwayQuestion.type === 'extubacion' && wasAirwayEvent === 'si' && <div className="space-y-2">
+                  <label className="block text-sm font-medium text-amber-900">
+                    Clasificación *
+                  </label>
+                  <div className="flex gap-3">
+                    <button type="button" onClick={() => setClassification('programada')} className={`flex-1 py-3 rounded-xl border-2 font-semibold transition-colors ${classification === 'programada' ? 'border-amber-600 bg-amber-100 text-amber-900' : 'border-gray-200 bg-white text-gray-600'}`}>
+                      Programada
+                    </button>
+                    <button type="button" onClick={() => setClassification('accidental')} className={`flex-1 py-3 rounded-xl border-2 font-semibold transition-colors ${classification === 'accidental' ? 'border-amber-600 bg-amber-100 text-amber-900' : 'border-gray-200 bg-white text-gray-600'}`}>
+                      Accidental / auto-extubación
+                    </button>
+                  </div>
+                  <p className="text-xs text-amber-700">
+                    Las accidentales se excluyen del indicador de reintubación (ni suman ni restan).
+                  </p>
+                </div>}
+            </div>}
+
           <div className="flex gap-3 pt-4">
             <Button type="button" variant="secondary" onClick={onClose} fullWidth>
               Cancelar
             </Button>
-            <Button type="submit" fullWidth disabled={!newSupport}>
+            <Button type="submit" fullWidth disabled={!canSubmit}>
               Confirmar Cambio
             </Button>
           </div>

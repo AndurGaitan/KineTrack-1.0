@@ -1,14 +1,29 @@
+export type UserRole = 'kinesiologo' | 'coordinador';
 export interface User {
+  id: string;
   name: string;
   email: string;
+  role: UserRole;
 }
 export type SupportType = 'imv' | 'niv' | 'hfnc' | 'conventional-oxygen' | 'room-air';
 export type RiskLevel = 'low' | 'medium' | 'high';
 export type ScoreType = 'hacor' | 'rox';
+// Ward/admission type. Curated suggestions in the UI, but stored as free text
+// so a different institution can add its own without a code change.
+export type SectorType = 'uci' | 'sala' | 'uco' | 'utim' | string;
+export interface Bed {
+  id: string;
+  sectorId: string;
+  label: string;
+  sortOrder: number;
+  active: boolean;
+}
 export interface Sector {
   id: string;
   name: string;
-  beds: number;
+  type: SectorType;
+  active: boolean;
+  beds: Bed[];
 }
 export type PatientStatus = 'active' | 'closed';
 export type ClosureReason = 'discharge' | 'transfer-ward' | 'transfer-facility' | 'deceased';
@@ -24,11 +39,17 @@ export interface SupportEpisode {
   endAt?: string;
   reason?: string;
 }
+export type AirwayEventType = 'extubacion' | 'destete-vni' | 'destete-hfnc';
+export type AirwayEventInput =
+  | { type: 'extubacion'; classification: 'programada' | 'accidental' }
+  | { type: 'destete-vni' }
+  | { type: 'destete-hfnc' };
 export interface Patient {
   id: string;
   alias: string;
   sectorId: string;
-  bed: number;
+  bedId: string;
+  bedLabel?: string;
   supportType: SupportType;
   createdAt: string;
   predictedBodyWeight?: number;
@@ -187,4 +208,126 @@ export interface AppState {
   vmiRecords: VMIRecord[];
   nivRecords: NIVRecord[];
   hfncRecords: HFNCRecord[];
+}
+
+// ---------------------------------------------------------------------------
+// Coordinator module: team productivity, quality indicators, scheduling.
+// ---------------------------------------------------------------------------
+
+export type PrestacionType = 'kinesioterapia-motora' | 'evaluacion' | 'progresion';
+export interface Prestacion {
+  id: string;
+  patientId: string;
+  performedByUserId: string;
+  type: PrestacionType;
+  timestamp: string;
+  durationMinutes?: number;
+  notes?: string;
+}
+
+export type MrcStatus = 'evaluable' | 'no-evaluable' | 'parcial' | 'desconocido';
+export interface MrcScores {
+  shoulderAbductionRight?: number;
+  shoulderAbductionLeft?: number;
+  elbowFlexionRight?: number;
+  elbowFlexionLeft?: number;
+  wristExtensionRight?: number;
+  wristExtensionLeft?: number;
+  hipFlexionRight?: number;
+  hipFlexionLeft?: number;
+  kneeExtensionRight?: number;
+  kneeExtensionLeft?: number;
+  ankleDorsiflexionRight?: number;
+  ankleDorsiflexionLeft?: number;
+}
+export interface MrcAssessment {
+  id: string;
+  patientId: string;
+  episodeId?: string;
+  evaluatedByUserId: string;
+  assessedAt: string;
+  status: MrcStatus;
+  scores: MrcScores;
+  totalScore?: number;
+  daucicConfirmed?: boolean;
+  notes?: string;
+}
+
+export interface Protocol {
+  id: string;
+  name: string;
+  isPriority: boolean;
+  approved: boolean;
+  version?: string;
+  effectiveFrom?: string;
+  validUntil?: string;
+  available: boolean;
+  archived: boolean;
+  replaced: boolean;
+  notes?: string;
+  vigente: boolean;
+}
+
+export interface ShiftTemplateSlot {
+  id?: string;
+  area: string;
+  count: number;
+}
+export interface ShiftTemplate {
+  id: string;
+  name: string;
+  daysOfWeek: number[]; // ISO weekday: 1=Lun .. 7=Dom
+  startTime: string;
+  endTime: string;
+  active: boolean;
+  slots: ShiftTemplateSlot[];
+}
+export interface ShiftAssignment {
+  id: string;
+  shiftTemplateId: string;
+  date: string; // YYYY-MM-DD
+  area: string;
+  slotIndex: number;
+  userId?: string;
+  userName?: string;
+}
+
+export interface QIResultBase {
+  calculable: boolean;
+  percentage: number | null;
+}
+export interface DashboardSummary {
+  period: { from: string; to: string };
+  productivity: {
+    total: { kinesioterapiaRespiratoria: number; kinesioterapiaMotora: number; evaluaciones: number; progresiones: number };
+    byUser: Array<{
+      userId: string;
+      userName: string;
+      kinesioterapiaRespiratoria: number;
+      kinesioterapiaMotora: number;
+      evaluaciones: number;
+      progresiones: number;
+    }>;
+  };
+  achievements: {
+    extubacionExitosa: { total: number; exitosas: number; fallidas: number; pendientes: number };
+    desteteVniExitoso: { total: number; exitosas: number; fallidas: number; pendientes: number };
+    desteteHfncExitoso: { total: number; exitosas: number; fallidas: number; pendientes: number };
+    sbt: {
+      total: number;
+      sinModoRegistrado: number;
+      byType: Record<'psv' | 'cpap' | 't-piece', { total: number; exitosas: number; fallidas: number }>;
+    };
+  };
+  qualityIndicators: {
+    qi01PveDiasElegibles: QIResultBase & { eligibleDays: number; eligibleDaysWithPve: number };
+    qi02Reintubacion48h: QIResultBase & {
+      extubacionesProgramadas: number;
+      reintubadas48h: number;
+      exitosas: number;
+      pendientes: number;
+    };
+    qi03Dauci: QIResultBase & { patientsVmiMasDe7Dias: number; daucicConfirmada: number };
+    qi04ProtocolosVigentes: QIResultBase & { protocolosPriorizados: number; protocolosVigentes: number };
+  };
 }

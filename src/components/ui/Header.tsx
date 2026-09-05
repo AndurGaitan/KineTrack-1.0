@@ -1,4 +1,4 @@
-import React from 'react';
+import { ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeftIcon, UsersIcon } from 'lucide-react';
 interface HeaderProps {

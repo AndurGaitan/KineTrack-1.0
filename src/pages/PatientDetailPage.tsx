@@ -8,7 +8,7 @@ import { Button } from '../components/ui/Button';
 import { ChangeSupportModal } from '../components/ChangeSupportModal';
 import { ClosePatientModal } from '../components/ClosePatientModal';
 import { EditIcon, BedDoubleIcon, ActivityIcon, WindIcon, DropletIcon, ChevronDownIcon, ChevronUpIcon, RepeatIcon, XCircleIcon } from 'lucide-react';
-import { SupportType, ClosureReason } from '../types';
+import { SupportType, ClosureReason, AirwayEventInput } from '../types';
 const supportTypeLabels = {
   imv: 'VMI',
   niv: 'VNI',
@@ -117,8 +117,8 @@ export function PatientDetailPage() {
     }
     return `${diffHours} hora${diffHours !== 1 ? 's' : ''}`;
   };
-  const handleChangeSupport = (newSupport: SupportType, reason: string, date: string) => {
-    changeSupportType(patient.id, newSupport, reason, date);
+  const handleChangeSupport = (newSupport: SupportType, reason: string, date: string, airwayEvent?: AirwayEventInput) => {
+    changeSupportType(patient.id, newSupport, reason, date, airwayEvent);
     setShowChangeSupportModal(false);
   };
   const handleClosePatient = (reason: ClosureReason, date: string, notes: string) => {
@@ -155,7 +155,7 @@ export function PatientDetailPage() {
                 <div className="text-sm text-gray-600 mb-1">Ubicación</div>
                 <div className="flex items-center gap-2 text-lg font-medium text-gray-900">
                   <BedDoubleIcon className="w-5 h-5" />
-                  {sector.name} - Cama {patient.bed}
+                  {sector.name} - Cama {patient.bedLabel ?? patient.bedId}
                 </div>
               </div>
               <div className="flex flex-col items-end gap-2">
@@ -259,6 +259,16 @@ export function PatientDetailPage() {
                   </p>
                 </div>
               </Card>}
+
+            {/* Team productivity / quality logging */}
+            <div className="grid grid-cols-2 gap-3">
+              <Button variant="secondary" onClick={() => navigate(`/patient/${patient.id}/prestacion/new`)}>
+                + Prestación
+              </Button>
+              <Button variant="secondary" onClick={() => navigate(`/patient/${patient.id}/mrc/new`)}>
+                Evaluación MRC
+              </Button>
+            </div>
 
             {/* Action Buttons */}
             <div className="grid grid-cols-2 gap-3">

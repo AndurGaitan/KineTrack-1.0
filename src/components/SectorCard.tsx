@@ -21,7 +21,7 @@ export function SectorCard({
           <div className="flex items-center gap-4 text-gray-600">
             <div className="flex items-center gap-1">
               <BedDoubleIcon className="w-5 h-5" />
-              <span className="text-lg">{sector.beds} camas</span>
+              <span className="text-lg">{sector.beds.length} camas</span>
             </div>
             <div className="text-lg">
               {patientCount} paciente{patientCount !== 1 ? 's' : ''}

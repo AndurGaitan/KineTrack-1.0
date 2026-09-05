@@ -1,4 +1,4 @@
-import React from 'react';
+import { InputHTMLAttributes } from 'react';
 import { EducationalTooltip } from './ui/Tooltip';
 import { vmiEducation } from '../utils/vmiEducation';
 interface VMIFieldProps extends InputHTMLAttributes<HTMLInputElement> {
