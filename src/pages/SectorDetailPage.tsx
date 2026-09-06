@@ -3,7 +3,6 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useApp } from '../contexts/AppContext';
 import { Header } from '../components/ui/Header';
 import { BedGrid } from '../components/BedGrid';
-import { FAB } from '../components/ui/FAB';
 import { filterPatientsBySector } from '../domain/services/patientService';
 import { Bed, Patient } from '../types';
 export function SectorDetailPage() {
@@ -57,7 +56,5 @@ export function SectorDetailPage() {
           </p>
         </div>
       </main>
-
-      <FAB onClick={() => navigate(`/patient/new?sectorId=${sector.id}`)} label="Nuevo Paciente" />
     </div>;
 }

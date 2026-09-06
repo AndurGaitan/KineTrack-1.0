@@ -19,6 +19,7 @@ interface AppContextType extends AppState {
   login: (email: string, password: string) => Promise<void>;
   register: (name: string, email: string, password: string) => Promise<void>;
   logout: () => void;
+  updateProfile: (name: string) => Promise<void>;
   addPatient: (patient: Omit<Patient, 'id' | 'createdAt' | 'status' | 'episodes'>) => Promise<void>;
   updatePatient: (id: string, patient: Partial<Patient>) => Promise<void>;
   deletePatient: (id: string) => Promise<void>;
@@ -177,6 +178,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setState(initialState);
   };
 
+  const updateProfile = async (name: string) => {
+    try {
+      const { user } = await authApi.updateMe(name);
+      setState((prev) => ({ ...prev, user }));
+    } catch (error) {
+      reportError('actualizar perfil', error);
+      throw error;
+    }
+  };
+
   const addPatient = async (patientData: Omit<Patient, 'id' | 'createdAt' | 'status' | 'episodes'>) => {
     try {
       const patient = await patientsApi.createPatient({
@@ -216,6 +227,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         vmiRecords: prev.vmiRecords.filter((v) => v.patientId !== id),
         nivRecords: prev.nivRecords.filter((n) => n.patientId !== id),
         hfncRecords: prev.hfncRecords.filter((h) => h.patientId !== id),
+        trachRecords: prev.trachRecords.filter((t) => t.patientId !== id),
       }));
     } catch (error) {
       reportError('eliminar paciente', error);
@@ -373,6 +385,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         login,
         register,
         logout,
+        updateProfile,
         addPatient,
         updatePatient,
         deletePatient,

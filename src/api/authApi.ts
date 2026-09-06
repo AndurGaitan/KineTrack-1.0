@@ -21,6 +21,10 @@ export function me() {
   return apiFetch<{ user: User }>('/api/auth/me');
 }
 
+export function updateMe(name: string) {
+  return apiFetch<{ user: User }>('/api/auth/me', { method: 'PATCH', body: JSON.stringify({ name }) });
+}
+
 export function listUsers() {
   return apiFetch<User[]>('/api/auth/users');
 }

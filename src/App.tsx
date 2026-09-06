@@ -20,6 +20,7 @@ import { TrachHubPage } from './pages/TrachHubPage';
 import { TrachEntryPage } from './pages/TrachEntryPage';
 import { TrachRecordDetailPage } from './pages/TrachRecordDetailPage';
 import { ClosedPatientsPage } from './pages/ClosedPatientsPage';
+import { ProfilePage } from './pages/ProfilePage';
 import { PrestacionFormPage } from './pages/PrestacionFormPage';
 import { MrcAssessmentFormPage } from './pages/MrcAssessmentFormPage';
 import { CoordinatorDashboardPage } from './pages/coordinator/CoordinatorDashboardPage';
@@ -57,6 +58,9 @@ function AppRoutes() {
       <Route path="/" element={<LoginPage />} />
       <Route path="/dashboard" element={<ProtectedRoute>
             <DashboardPage />
+          </ProtectedRoute>} />
+      <Route path="/profile" element={<ProtectedRoute>
+            <ProfilePage />
           </ProtectedRoute>} />
       <Route path="/closed-patients" element={<ProtectedRoute>
             <ClosedPatientsPage />

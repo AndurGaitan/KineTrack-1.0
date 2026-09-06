@@ -2,11 +2,10 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../contexts/AppContext';
 import { Header } from '../components/ui/Header';
-import { FAB } from '../components/ui/FAB';
 import { BottomNav } from '../components/BottomNav';
 import { SectorCard } from '../components/SectorCard';
 import { Button } from '../components/ui/Button';
-import { ArchiveIcon } from 'lucide-react';
+import { ArchiveIcon, UserCircleIcon } from 'lucide-react';
 import { getActivePatientsCount, getClosedPatientsCount } from '../domain/services/patientService';
 export function DashboardPage() {
   const navigate = useNavigate();
@@ -17,13 +16,15 @@ export function DashboardPage() {
   } = useApp();
   const closedCount = getClosedPatientsCount(patients);
   return <div className="min-h-screen bg-gray-50">
-      <Header title={`Hola, ${user?.name || 'Usuario'}`} />
+      <Header title={`Hola, ${user?.name || 'Usuario'}`} action={<button onClick={() => navigate('/profile')} className="p-2 active:bg-gray-100 rounded-lg transition-colors" aria-label="Mi Perfil">
+              <UserCircleIcon className="w-6 h-6 text-gray-600" />
+            </button>} />
 
       <main className="max-w-2xl mx-auto p-4 pb-28">
         <h2 className="text-2xl font-bold text-gray-900 mb-6">Sectores UCI</h2>
         <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-4">
           <p className="text-sm text-blue-900">
-            <strong>💡 Tip:</strong> Seleccioná una UCI para agregar tus pacientes.
+            <strong>💡 Tip:</strong> Seleccioná una UCI y tocá una cama para agregar un paciente.
           </p>
         </div>
 
@@ -39,7 +40,6 @@ export function DashboardPage() {
           </div>}
       </main>
 
-      <FAB onClick={() => navigate('/patient/new')} label="Nuevo Paciente" aboveBottomNav />
       <BottomNav />
     </div>;
 }
