@@ -305,7 +305,7 @@ export function SchedulePage() {
           </Card>
         )}
       </main>
-      {isCoordinador && <BottomNav />}
+      <BottomNav />
     </div>
   );
 }

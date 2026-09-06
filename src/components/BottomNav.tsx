@@ -1,24 +1,29 @@
 import { useNavigate, useLocation } from 'react-router-dom';
 import { BedDoubleIcon, CalendarIcon, LayoutDashboardIcon } from 'lucide-react';
+import { useApp } from '../contexts/AppContext';
 
-const tabs = [
+const baseTabs = [
   { path: '/dashboard', label: 'Pacientes', icon: BedDoubleIcon },
   { path: '/coordinator/schedule', label: 'Cronograma', icon: CalendarIcon },
-  { path: '/coordinator/dashboard', label: 'Dashboard', icon: LayoutDashboardIcon },
 ];
 
+const coordinadorOnlyTabs = [{ path: '/coordinator/dashboard', label: 'Dashboard', icon: LayoutDashboardIcon }];
+
 /**
- * Fixed bottom tab bar for a coordinador's 3 main areas. Kept separate from
- * CoordinatorNav (which handles the secondary Sectores/Protocolos/Usuarios
- * admin cluster) to avoid duplicating the same destinations in two navs.
+ * Fixed bottom tab bar. Every logged-in user gets Pacientes + Cronograma —
+ * team productivity/QI Dashboard is a coordinador-only management view, so
+ * it's only added to the bar for that role (CoordinatorNav still covers the
+ * Sectores/Protocolos/Usuarios admin cluster, reached from Dashboard).
  */
 export function BottomNav() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { user } = useApp();
+  const tabs = user?.role === 'coordinador' ? [...baseTabs, ...coordinadorOnlyTabs] : baseTabs;
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-20 bg-white border-t border-gray-200 pb-[env(safe-area-inset-bottom)]">
-      <div className="max-w-2xl mx-auto grid grid-cols-3">
+      <div className={`max-w-2xl mx-auto grid`} style={{ gridTemplateColumns: `repeat(${tabs.length}, minmax(0, 1fr))` }}>
         {tabs.map((tab) => {
           const isActive = location.pathname === tab.path;
           const Icon = tab.icon;
