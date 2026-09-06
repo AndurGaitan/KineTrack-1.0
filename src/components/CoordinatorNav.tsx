@@ -1,8 +1,9 @@
 import { useNavigate, useLocation } from 'react-router-dom';
 
+// Secondary nav for the admin cluster (config screens, not everyday
+// navigation). Dashboard/Cronograma live in the bottom tab bar instead —
+// keeping them here too would just duplicate the same destinations.
 const tabs = [
-  { path: '/coordinator/dashboard', label: 'Dashboard' },
-  { path: '/coordinator/schedule', label: 'Cronograma' },
   { path: '/coordinator/sectors', label: 'Sectores' },
   { path: '/coordinator/protocols', label: 'Protocolos' },
   { path: '/coordinator/users', label: 'Usuarios' },

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Header } from '../../components/ui/Header';
 import { Card } from '../../components/ui/Card';
 import { CoordinatorNav } from '../../components/CoordinatorNav';
+import { BottomNav } from '../../components/BottomNav';
 import * as dashboardApi from '../../api/dashboardApi';
 import { DashboardSummary } from '../../types';
 
@@ -101,7 +102,7 @@ export function CoordinatorDashboardPage() {
   );
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-24">
+    <div className="min-h-screen bg-gray-50 pb-28">
       <Header title="Panel de Coordinación" showBack />
       <CoordinatorNav />
 
@@ -236,6 +237,7 @@ export function CoordinatorDashboardPage() {
           </>
         )}
       </main>
+      <BottomNav />
     </div>
   );
 }

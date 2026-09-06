@@ -3,7 +3,7 @@ import { Header } from '../../components/ui/Header';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
-import { CoordinatorNav } from '../../components/CoordinatorNav';
+import { BottomNav } from '../../components/BottomNav';
 import { useApp } from '../../contexts/AppContext';
 import * as scheduleApi from '../../api/scheduleApi';
 import * as authApi from '../../api/authApi';
@@ -120,9 +120,8 @@ export function SchedulePage() {
   const selectedAssignments = selectedDay ? assignmentsByDay.get(selectedDay) ?? [] : [];
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-24">
+    <div className="min-h-screen bg-gray-50 pb-28">
       <Header title="Cronograma de Personal" showBack />
-      <CoordinatorNav />
 
       <main className="max-w-4xl mx-auto p-4 space-y-6">
         <div className="flex items-center justify-between flex-wrap gap-3">
@@ -306,6 +305,7 @@ export function SchedulePage() {
           </Card>
         )}
       </main>
+      {isCoordinador && <BottomNav />}
     </div>
   );
 }
