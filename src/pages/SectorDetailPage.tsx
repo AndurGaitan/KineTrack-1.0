@@ -43,7 +43,7 @@ export function SectorDetailPage() {
               Camas del Sector
             </h2>
             <div className="text-sm text-gray-600">
-              {sectorPatients.length} / {sector.beds.length} ocupadas
+              {sectorPatients.length} / {sector.beds.filter(b => b.active).length} ocupadas
             </div>
           </div>
 
