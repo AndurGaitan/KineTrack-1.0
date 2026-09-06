@@ -17,21 +17,35 @@ const supportOptions = [{
   value: 'hfnc',
   label: 'HFNC - Cánula Nasal de Alto Flujo'
 }, {
+  value: 'traqueostomia',
+  label: 'Traqueostomía - Respiración Espontánea'
+}, {
   value: 'conventional-oxygen',
   label: 'Oxígeno Convencional'
 }, {
   value: 'room-air',
   label: 'Aire Ambiente'
 }];
-const reasonOptions = ['Extubación programada', 'Extubación no programada', 'Weaning exitoso', 'Escalamiento por deterioro', 'Mejoría clínica', 'Protocolo de destete', 'Otro'];
+const reasonOptions = ['Extubación programada', 'Extubación no programada', 'Traqueostomía', 'Weaning exitoso', 'Escalamiento por deterioro', 'Mejoría clínica', 'Protocolo de destete', 'Otro'];
 
-// Which airway-event confirmation applies when downgrading FROM this support
-// type — backs QI-02 (reintubación ≤48h) and the destete VNI/HFNC achievements.
-const airwayEventByCurrentSupport: Partial<Record<SupportType, { type: AirwayEventType; question: string }>> = {
-  imv: { type: 'extubacion', question: '¿Este cambio fue una extubación?' },
-  niv: { type: 'destete-vni', question: '¿Este cambio fue un destete de VNI?' },
-  hfnc: { type: 'destete-hfnc', question: '¿Este cambio fue un destete de HFNC?' }
-};
+/**
+ * Which airway-event confirmation applies for a given (current, new) support
+ * transition — backs QI-02 (reintubación ≤48h) and the destete VNI/HFNC
+ * achievements. VMI → Traqueostomía is deliberately excluded: placing a
+ * tracheostomy isn't an extubation (the tube isn't removed, just changed),
+ * so it shouldn't feed the extubation reintubation-rate indicator.
+ */
+function getAirwayQuestion(
+  current: SupportType,
+  next: SupportType | ''
+): { type: AirwayEventType; question: string } | undefined {
+  if (current === 'imv' && next !== 'traqueostomia') {
+    return { type: 'extubacion', question: '¿Este cambio fue una extubación?' };
+  }
+  if (current === 'niv') return { type: 'destete-vni', question: '¿Este cambio fue un destete de VNI?' };
+  if (current === 'hfnc') return { type: 'destete-hfnc', question: '¿Este cambio fue un destete de HFNC?' };
+  return undefined;
+}
 
 export function ChangeSupportModal({
   currentSupport,
@@ -45,7 +59,7 @@ export function ChangeSupportModal({
     const now = new Date();
     return now.toISOString().slice(0, 16);
   });
-  const airwayQuestion = airwayEventByCurrentSupport[currentSupport];
+  const airwayQuestion = getAirwayQuestion(currentSupport, newSupport);
   const [wasAirwayEvent, setWasAirwayEvent] = useState<'' | 'si' | 'no'>('');
   const [classification, setClassification] = useState<'programada' | 'accidental' | ''>('');
 

@@ -89,6 +89,7 @@ export function countObservationsByType(observations: ClinicalObservationType[],
     imv: patientObs.filter(o => o.type === 'imv').length,
     niv: patientObs.filter(o => o.type === 'niv').length,
     hfnc: patientObs.filter(o => o.type === 'hfnc').length,
+    traqueostomia: 0,
     'conventional-oxygen': 0,
     'room-air': 0
   };

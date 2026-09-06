@@ -9,6 +9,7 @@ const supportTypeColors = {
   imv: 'bg-blue-100 border-blue-300 text-blue-700',
   niv: 'bg-purple-100 border-purple-300 text-purple-700',
   hfnc: 'bg-teal-100 border-teal-300 text-teal-700',
+  traqueostomia: 'bg-indigo-100 border-indigo-300 text-indigo-700',
   'conventional-oxygen': 'bg-gray-100 border-gray-300 text-gray-700',
   'room-air': 'bg-green-100 border-green-300 text-green-700'
 };
@@ -16,6 +17,7 @@ const supportTypeLabels = {
   imv: 'VMI',
   niv: 'VNI',
   hfnc: 'HFNC',
+  traqueostomia: 'TQT',
   'conventional-oxygen': 'O₂',
   'room-air': 'Aire'
 };

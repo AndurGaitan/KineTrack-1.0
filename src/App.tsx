@@ -16,6 +16,9 @@ import { NIVRecordDetailPage } from './pages/NIVRecordDetailPage';
 import { HFNCHubPage } from './pages/HFNCHubPage';
 import { HFNCEntryPage } from './pages/HFNCEntryPage';
 import { HFNCRecordDetailPage } from './pages/HFNCRecordDetailPage';
+import { TrachHubPage } from './pages/TrachHubPage';
+import { TrachEntryPage } from './pages/TrachEntryPage';
+import { TrachRecordDetailPage } from './pages/TrachRecordDetailPage';
 import { ClosedPatientsPage } from './pages/ClosedPatientsPage';
 import { PrestacionFormPage } from './pages/PrestacionFormPage';
 import { MrcAssessmentFormPage } from './pages/MrcAssessmentFormPage';
@@ -102,6 +105,17 @@ function AppRoutes() {
           </ProtectedRoute>} />
       <Route path="/patient/:patientId/hfnc/:recordId" element={<ProtectedRoute>
             <HFNCRecordDetailPage />
+          </ProtectedRoute>} />
+
+      {/* Tracheostomy weaning Routes */}
+      <Route path="/patient/:patientId/traqueostomia" element={<ProtectedRoute>
+            <TrachHubPage />
+          </ProtectedRoute>} />
+      <Route path="/patient/:patientId/traqueostomia/new" element={<ProtectedRoute>
+            <TrachEntryPage />
+          </ProtectedRoute>} />
+      <Route path="/patient/:patientId/traqueostomia/:recordId" element={<ProtectedRoute>
+            <TrachRecordDetailPage />
           </ProtectedRoute>} />
 
       {/* Score Routes */}

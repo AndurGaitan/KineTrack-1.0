@@ -84,6 +84,9 @@ export function PatientForm({
       value: 'hfnc',
       label: 'HFNC - Cánula Nasal de Alto Flujo'
     }, {
+      value: 'traqueostomia',
+      label: 'Traqueostomía - Respiración Espontánea'
+    }, {
       value: 'conventional-oxygen',
       label: 'Oxígeno Convencional'
     }, {

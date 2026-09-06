@@ -11,6 +11,7 @@ const supportTypeLabels = {
   imv: 'VMI',
   niv: 'VNI',
   hfnc: 'HFNC',
+  traqueostomia: 'TQT',
   'conventional-oxygen': 'O₂ Conv.',
   'room-air': 'Aire Amb.'
 };

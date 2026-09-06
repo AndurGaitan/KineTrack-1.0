@@ -5,7 +5,7 @@ export interface User {
   email: string;
   role: UserRole;
 }
-export type SupportType = 'imv' | 'niv' | 'hfnc' | 'conventional-oxygen' | 'room-air';
+export type SupportType = 'imv' | 'niv' | 'hfnc' | 'traqueostomia' | 'conventional-oxygen' | 'room-air';
 export type RiskLevel = 'low' | 'medium' | 'high';
 export type ScoreType = 'hacor' | 'rox';
 // Ward/admission type. Curated suggestions in the UI, but stored as free text
@@ -200,6 +200,32 @@ export interface HFNCRecord {
   // Alerts
   alerts: string[];
 }
+// Tracheostomy weaning follow-up (patients who failed extubation, were
+// tracheostomized, and are now breathing spontaneously via the trach —
+// support type 'traqueostomia'). Days-since-VMI is derived from the
+// episode's startAt on the frontend, not stored here.
+export type SwallowingTestResult = 'apta' | 'no-apta' | 'con-restricciones';
+export type BlueTestResult = 'positivo' | 'negativo';
+export interface TrachRecord {
+  id: string;
+  patientId: string;
+  episodeId?: string;
+  performedByUserId: string;
+  timestamp: string;
+  type: 'traqueostomia';
+  glasgow: number;
+  pemax?: number;
+  cuffDeflationPerformed: boolean;
+  cuffDeflationTolerated?: boolean;
+  cuffDeflationNotes?: string;
+  cappedTrialPerformed: boolean;
+  cappedTrialTolerated?: boolean;
+  cappedTrialNotes?: string;
+  swallowingTest?: SwallowingTestResult;
+  blueTest?: BlueTestResult;
+  alerts: string[];
+}
+
 export interface AppState {
   user: User | null;
   sectors: Sector[];
@@ -208,6 +234,7 @@ export interface AppState {
   vmiRecords: VMIRecord[];
   nivRecords: NIVRecord[];
   hfncRecords: HFNCRecord[];
+  trachRecords: TrachRecord[];
 }
 
 // ---------------------------------------------------------------------------

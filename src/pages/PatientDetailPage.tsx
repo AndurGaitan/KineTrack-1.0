@@ -13,6 +13,7 @@ const supportTypeLabels = {
   imv: 'VMI',
   niv: 'VNI',
   hfnc: 'HFNC',
+  traqueostomia: 'TQT',
   'conventional-oxygen': 'O₂ Convencional',
   'room-air': 'Aire Ambiente'
 };
@@ -20,6 +21,7 @@ const supportTypeFullLabels = {
   imv: 'Ventilación Mecánica Invasiva',
   niv: 'Ventilación No Invasiva',
   hfnc: 'Cánula Nasal de Alto Flujo',
+  traqueostomia: 'Traqueostomía - Respiración Espontánea',
   'conventional-oxygen': 'Oxígeno Convencional',
   'room-air': 'Aire Ambiente'
 };
@@ -27,6 +29,7 @@ const supportTypeIcons = {
   imv: ActivityIcon,
   niv: WindIcon,
   hfnc: DropletIcon,
+  traqueostomia: WindIcon,
   'conventional-oxygen': DropletIcon,
   'room-air': DropletIcon
 };
@@ -45,6 +48,11 @@ const supportTypeColors = {
     bg: 'bg-teal-100',
     text: 'text-teal-700',
     border: 'border-teal-200'
+  },
+  traqueostomia: {
+    bg: 'bg-indigo-100',
+    text: 'text-indigo-700',
+    border: 'border-indigo-200'
   },
   'conventional-oxygen': {
     bg: 'bg-gray-100',
@@ -70,6 +78,7 @@ export function PatientDetailPage() {
     getPatientVMIRecords,
     getPatientNIVRecords,
     getPatientHFNCRecords,
+    getPatientTrachRecords,
     getPatientEpisodes,
     changeSupportType,
     closePatient
@@ -138,6 +147,8 @@ export function PatientDetailPage() {
         return getPatientNIVRecords(patient.id, episodeId);
       case 'hfnc':
         return getPatientHFNCRecords(patient.id, episodeId);
+      case 'traqueostomia':
+        return getPatientTrachRecords(patient.id, episodeId);
       default:
         return [];
     }
@@ -252,6 +263,26 @@ export function PatientDetailPage() {
                 </Button>
               </Card>}
 
+            {supportType === 'traqueostomia' && <Card className="bg-gradient-to-br from-indigo-50 to-blue-50 border-indigo-200">
+                <div className="flex items-start justify-between mb-4">
+                  <div>
+                    <div className="flex items-center gap-2 mb-2">
+                      <WindIcon className="w-6 h-6 text-indigo-600" />
+                      <h3 className="text-lg font-bold text-gray-900">
+                        Seguimiento de Traqueostomía
+                      </h3>
+                    </div>
+                    <p className="text-sm text-gray-700">
+                      Días sin VMI, Glasgow, PEmax, pruebas de balón/cánula y deglución para{' '}
+                      {supportTypeFullLabels[supportType]}
+                    </p>
+                  </div>
+                </div>
+                <Button onClick={() => navigate(`/patient/${patient.id}/traqueostomia`)} className="w-full bg-indigo-600">
+                  Acceder a Seguimiento de Traqueostomía
+                </Button>
+              </Card>}
+
             {supportType === 'conventional-oxygen' && <Card className="bg-gray-50 border-gray-200">
                 <div className="text-center py-6">
                   <p className="text-gray-600">
@@ -345,6 +376,7 @@ export function PatientDetailPage() {
                       if (episode.supportType === 'imv') navigate(`/patient/${patient.id}/vmi/${record.id}`);
                       if (episode.supportType === 'niv') navigate(`/patient/${patient.id}/niv/${record.id}`);
                       if (episode.supportType === 'hfnc') navigate(`/patient/${patient.id}/hfnc/${record.id}`);
+                      if (episode.supportType === 'traqueostomia') navigate(`/patient/${patient.id}/traqueostomia/${record.id}`);
                     }} className="p-4 bg-gray-50 rounded-xl cursor-pointer active:bg-gray-100 transition-colors">
                                     <div className="flex items-center justify-between mb-2">
                                       <span className="text-sm text-gray-600">
@@ -358,6 +390,9 @@ export function PatientDetailPage() {
                                           </Badge>}
                                       {episode.supportType === 'hfnc' && 'roxIndex' in record && <Badge variant="risk" type={record.roxIndex >= 4.88 ? 'low' : record.roxIndex >= 3.85 ? 'medium' : 'high'}>
                                             ROX {record.roxIndex}
+                                          </Badge>}
+                                      {episode.supportType === 'traqueostomia' && 'glasgow' in record && <Badge className="bg-indigo-100 text-indigo-700">
+                                            Glasgow {record.glasgow}
                                           </Badge>}
                                     </div>
 
@@ -462,6 +497,33 @@ export function PatientDetailPage() {
                                             </div>
                                             <div className="text-lg font-bold text-gray-900">
                                               {record.humidificationWorking ? '✓' : '✗'}
+                                            </div>
+                                          </div>
+                                        </div>}
+
+                                    {episode.supportType === 'traqueostomia' && 'glasgow' in record && <div className="grid grid-cols-3 gap-3 text-center">
+                                          <div>
+                                            <div className="text-xs text-gray-600">
+                                              Glasgow
+                                            </div>
+                                            <div className="text-lg font-bold text-gray-900">
+                                              {record.glasgow}
+                                            </div>
+                                          </div>
+                                          <div>
+                                            <div className="text-xs text-gray-600">
+                                              PEmax
+                                            </div>
+                                            <div className="text-lg font-bold text-gray-900">
+                                              {record.pemax ?? '-'}
+                                            </div>
+                                          </div>
+                                          <div>
+                                            <div className="text-xs text-gray-600">
+                                              Deglución
+                                            </div>
+                                            <div className="text-lg font-bold text-gray-900">
+                                              {record.swallowingTest ?? '-'}
                                             </div>
                                           </div>
                                         </div>}

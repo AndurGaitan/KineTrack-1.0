@@ -1,5 +1,5 @@
 import { ReactNode, useEffect, useState, createContext, useContext } from 'react';
-import { AppState, User, Patient, ScoreRecord, VMIRecord, NIVRecord, HFNCRecord, SupportType, AirwayEventInput } from '../types';
+import { AppState, User, Patient, ScoreRecord, VMIRecord, NIVRecord, HFNCRecord, TrachRecord, SupportType, AirwayEventInput } from '../types';
 import { PatientClosure, ClinicalObservationType } from '../domain/models';
 import {
   observationToVMIRecord,
@@ -45,6 +45,9 @@ interface AppContextType extends AppState {
   addHFNCRecord: (record: Omit<HFNCRecord, 'id' | 'timestamp'>) => Promise<void>;
   getPatientHFNCRecords: (patientId: string, episodeId?: string) => HFNCRecord[];
   getHFNCRecord: (id: string) => HFNCRecord | undefined;
+  addTrachRecord: (record: Omit<TrachRecord, 'id' | 'timestamp' | 'performedByUserId' | 'type' | 'alerts'>) => Promise<void>;
+  getPatientTrachRecords: (patientId: string, episodeId?: string) => TrachRecord[];
+  getTrachRecord: (id: string) => TrachRecord | undefined;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -57,19 +60,22 @@ const initialState: AppState = {
   vmiRecords: [],
   nivRecords: [],
   hfncRecords: [],
+  trachRecords: [],
 };
 
 /** Splits the flat observations list returned by the API into the legacy per-type record shapes the UI expects. */
-function splitObservationsIntoLegacyRecords(observations: ClinicalObservationType[]) {
+function splitObservationsIntoLegacyRecords(observations: (ClinicalObservationType | TrachRecord)[]) {
   const vmiRecords: VMIRecord[] = [];
   const nivRecords: NIVRecord[] = [];
   const hfncRecords: HFNCRecord[] = [];
+  const trachRecords: TrachRecord[] = [];
   for (const obs of observations) {
     if (obs.type === 'imv') vmiRecords.push(observationToVMIRecord(obs));
     else if (obs.type === 'niv') nivRecords.push(observationToNIVRecord(obs));
-    else hfncRecords.push(observationToHFNCRecord(obs));
+    else if (obs.type === 'hfnc') hfncRecords.push(observationToHFNCRecord(obs));
+    else trachRecords.push(obs);
   }
-  return { vmiRecords, nivRecords, hfncRecords };
+  return { vmiRecords, nivRecords, hfncRecords, trachRecords };
 }
 
 /** Reports a failed mutation without breaking the fire-and-forget call sites that don't await these methods. */
@@ -111,6 +117,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       vmiRecords: perPatient.flatMap((p) => p.vmiRecords),
       nivRecords: perPatient.flatMap((p) => p.nivRecords),
       hfncRecords: perPatient.flatMap((p) => p.hfncRecords),
+      trachRecords: perPatient.flatMap((p) => p.trachRecords),
     });
   };
 
@@ -338,6 +345,25 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const getHFNCRecord = (id: string) => state.hfncRecords.find((h) => h.id === id);
 
+  const addTrachRecord = async (
+    record: Omit<TrachRecord, 'id' | 'timestamp' | 'performedByUserId' | 'type' | 'alerts'>
+  ) => {
+    try {
+      const obs = await observationsApi.createObservation({ ...record, type: 'traqueostomia' });
+      setState((prev) => ({ ...prev, trachRecords: [...prev.trachRecords, obs as TrachRecord] }));
+    } catch (error) {
+      reportError('guardar seguimiento de traqueostomía', error);
+    }
+  };
+
+  const getPatientTrachRecords = (patientId: string, episodeId?: string) => {
+    return state.trachRecords
+      .filter((t) => t.patientId === patientId && (!episodeId || t.episodeId === episodeId))
+      .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+  };
+
+  const getTrachRecord = (id: string) => state.trachRecords.find((t) => t.id === id);
+
   return (
     <AppContext.Provider
       value={{
@@ -367,6 +393,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
         addHFNCRecord,
         getPatientHFNCRecords,
         getHFNCRecord,
+        addTrachRecord,
+        getPatientTrachRecords,
+        getTrachRecord,
       }}
     >
       {children}
