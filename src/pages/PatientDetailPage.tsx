@@ -7,7 +7,8 @@ import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
 import { ChangeSupportModal } from '../components/ChangeSupportModal';
 import { ClosePatientModal } from '../components/ClosePatientModal';
-import { EditIcon, BedDoubleIcon, ActivityIcon, WindIcon, DropletIcon, ChevronDownIcon, ChevronUpIcon, RepeatIcon, XCircleIcon } from 'lucide-react';
+import { ActionSheet } from '../components/ActionSheet';
+import { EditIcon, BedDoubleIcon, ActivityIcon, WindIcon, DropletIcon, ChevronDownIcon, ChevronUpIcon, RepeatIcon, XCircleIcon, ClipboardPlusIcon, DumbbellIcon, ClipboardCheckIcon, BrainIcon, TrendingUpIcon } from 'lucide-react';
 import { SupportType, ClosureReason, AirwayEventInput } from '../types';
 const supportTypeLabels = {
   imv: 'VMI',
@@ -89,6 +90,7 @@ export function PatientDetailPage() {
   const [expandedEpisodes, setExpandedEpisodes] = useState<Record<string, boolean>>({});
   const [showChangeSupportModal, setShowChangeSupportModal] = useState(false);
   const [showClosePatientModal, setShowClosePatientModal] = useState(false);
+  const [showPrestacionMenu, setShowPrestacionMenu] = useState(false);
   if (!patient || !sector) {
     return <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <p className="text-gray-600">Paciente no encontrado</p>
@@ -292,14 +294,10 @@ export function PatientDetailPage() {
               </Card>}
 
             {/* Team productivity / quality logging */}
-            <div className="grid grid-cols-2 gap-3">
-              <Button variant="secondary" onClick={() => navigate(`/patient/${patient.id}/prestacion/new`)}>
-                + Prestación
-              </Button>
-              <Button variant="secondary" onClick={() => navigate(`/patient/${patient.id}/mrc/new`)}>
-                Evaluación MRC
-              </Button>
-            </div>
+            <Button variant="secondary" onClick={() => setShowPrestacionMenu(true)} fullWidth className="flex items-center justify-center gap-2">
+              <ClipboardPlusIcon className="w-5 h-5" />
+              + Registrar Prestación
+            </Button>
 
             {/* Action Buttons */}
             <div className="grid grid-cols-2 gap-3">
@@ -550,5 +548,27 @@ export function PatientDetailPage() {
       {showChangeSupportModal && <ChangeSupportModal currentSupport={patient.supportType} onClose={() => setShowChangeSupportModal(false)} onConfirm={handleChangeSupport} />}
 
       {showClosePatientModal && <ClosePatientModal patientAlias={patient.alias} onClose={() => setShowClosePatientModal(false)} onConfirm={handleClosePatient} />}
+
+      {showPrestacionMenu && <ActionSheet title="Registrar Prestación" onClose={() => setShowPrestacionMenu(false)} options={[{
+      label: 'Kinesioterapia Motora',
+      description: 'Movilización, sedestación, ejercicios',
+      icon: DumbbellIcon,
+      onClick: () => navigate(`/patient/${patient.id}/prestacion/new?type=kinesioterapia-motora`)
+    }, {
+      label: 'Evaluación',
+      description: 'Evaluación clínica general',
+      icon: ClipboardCheckIcon,
+      onClick: () => navigate(`/patient/${patient.id}/prestacion/new?type=evaluacion`)
+    }, {
+      label: 'Evaluación MRC',
+      description: 'Fuerza muscular (DAUCI) — Glasgow, PEmax, deglución',
+      icon: BrainIcon,
+      onClick: () => navigate(`/patient/${patient.id}/mrc/new`)
+    }, {
+      label: 'Progresión',
+      description: 'Avance en el plan kinésico',
+      icon: TrendingUpIcon,
+      onClick: () => navigate(`/patient/${patient.id}/prestacion/new?type=progresion`)
+    }]} />}
     </div>;
 }

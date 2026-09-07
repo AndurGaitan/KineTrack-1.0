@@ -1,5 +1,5 @@
 import { useState, FormEvent } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useApp } from '../contexts/AppContext';
 import { Header } from '../components/ui/Header';
 import { Button } from '../components/ui/Button';
@@ -16,10 +16,14 @@ const typeOptions: { value: PrestacionType; label: string }[] = [
 export function PrestacionFormPage() {
   const { patientId } = useParams<{ patientId: string }>();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { patients } = useApp();
   const patient = patients.find((p) => p.id === patientId);
 
-  const [type, setType] = useState<PrestacionType | ''>('');
+  const prefilledType = searchParams.get('type');
+  const isValidType = (t: string | null): t is PrestacionType =>
+    t === 'kinesioterapia-motora' || t === 'evaluacion' || t === 'progresion';
+  const [type, setType] = useState<PrestacionType | ''>(isValidType(prefilledType) ? prefilledType : '');
   const [durationMinutes, setDurationMinutes] = useState('');
   const [notes, setNotes] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -55,7 +59,7 @@ export function PrestacionFormPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Header title="Registrar Prestación" showBack />
+      <Header title={type ? typeOptions.find((o) => o.value === type)?.label ?? 'Registrar Prestación' : 'Registrar Prestación'} showBack />
       <main className="max-w-2xl mx-auto p-4 space-y-6">
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
           <div className="text-sm text-gray-600 mb-1">Paciente</div>
