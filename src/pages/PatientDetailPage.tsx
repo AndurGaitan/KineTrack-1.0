@@ -98,6 +98,17 @@ export function PatientDetailPage() {
   }
   const supportType = patient.supportType;
   const isClosed = patient.status === 'closed';
+  // Same destinations as the big module card above — repeated here as the
+  // top item of the Prestación menu so it's still reachable from there,
+  // without making it the *only* way in (that card stays the 1-tap path,
+  // since it's by far the most frequent action for a ventilated patient).
+  const monitoringHubs: Partial<Record<SupportType, { label: string; path: string; icon: typeof ActivityIcon }>> = {
+    imv: { label: 'Monitorización VMI', path: 'vmi', icon: ActivityIcon },
+    niv: { label: 'Monitorización VNI', path: 'niv', icon: WindIcon },
+    hfnc: { label: 'Monitorización HFNC', path: 'hfnc', icon: DropletIcon },
+    traqueostomia: { label: 'Seguimiento de Traqueostomía', path: 'traqueostomia', icon: WindIcon },
+  };
+  const monitoringHub = monitoringHubs[supportType];
   const toggleEpisode = (episodeId: string) => {
     setExpandedEpisodes(prev => ({
       ...prev,
@@ -204,6 +215,8 @@ export function PatientDetailPage() {
           </Card>}
 
         {!isClosed && <>
+            <h2 className="text-lg font-bold text-gray-900 -mb-2">Prestaciones</h2>
+
             {/* Current Support Module */}
             {supportType === 'imv' && <Card className="bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-200">
                 <div className="flex items-start justify-between mb-4">
@@ -549,7 +562,12 @@ export function PatientDetailPage() {
 
       {showClosePatientModal && <ClosePatientModal patientAlias={patient.alias} onClose={() => setShowClosePatientModal(false)} onConfirm={handleClosePatient} />}
 
-      {showPrestacionMenu && <ActionSheet title="Registrar Prestación" onClose={() => setShowPrestacionMenu(false)} options={[{
+      {showPrestacionMenu && <ActionSheet title="Registrar Prestación" onClose={() => setShowPrestacionMenu(false)} options={[...(monitoringHub ? [{
+      label: monitoringHub.label,
+      description: 'Planilla de monitorización habitual',
+      icon: monitoringHub.icon,
+      onClick: () => navigate(`/patient/${patient.id}/${monitoringHub.path}`)
+    }] : []), {
       label: 'Kinesioterapia Motora',
       description: 'Movilización, sedestación, ejercicios',
       icon: DumbbellIcon,
