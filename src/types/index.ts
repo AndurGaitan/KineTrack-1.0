@@ -241,7 +241,10 @@ export interface AppState {
 // Coordinator module: team productivity, quality indicators, scheduling.
 // ---------------------------------------------------------------------------
 
-export type PrestacionType = 'kinesioterapia-motora' | 'evaluacion' | 'progresion';
+export type PrestacionType = 'kinesioterapia-respiratoria' | 'kinesioterapia-motora' | 'evaluacion' | 'progresion';
+// Dispositivo de entrega de O2 — solo aplica a prestaciones de kinesioterapia
+// respiratoria en pacientes con soporte 'conventional-oxygen'.
+export type OxygenDeviceType = 'canula-nasal-simple' | 'mascara-simple' | 'mascara-venturi' | 'mascara-no-reinhalacion';
 export interface Prestacion {
   id: string;
   patientId: string;
@@ -250,6 +253,8 @@ export interface Prestacion {
   timestamp: string;
   durationMinutes?: number;
   notes?: string;
+  oxygenDevice?: OxygenDeviceType;
+  oxygenLiters?: number;
 }
 
 export type MrcStatus = 'evaluable' | 'no-evaluable' | 'parcial' | 'desconocido';

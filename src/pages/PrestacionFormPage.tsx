@@ -5,12 +5,20 @@ import { Header } from '../components/ui/Header';
 import { Button } from '../components/ui/Button';
 import { Select, Input } from '../components/ui/Input';
 import * as prestacionesApi from '../api/prestacionesApi';
-import { PrestacionType } from '../types';
+import { OxygenDeviceType, PrestacionType } from '../types';
 
 const typeOptions: { value: PrestacionType; label: string }[] = [
+  { value: 'kinesioterapia-respiratoria', label: 'Kinesioterapia respiratoria' },
   { value: 'kinesioterapia-motora', label: 'Kinesioterapia motora' },
   { value: 'evaluacion', label: 'Evaluación' },
   { value: 'progresion', label: 'Progresión' },
+];
+
+const oxygenDeviceOptions: { value: OxygenDeviceType; label: string }[] = [
+  { value: 'canula-nasal-simple', label: 'Cánula nasal simple' },
+  { value: 'mascara-simple', label: 'Máscara simple' },
+  { value: 'mascara-venturi', label: 'Máscara Venturi' },
+  { value: 'mascara-no-reinhalacion', label: 'Máscara de no reinhalación' },
 ];
 
 export function PrestacionFormPage() {
@@ -22,12 +30,16 @@ export function PrestacionFormPage() {
 
   const prefilledType = searchParams.get('type');
   const isValidType = (t: string | null): t is PrestacionType =>
-    t === 'kinesioterapia-motora' || t === 'evaluacion' || t === 'progresion';
+    t === 'kinesioterapia-respiratoria' || t === 'kinesioterapia-motora' || t === 'evaluacion' || t === 'progresion';
   const [type, setType] = useState<PrestacionType | ''>(isValidType(prefilledType) ? prefilledType : '');
   const [durationMinutes, setDurationMinutes] = useState('');
   const [notes, setNotes] = useState('');
+  const [oxygenDevice, setOxygenDevice] = useState<OxygenDeviceType | ''>('');
+  const [oxygenLiters, setOxygenLiters] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const showOxygenFields = type === 'kinesioterapia-respiratoria' && patient?.supportType === 'conventional-oxygen';
 
   if (!patient) {
     return (
@@ -48,6 +60,8 @@ export function PrestacionFormPage() {
         type,
         durationMinutes: durationMinutes ? Number(durationMinutes) : undefined,
         notes: notes || undefined,
+        oxygenDevice: showOxygenFields && oxygenDevice ? oxygenDevice : undefined,
+        oxygenLiters: showOxygenFields && oxygenLiters ? Number(oxygenLiters) : undefined,
       });
       navigate(`/patient/${patient.id}`);
     } catch (err) {
@@ -74,6 +88,30 @@ export function PrestacionFormPage() {
             options={typeOptions}
             required
           />
+
+          {showOxygenFields && (
+            <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 space-y-4">
+              <p className="text-sm text-blue-900">
+                <strong>💡</strong> Paciente con O₂ convencional — registrá el dispositivo y el flujo actual.
+              </p>
+              <Select
+                label="Dispositivo de O₂ (opcional)"
+                value={oxygenDevice}
+                onChange={(e) => setOxygenDevice(e.target.value as OxygenDeviceType)}
+                options={oxygenDeviceOptions}
+              />
+              <Input
+                label="Flujo de O₂ en litros/min (opcional)"
+                type="number"
+                step="0.5"
+                min="0"
+                value={oxygenLiters}
+                onChange={(e) => setOxygenLiters(e.target.value)}
+                placeholder="Ej: 3"
+              />
+            </div>
+          )}
+
           <Input
             label="Duración (minutos, opcional)"
             type="number"

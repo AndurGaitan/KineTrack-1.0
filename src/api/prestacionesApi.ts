@@ -1,5 +1,5 @@
 import { apiFetch } from './client';
-import type { Prestacion, PrestacionType } from '../types';
+import type { OxygenDeviceType, Prestacion, PrestacionType } from '../types';
 
 export function createPrestacion(input: {
   patientId: string;
@@ -7,6 +7,8 @@ export function createPrestacion(input: {
   timestamp?: string;
   durationMinutes?: number;
   notes?: string;
+  oxygenDevice?: OxygenDeviceType;
+  oxygenLiters?: number;
 }) {
   return apiFetch<Prestacion>('/api/prestaciones', { method: 'POST', body: JSON.stringify(input) });
 }

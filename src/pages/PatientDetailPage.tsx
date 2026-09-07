@@ -8,7 +8,7 @@ import { Button } from '../components/ui/Button';
 import { ChangeSupportModal } from '../components/ChangeSupportModal';
 import { ClosePatientModal } from '../components/ClosePatientModal';
 import { ActionSheet } from '../components/ActionSheet';
-import { EditIcon, BedDoubleIcon, ActivityIcon, WindIcon, DropletIcon, ChevronDownIcon, ChevronUpIcon, RepeatIcon, XCircleIcon, ClipboardPlusIcon, DumbbellIcon, ClipboardCheckIcon, BrainIcon, TrendingUpIcon } from 'lucide-react';
+import { EditIcon, BedDoubleIcon, ActivityIcon, WindIcon, DropletIcon, ChevronDownIcon, ChevronUpIcon, RepeatIcon, XCircleIcon, ClipboardPlusIcon, DumbbellIcon, ClipboardCheckIcon, BrainIcon, TrendingUpIcon, StethoscopeIcon } from 'lucide-react';
 import { SupportType, ClosureReason, AirwayEventInput } from '../types';
 const supportTypeLabels = {
   imv: 'VMI',
@@ -568,6 +568,11 @@ export function PatientDetailPage() {
       icon: monitoringHub.icon,
       onClick: () => navigate(`/patient/${patient.id}/${monitoringHub.path}`)
     }] : []), {
+      label: 'Kinesioterapia Respiratoria',
+      description: supportType === 'conventional-oxygen' ? 'Higiene bronquial, ejercicios respiratorios — con dispositivo y flujo de O₂' : 'Higiene bronquial, ejercicios respiratorios',
+      icon: StethoscopeIcon,
+      onClick: () => navigate(`/patient/${patient.id}/prestacion/new?type=kinesioterapia-respiratoria`)
+    }, {
       label: 'Kinesioterapia Motora',
       description: 'Movilización, sedestación, ejercicios',
       icon: DumbbellIcon,
