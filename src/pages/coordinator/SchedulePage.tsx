@@ -121,12 +121,12 @@ export function SchedulePage() {
 
   return (
     <div className="min-h-screen bg-gray-50 pb-28">
-      <Header title="Cronograma de Personal" showBack />
+      <Header title="Cronograma de Personal" />
 
       <main className="max-w-4xl mx-auto p-4 space-y-6">
-        <div className="flex items-center justify-between flex-wrap gap-3">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div className="flex items-center gap-2">
-            <select value={month} onChange={(e) => setMonth(Number(e.target.value))} className="border-2 border-gray-200 rounded-lg px-2 py-2 text-sm">
+            <select value={month} onChange={(e) => setMonth(Number(e.target.value))} className="flex-1 sm:flex-none border-2 border-gray-200 rounded-lg px-2 py-2 text-sm">
               {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
                 <option key={m} value={m}>
                   {new Date(2000, m - 1, 1).toLocaleDateString('es-AR', { month: 'long' })}
@@ -143,10 +143,10 @@ export function SchedulePage() {
           </div>
           {isCoordinador && (
             <div className="flex gap-2">
-              <Button onClick={() => setShowTemplateForm((s) => !s)} variant="secondary">
+              <Button onClick={() => setShowTemplateForm((s) => !s)} variant="secondary" className="flex-1 sm:flex-none">
                 {showTemplateForm ? 'Cancelar' : '+ Plantilla de turno'}
               </Button>
-              <Button onClick={handleGenerateMonth}>Generar mes</Button>
+              <Button onClick={handleGenerateMonth} className="flex-1 sm:flex-none">Generar mes</Button>
             </div>
           )}
         </div>

@@ -103,27 +103,29 @@ export function CoordinatorDashboardPage() {
 
   return (
     <div className="min-h-screen bg-gray-50 pb-28">
-      <Header title="Panel de Coordinación" showBack />
+      <Header title="Panel de Coordinación" />
       <CoordinatorNav />
 
       <main className="max-w-4xl mx-auto p-4 space-y-6">
-        <div className="flex gap-2 flex-wrap">
-          {presetButtons.map((p) => (
-            <button
-              key={p.key}
-              onClick={() => {
-                setPreset(p.key);
-                setRange(rangeForPreset(p.key));
-              }}
-              className={`px-4 py-2 rounded-lg text-sm font-semibold transition-colors ${preset === p.key ? 'bg-blue-600 text-white' : 'bg-white border border-gray-200 text-gray-600'}`}
-            >
-              {p.label}
-            </button>
-          ))}
-          <div className="flex items-center gap-2 ml-auto text-sm">
-            <input type="date" value={range.from} onChange={(e) => setRange((r) => ({ ...r, from: e.target.value }))} className="border-2 border-gray-200 rounded-lg px-2 py-1" />
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+          <div className="flex gap-2 flex-wrap">
+            {presetButtons.map((p) => (
+              <button
+                key={p.key}
+                onClick={() => {
+                  setPreset(p.key);
+                  setRange(rangeForPreset(p.key));
+                }}
+                className={`px-4 py-2 rounded-lg text-sm font-semibold transition-colors ${preset === p.key ? 'bg-blue-600 text-white' : 'bg-white border border-gray-200 text-gray-600'}`}
+              >
+                {p.label}
+              </button>
+            ))}
+          </div>
+          <div className="flex items-center gap-2 text-sm sm:ml-auto">
+            <input type="date" value={range.from} onChange={(e) => setRange((r) => ({ ...r, from: e.target.value }))} className="flex-1 min-w-0 border-2 border-gray-200 rounded-lg px-2 py-1" />
             <span className="text-gray-400">a</span>
-            <input type="date" value={range.to} onChange={(e) => setRange((r) => ({ ...r, to: e.target.value }))} className="border-2 border-gray-200 rounded-lg px-2 py-1" />
+            <input type="date" value={range.to} onChange={(e) => setRange((r) => ({ ...r, to: e.target.value }))} className="flex-1 min-w-0 border-2 border-gray-200 rounded-lg px-2 py-1" />
           </div>
         </div>
 
