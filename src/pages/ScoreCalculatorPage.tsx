@@ -37,7 +37,7 @@ export function ScoreCalculatorPage() {
   return <div className="min-h-screen bg-gray-50">
       <Header title={title} showBack />
 
-      <main className="max-w-2xl mx-auto p-4">
+      <main className="max-w-2xl mx-auto p-4 pb-24">
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mb-4">
           <div className="text-sm text-gray-600 mb-1">Paciente</div>
           <div className="text-xl font-bold text-gray-900">{patient.alias}</div>

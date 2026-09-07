@@ -2,7 +2,6 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../contexts/AppContext';
 import { Header } from '../components/ui/Header';
-import { BottomNav } from '../components/BottomNav';
 import { SectorCard } from '../components/SectorCard';
 import { Button } from '../components/ui/Button';
 import { ArchiveIcon, UserCircleIcon } from 'lucide-react';
@@ -39,7 +38,5 @@ export function DashboardPage() {
             </Button>
           </div>}
       </main>
-
-      <BottomNav />
     </div>;
 }

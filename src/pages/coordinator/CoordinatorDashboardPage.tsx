@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from 'react';
 import { Header } from '../../components/ui/Header';
 import { Card } from '../../components/ui/Card';
 import { CoordinatorNav } from '../../components/CoordinatorNav';
-import { BottomNav } from '../../components/BottomNav';
 import * as dashboardApi from '../../api/dashboardApi';
 import { DashboardSummary } from '../../types';
 
@@ -239,7 +238,6 @@ export function CoordinatorDashboardPage() {
           </>
         )}
       </main>
-      <BottomNav />
     </div>
   );
 }

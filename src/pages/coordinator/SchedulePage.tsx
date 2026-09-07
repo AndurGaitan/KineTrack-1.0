@@ -3,7 +3,6 @@ import { Header } from '../../components/ui/Header';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
-import { BottomNav } from '../../components/BottomNav';
 import { useApp } from '../../contexts/AppContext';
 import * as scheduleApi from '../../api/scheduleApi';
 import * as authApi from '../../api/authApi';
@@ -305,7 +304,6 @@ export function SchedulePage() {
           </Card>
         )}
       </main>
-      <BottomNav />
     </div>
   );
 }

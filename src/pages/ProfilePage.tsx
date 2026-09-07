@@ -43,7 +43,7 @@ export function ProfilePage() {
     <div className="min-h-screen bg-gray-50">
       <Header title="Mi Perfil" showBack />
 
-      <main className="max-w-2xl mx-auto p-4 space-y-6">
+      <main className="max-w-2xl mx-auto p-4 pb-24 space-y-6">
         <Card>
           <div className="flex items-center gap-2 mb-4">
             <Badge className={user.role === 'coordinador' ? 'bg-purple-100 text-purple-700' : 'bg-gray-100 text-gray-700'}>

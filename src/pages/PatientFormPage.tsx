@@ -33,7 +33,7 @@ export function PatientFormPage() {
   return <div className="min-h-screen bg-gray-50">
       <Header title={isEdit ? 'Editar Paciente' : 'Nuevo Paciente'} showBack />
 
-      <main className="max-w-2xl mx-auto p-4">
+      <main className="max-w-2xl mx-auto p-4 pb-24">
         <PatientForm sectors={sectors} initialData={patient} prefilledSectorId={prefilledSectorId} prefilledBedId={prefilledBedId} onSubmit={handleSubmit} onCancel={() => navigate(-1)} />
       </main>
     </div>;

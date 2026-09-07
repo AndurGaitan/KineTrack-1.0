@@ -43,7 +43,7 @@ export function HFNCRecordDetailPage() {
   return <div className="min-h-screen bg-gray-50">
       <Header title="Detalle de Monitorización HFNC" showBack showPatientList sectorId={sector?.id} />
 
-      <main className="max-w-2xl mx-auto p-4 space-y-6">
+      <main className="max-w-2xl mx-auto p-4 pb-24 space-y-6">
         <Card>
           <div className="flex items-start justify-between mb-4">
             <div>

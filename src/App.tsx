@@ -1,6 +1,7 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AppProvider, useApp } from './contexts/AppContext';
+import { BottomNav } from './components/BottomNav';
 import { LoginPage } from './pages/LoginPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { SectorDetailPage } from './pages/SectorDetailPage';
@@ -45,13 +46,23 @@ function ProtectedRoute({
   }
   if (!user) return <Navigate to="/" replace />;
   if (requireCoordinador && user.role !== 'coordinador') {
-    return <div className="min-h-screen flex items-center justify-center p-4">
-        <p className="text-gray-600 text-center">
-          Esta sección es solo para coordinadores de servicio.
-        </p>
-      </div>;
+    return <>
+        <div className="min-h-screen flex items-center justify-center p-4">
+          <p className="text-gray-600 text-center">
+            Esta sección es solo para coordinadores de servicio.
+          </p>
+        </div>
+        <BottomNav />
+      </>;
   }
-  return <>{children}</>;
+  // Every protected screen gets the tab bar — not just the 3 root
+  // destinations — so navigating back to Pacientes/Cronograma/Dashboard
+  // never requires unwinding a deep "evolucionar paciente" stack
+  // (PatientDetail → Hub → Entry, etc.) one "Volver" at a time.
+  return <>
+      {children}
+      <BottomNav />
+    </>;
 }
 function AppRoutes() {
   return <Routes>

@@ -37,7 +37,7 @@ export function ClosedPatientsPage() {
   return <div className="min-h-screen bg-gray-50">
       <Header title="Pacientes Cerrados" showBack />
 
-      <main className="max-w-2xl mx-auto p-4 space-y-4">
+      <main className="max-w-2xl mx-auto p-4 pb-24 space-y-4">
         {closedPatients.length === 0 ? <Card className="text-center py-12">
             <XCircleIcon className="w-12 h-12 text-gray-400 mx-auto mb-4" />
             <p className="text-gray-500 text-lg">No hay pacientes cerrados</p>
