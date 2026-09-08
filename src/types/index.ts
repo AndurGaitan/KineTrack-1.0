@@ -53,6 +53,10 @@ export interface Patient {
   supportType: SupportType;
   createdAt: string;
   predictedBodyWeight?: number;
+  // Contexto clínico básico — todo opcional, editable desde PatientForm.
+  age?: number;
+  admissionDiagnosis?: string;
+  antecedentes: string[];
   status: PatientStatus;
   closure?: PatientClosure;
   episodes: SupportEpisode[];

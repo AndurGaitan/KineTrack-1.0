@@ -22,9 +22,22 @@ export function PatientForm({
     alias: initialData?.alias || '',
     sectorId: initialData?.sectorId || prefilledSectorId || '',
     bedId: initialData?.bedId || prefilledBedId || '',
-    supportType: initialData?.supportType || ''
+    supportType: initialData?.supportType || '',
+    age: initialData?.age?.toString() || '',
+    admissionDiagnosis: initialData?.admissionDiagnosis || '',
+    antecedentes: initialData?.antecedentes || [] as string[]
   });
+  const [newAntecedente, setNewAntecedente] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const addAntecedente = () => {
+    const trimmed = newAntecedente.trim();
+    if (!trimmed) return;
+    setFormData(f => ({ ...f, antecedentes: [...f.antecedentes, trimmed] }));
+    setNewAntecedente('');
+  };
+  const removeAntecedente = (index: number) => {
+    setFormData(f => ({ ...f, antecedentes: f.antecedentes.filter((_, i) => i !== index) }));
+  };
   const selectedSector = sectors.find(s => s.id === formData.sectorId);
   const bedOptions = (selectedSector?.beds ?? [])
     .filter(b => b.active || b.id === initialData?.bedId)
@@ -48,7 +61,10 @@ export function PatientForm({
       alias: formData.alias,
       sectorId: formData.sectorId,
       bedId: formData.bedId,
-      supportType: formData.supportType as SupportType
+      supportType: formData.supportType as SupportType,
+      age: formData.age ? Number(formData.age) : undefined,
+      admissionDiagnosis: formData.admissionDiagnosis.trim() || undefined,
+      antecedentes: formData.antecedentes
     });
   };
   return <form onSubmit={handleSubmit} className="space-y-6">
@@ -93,6 +109,43 @@ export function PatientForm({
       value: 'room-air',
       label: 'Aire Ambiente'
     }]} error={errors.supportType} />
+
+      <div className="pt-2 space-y-6">
+        <h2 className="text-lg font-bold text-gray-900 -mb-2">Contexto Clínico (opcional)</h2>
+
+        <Input label="Edad" type="number" min="0" max="120" value={formData.age} onChange={e => setFormData({
+        ...formData,
+        age: e.target.value
+      })} placeholder="Ej: 68" />
+
+        <Input label="Diagnóstico de ingreso" value={formData.admissionDiagnosis} onChange={e => setFormData({
+        ...formData,
+        admissionDiagnosis: e.target.value
+      })} placeholder="Ej: Neumonía grave, EPOC reagudizado" />
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Antecedentes</label>
+          {formData.antecedentes.length > 0 && <div className="flex flex-wrap gap-2 mb-3">
+              {formData.antecedentes.map((item, i) => <span key={i} className="inline-flex items-center gap-1.5 pl-3 pr-2 py-1.5 rounded-full bg-gray-100 text-gray-700 text-sm font-medium">
+                  {item}
+                  <button type="button" onClick={() => removeAntecedente(i)} aria-label={`Quitar ${item}`} className="text-gray-400 hover:text-gray-700">
+                    ✕
+                  </button>
+                </span>)}
+            </div>}
+          <div className="flex gap-2">
+            <input type="text" value={newAntecedente} onChange={e => setNewAntecedente(e.target.value)} onKeyDown={e => {
+            if (e.key === 'Enter') {
+              e.preventDefault();
+              addAntecedente();
+            }
+          }} placeholder="Ej: HTA, EPOC, DBT tipo 2..." className="flex-1 min-h-[56px] px-4 text-lg border-2 border-gray-300 rounded-xl focus:border-blue-600 focus:outline-none" />
+            <Button type="button" variant="secondary" onClick={addAntecedente}>
+              + Agregar
+            </Button>
+          </div>
+        </div>
+      </div>
 
       <div className="flex gap-3 pt-4">
         <Button type="button" variant="secondary" onClick={onCancel} fullWidth>

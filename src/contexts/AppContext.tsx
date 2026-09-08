@@ -196,6 +196,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
         bedId: patientData.bedId,
         supportType: patientData.supportType,
         predictedBodyWeight: patientData.predictedBodyWeight,
+        age: patientData.age,
+        admissionDiagnosis: patientData.admissionDiagnosis,
+        antecedentes: patientData.antecedentes,
       });
       setState((prev) => ({ ...prev, patients: [...prev.patients, patient] }));
     } catch (error) {
@@ -210,6 +213,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
         sectorId: updates.sectorId,
         bedId: updates.bedId,
         predictedBodyWeight: updates.predictedBodyWeight,
+        age: updates.age,
+        admissionDiagnosis: updates.admissionDiagnosis,
+        antecedentes: updates.antecedentes,
       });
       setState((prev) => ({ ...prev, patients: prev.patients.map((p) => (p.id === id ? patient : p)) }));
     } catch (error) {

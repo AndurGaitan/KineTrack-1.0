@@ -7,6 +7,9 @@ export type CreatePatientInput = {
   bedId: string;
   supportType: SupportType;
   predictedBodyWeight?: number;
+  age?: number;
+  admissionDiagnosis?: string;
+  antecedentes?: string[];
 };
 
 export type UpdatePatientInput = Partial<{
@@ -14,6 +17,9 @@ export type UpdatePatientInput = Partial<{
   sectorId: string;
   bedId: string;
   predictedBodyWeight: number | null;
+  age: number | null;
+  admissionDiagnosis: string | null;
+  antecedentes: string[];
 }>;
 
 export type ClosePatientInput = {
