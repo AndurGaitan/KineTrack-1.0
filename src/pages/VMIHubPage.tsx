@@ -16,7 +16,8 @@ export function VMIHubPage() {
   const {
     patients,
     getPatientVMIRecords,
-    sectors
+    sectors,
+    user
   } = useApp();
   const patient = patients.find(p => p.id === patientId);
   const sector = patient ? sectors.find(s => s.id === patient.sectorId) : null;
@@ -74,6 +75,13 @@ export function VMIHubPage() {
         <Button onClick={() => navigate(`/patient/${patient.id}/vmi/new`)} fullWidth className="min-h-[64px] text-xl">
           + Nueva Monitorización
         </Button>
+
+        {user?.role === 'coordinador' && (
+          <Button variant="secondary" onClick={() => navigate(`/patient/${patient.id}/vmi/trends`)} fullWidth className="flex items-center justify-center gap-2">
+            <TrendingUpIcon className="w-5 h-5" />
+            Ver Tendencias
+          </Button>
+        )}
 
         <div>
           <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">

@@ -7,6 +7,7 @@ const tabs = [
   { path: '/coordinator/sectors', label: 'Sectores' },
   { path: '/coordinator/protocols', label: 'Protocolos' },
   { path: '/coordinator/users', label: 'Usuarios' },
+  { path: '/coordinator/vmi', label: 'VMI' },
 ];
 
 export function CoordinatorNav() {

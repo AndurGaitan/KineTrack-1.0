@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { Suspense, lazy } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AppProvider, useApp } from './contexts/AppContext';
 import { BottomNav } from './components/BottomNav';
@@ -29,6 +29,12 @@ import { SectorsAdminPage } from './pages/coordinator/SectorsAdminPage';
 import { ProtocolsAdminPage } from './pages/coordinator/ProtocolsAdminPage';
 import { UsersAdminPage } from './pages/coordinator/UsersAdminPage';
 import { SchedulePage } from './pages/coordinator/SchedulePage';
+import { VMIPatientsListPage } from './pages/coordinator/VMIPatientsListPage';
+
+// Recharts (and the Recharts-only VMITrendsPage) is code-split out of the
+// main bundle — it roughly doubles the app's gzip size and only
+// coordinadores viewing VMI trends ever need it.
+const VMITrendsPage = lazy(() => import('./pages/coordinator/VMITrendsPage').then((m) => ({ default: m.VMITrendsPage })));
 
 function ProtectedRoute({
   children,
@@ -96,6 +102,11 @@ function AppRoutes() {
       <Route path="/patient/:patientId/vmi/new" element={<ProtectedRoute>
             <VMIEntryPage />
           </ProtectedRoute>} />
+      <Route path="/patient/:patientId/vmi/trends" element={<ProtectedRoute requireCoordinador>
+            <Suspense fallback={<div className="min-h-screen flex items-center justify-center text-gray-500">Cargando...</div>}>
+              <VMITrendsPage />
+            </Suspense>
+          </ProtectedRoute>} />
       <Route path="/patient/:patientId/vmi/:recordId" element={<ProtectedRoute>
             <VMIRecordDetailPage />
           </ProtectedRoute>} />
@@ -161,6 +172,9 @@ function AppRoutes() {
           </ProtectedRoute>} />
       <Route path="/coordinator/users" element={<ProtectedRoute requireCoordinador>
             <UsersAdminPage />
+          </ProtectedRoute>} />
+      <Route path="/coordinator/vmi" element={<ProtectedRoute requireCoordinador>
+            <VMIPatientsListPage />
           </ProtectedRoute>} />
     </Routes>;
 }
