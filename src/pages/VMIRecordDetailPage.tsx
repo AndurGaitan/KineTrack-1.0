@@ -23,6 +23,11 @@ const asynchronyTypes = [{
   value: 'auto-peep',
   label: 'Auto-PEEP'
 }];
+const sbtTypeLabels: Record<string, string> = {
+  psv: 'Presión de Soporte (PSV)',
+  cpap: 'CPAP',
+  't-piece': 'Tubo en T'
+};
 export function VMIRecordDetailPage() {
   const {
     patientId,
@@ -109,6 +114,30 @@ export function VMIRecordDetailPage() {
                 {controlVariableLabel}
               </div>
             </div>
+            {record.ventMode === 'VC' && <div>
+                <div className="text-sm text-gray-600 mb-1">VT</div>
+                <div className="text-xl font-bold text-gray-900">
+                  {record.tidalVolumeSet} ml
+                </div>
+              </div>}
+            {record.ventMode === 'PC' && record.controlPressure != null && <div>
+                <div className="text-sm text-gray-600 mb-1">PC</div>
+                <div className="text-xl font-bold text-gray-900">
+                  {record.controlPressure} cmH₂O
+                </div>
+              </div>}
+            {record.ventMode === 'PSV' && record.supportPressure != null && <div>
+                <div className="text-sm text-gray-600 mb-1">PS</div>
+                <div className="text-xl font-bold text-gray-900">
+                  {record.supportPressure} cmH₂O
+                </div>
+              </div>}
+            {record.inspiratoryTime != null && <div>
+                <div className="text-sm text-gray-600 mb-1">Ti</div>
+                <div className="text-xl font-bold text-gray-900">
+                  {record.inspiratoryTime} seg
+                </div>
+              </div>}
           </div>
         </Card>
 
@@ -145,10 +174,10 @@ export function VMIRecordDetailPage() {
             </div>
           </Card>}
 
-        {/* Lung Protection */}
+        {/* Advanced Monitoring (lung protection + mechanics) */}
         <Card>
           <h3 className="text-lg font-bold text-gray-900 mb-4">
-            Protección Pulmonar
+            Monitorización Avanzada
           </h3>
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
@@ -350,7 +379,7 @@ export function VMIRecordDetailPage() {
                     SBT Realizada
                   </div>
                   <div className="text-lg font-medium text-gray-900">
-                    {record.sbtType}
+                    {record.sbtType ? sbtTypeLabels[record.sbtType] ?? record.sbtType : '-'}
                   </div>
                 </div>
                 {record.sbtResult && <div>

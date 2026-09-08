@@ -76,6 +76,27 @@ export const vmiEducation = {
     target: '> 300: normal. 200-300: SDRA leve. 100-200: moderado. < 100: severo',
     example: 'PaO₂ 80 mmHg con FiO₂ 60% → P/F 133 (SDRA moderado)'
   },
+  controlPressure: {
+    title: 'Presión Control (PC)',
+    definition: 'Presión inspiratoria programada por sobre la PEEP en modo PCV.',
+    importance: 'Es la variable que el ventilador garantiza en PCV; el volumen resultante depende de la compliance y resistencia del sistema respiratorio.',
+    target: 'Ajustar para lograr Vt objetivo (6-8 ml/kg PBW) sin exceder Pplat 30 cmH₂O',
+    example: 'PC 15 cmH₂O + PEEP 8 → Presión pico ≈ 23 cmH₂O'
+  },
+  supportPressure: {
+    title: 'Presión de Soporte (PS)',
+    definition: 'Presión inspiratoria programada por sobre la PEEP en modo PSV, aplicada solo ante el esfuerzo inspiratorio del paciente.',
+    importance: 'Determina el trabajo respiratorio asistido; muy alta puede sobreasistir, muy baja puede fatigar al paciente.',
+    target: 'Titular según Vt resultante, FR y confort del paciente (habitual 5-20 cmH₂O)',
+    example: 'PS 10 cmH₂O + PEEP 5 → asistencia total 15 cmH₂O durante el esfuerzo'
+  },
+  inspiratoryTime: {
+    title: 'Tiempo Inspiratorio (Ti)',
+    definition: 'Duración de la fase inspiratoria de cada ciclo ventilatorio.',
+    importance: 'Determina la relación I:E; afecta el tiempo de llenado alveolar y el atrapamiento aéreo.',
+    target: 'Habitual 0.8-1.2 seg (adulto), ajustar según mecánica pulmonar',
+    example: 'Ti 1 seg con FR 15 → relación I:E ≈ 1:3'
+  },
   fio2: {
     title: 'FiO₂ (Fracción Inspirada de Oxígeno)',
     definition: 'Porcentaje de oxígeno en el gas inspirado.',
@@ -142,34 +163,21 @@ export const vmiEducation = {
       ]
     }
 };
+// Modos habilitados en esta versión: VCV, PCV, PSV. Se reusan los códigos
+// internos históricos ('VC'/'PC'/'PSV') para no romper registros viejos ni
+// el mapeo de controlVariable ya usado por vmiCalculations.
 export const ventModes = [{
   value: 'VC',
-  label: 'VC (Volume Control)',
+  label: 'VCV (Ventilación Controlada por Volumen)',
   control: 'volume' as const
 }, {
   value: 'PC',
-  label: 'PC (Pressure Control)',
+  label: 'PCV (Ventilación Controlada por Presión)',
   control: 'pressure' as const
-}, {
-  value: 'PRVC',
-  label: 'PRVC (Pressure Regulated Volume Control)',
-  control: 'dual' as const
 }, {
   value: 'PSV',
-  label: 'PSV (Pressure Support Ventilation)',
+  label: 'PSV (Ventilación con Presión de Soporte)',
   control: 'pressure' as const
-}, {
-  value: 'SIMV-VC',
-  label: 'SIMV-VC',
-  control: 'volume' as const
-}, {
-  value: 'SIMV-PC',
-  label: 'SIMV-PC',
-  control: 'pressure' as const
-}, {
-  value: 'Other',
-  label: 'Otro modo',
-  control: 'volume' as const
 }];
 export const weaningStatuses = [{
   value: 'not-candidate',

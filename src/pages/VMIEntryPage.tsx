@@ -33,6 +33,12 @@ const asynchronyTypes = [
   { value: 'auto-peep', label: 'Auto-PEEP', description: 'Hiperinsuflación dinámica' }
 ];
 
+const sbtTypeOptions = [
+  { value: 'psv', label: 'Presión de Soporte (PSV)' },
+  { value: 'cpap', label: 'CPAP' },
+  { value: 't-piece', label: 'Tubo en T' }
+];
+
 // Helpers: keep numbers truly empty (avoid Number('') => 0)
 const toNumberOrUndefined = (v: string): number | undefined => {
   const t = v.trim();
@@ -66,6 +72,9 @@ export function VMIEntryPage() {
     // Vent params (no defaults)
     tidalVolumeSet: undefined as number | undefined,
     tidalVolumeExpired: undefined as number | undefined,
+    controlPressure: undefined as number | undefined,
+    supportPressure: undefined as number | undefined,
+    inspiratoryTime: undefined as number | undefined,
     plateauPressure: undefined as number | undefined,
     peakPressure: undefined as number | undefined,
     peep: undefined as number | undefined,
@@ -87,7 +96,7 @@ export function VMIEntryPage() {
     // D) Weaning
     weaningStatus: 'not-candidate' as WeaningStatus,
     sbtPerformed: false,
-    sbtType: '',
+    sbtType: '' as '' | 'psv' | 'cpap' | 't-piece',
     sbtResult: '' as '' | 'success' | 'failure',
     sbtFailureReason: '',
 
@@ -206,12 +215,12 @@ export function VMIEntryPage() {
 
       // PBW is OPTIONAL (stored if available)
       predictedBodyWeight: pbwOk ? formData.predictedBodyWeight : undefined,
-      // Si tu type/DB lo soporta, podés guardar antropometría:
-      // sex: formData.sex ? (formData.sex as Sex) : undefined,
-      // heightCm: formData.heightCm ?? undefined,
 
       tidalVolumeSet: formData.tidalVolumeSet ?? undefined,
       tidalVolumeExpired: formData.tidalVolumeExpired ?? undefined,
+      controlPressure: formData.controlPressure ?? undefined,
+      supportPressure: formData.supportPressure ?? undefined,
+      inspiratoryTime: formData.inspiratoryTime ?? undefined,
       plateauPressure: formData.plateauPressure ?? undefined,
       peakPressure: formData.peakPressure ?? undefined,
       peep: formData.peep!,
@@ -290,7 +299,7 @@ export function VMIEntryPage() {
 
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* STEP 1: Ventilator Mode (FIRST) */}
-          <CollapsibleSection title="1) Modo Ventilatorio" subtitle="Seleccionar modo y variable de control">
+          <CollapsibleSection title="1) Modo Ventilatorio" subtitle="VCV, PCV o PSV">
             <div className="space-y-4">
               <VMISelect
                 label="Modo Ventilatorio"
@@ -301,49 +310,72 @@ export function VMIEntryPage() {
                 required
               />
 
-              {formData.ventMode === 'Other' && (
-                <VMIField
-                  label="Especificar modo"
-                  placeholder="Ej: VCV, PCV"
-                  value={formData.ventModeOther}
-                  onChange={e => setFormData({ ...formData, ventModeOther: e.target.value })}
-                />
-              )}
-
               {formData.ventMode && (
                 <div className="p-4 bg-blue-50 rounded-xl">
                   <div className="text-sm text-gray-700 mb-2">
                     <strong>Variable de control:</strong>{' '}
-                    {formData.controlVariable === 'volume'
-                      ? 'Volumen'
-                      : formData.controlVariable === 'pressure'
-                        ? 'Presión'
-                        : 'Dual'}
+                    {formData.controlVariable === 'volume' ? 'Volumen' : 'Presión'}
                   </div>
                   <p className="text-xs text-gray-600">
-                    {formData.controlVariable === 'volume' && 'El ventilador garantiza el volumen programado'}
-                    {formData.controlVariable === 'pressure' && 'El ventilador garantiza la presión programada'}
-                    {formData.controlVariable === 'dual' && 'Combina control de volumen y presión'}
+                    {formData.controlVariable === 'volume' && 'El ventilador garantiza el volumen programado (VT)'}
+                    {formData.controlVariable === 'pressure' &&
+                      formData.ventMode === 'PC' &&
+                      'El ventilador garantiza la presión control programada'}
+                    {formData.controlVariable === 'pressure' &&
+                      formData.ventMode === 'PSV' &&
+                      'El ventilador asiste con la presión de soporte programada ante cada esfuerzo del paciente'}
                   </p>
                 </div>
               )}
             </div>
           </CollapsibleSection>
 
-          {/* STEP 2: Parameters */}
+          {/* STEP 2: Mode-specific parameter + common parameters */}
           {formData.ventMode && (
-            <CollapsibleSection title="2) Parámetros" subtitle="Parámetros fundamentales de ventilación">
+            <CollapsibleSection title="2) Parámetros" subtitle="Parámetro propio del modo + parámetros comunes">
               <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
+                {formData.ventMode === 'VC' && (
                   <VMIField
-                    label="Vt Programado"
+                    label="VT (Volumen Tidal Programado)"
                     unit="ml"
                     type="number"
                     value={formData.tidalVolumeSet ?? ''}
                     onChange={e => setFormData({ ...formData, tidalVolumeSet: toNumberOrUndefined(e.target.value) })}
                   />
+                )}
+                {formData.ventMode === 'PC' && (
                   <VMIField
-                    label="Frecuencia Resp."
+                    label="PC (Presión Control)"
+                    educationKey="controlPressure"
+                    unit="cmH₂O"
+                    type="number"
+                    value={formData.controlPressure ?? ''}
+                    onChange={e => setFormData({ ...formData, controlPressure: toNumberOrUndefined(e.target.value) })}
+                  />
+                )}
+                {formData.ventMode === 'PSV' && (
+                  <VMIField
+                    label="PS (Presión de Soporte)"
+                    educationKey="supportPressure"
+                    unit="cmH₂O"
+                    type="number"
+                    value={formData.supportPressure ?? ''}
+                    onChange={e => setFormData({ ...formData, supportPressure: toNumberOrUndefined(e.target.value) })}
+                  />
+                )}
+
+                <div className="grid grid-cols-2 gap-4">
+                  <VMIField
+                    label="Ti (Tiempo Inspiratorio)"
+                    educationKey="inspiratoryTime"
+                    unit="seg"
+                    type="number"
+                    step="0.1"
+                    value={formData.inspiratoryTime ?? ''}
+                    onChange={e => setFormData({ ...formData, inspiratoryTime: toNumberOrUndefined(e.target.value) })}
+                  />
+                  <VMIField
+                    label="FR (Frecuencia Resp.)"
                     unit="rpm"
                     type="number"
                     value={formData.respiratoryRate ?? ''}
@@ -361,45 +393,33 @@ export function VMIEntryPage() {
                     onChange={e => setFormData({ ...formData, peep: toNumberOrUndefined(e.target.value) })}
                     required
                   />
+                  {/* FiO₂ bug fix: only clamp on blur, not on every keystroke — clamping
+                      live corrupted typing (e.g. typing "5" of "55" snapped to 21). */}
                   <VMIField
                     label="FiO₂"
                     educationKey="fio2"
                     unit="%"
                     type="number"
                     value={formData.fio2 ?? ''}
-                    onChange={e => {
+                    onChange={e => setFormData({ ...formData, fio2: toNumberOrUndefined(e.target.value) })}
+                    onBlur={e => {
                       const n = toNumberOrUndefined(e.target.value);
-                      setFormData({ ...formData, fio2: n == null ? undefined : clamp(n, 21, 100) });
+                      if (n != null) setFormData(prev => ({ ...prev, fio2: clamp(n, 21, 100) }));
                     }}
                     required
                   />
                 </div>
-
-                {formData.controlVariable === 'volume' && (
-                  <VMIField
-                    label="Presión Pico (Ppeak)"
-                    educationKey="peakPressure"
-                    unit="cmH₂O"
-                    type="number"
-                    value={formData.peakPressure ?? ''}
-                    onChange={e => setFormData({ ...formData, peakPressure: toNumberOrUndefined(e.target.value) })}
-                  />
-                )}
               </div>
             </CollapsibleSection>
           )}
 
-          {/* STEP 2: Lung Protection Parameters */}
+          {/* STEP 3: Predicted Body Weight (PCI/PBW) */}
           {formData.ventMode && (
-            <CollapsibleSection
-              title="2) Protección Pulmonar"
-              subtitle="Parámetros fundamentales de ventilación protectiva (opcional)"
-            >
+            <CollapsibleSection title="3) Peso Corporal Ideal (PCI)" subtitle="Sexo y talla para calcular el PBW automático">
               <div className="space-y-4">
-                {/* AUTO PBW: sex + height (OPTIONAL) */}
                 <div className="grid grid-cols-2 gap-4">
                   <VMISelect
-                    label="Sexo (opcional)"
+                    label="Sexo"
                     options={[
                       { value: 'male', label: 'Masculino' },
                       { value: 'female', label: 'Femenino' }
@@ -408,39 +428,40 @@ export function VMIEntryPage() {
                     onChange={e => setFormData({ ...formData, sex: e.target.value as Sex })}
                   />
 
+                  {/* Talla bug fix: same clamp-on-blur pattern as FiO₂. */}
                   <VMIField
-                    label="Talla (opcional)"
+                    label="Talla"
                     unit="cm"
                     type="number"
                     value={formData.heightCm ?? ''}
-                    onChange={e => {
+                    onChange={e => setFormData({ ...formData, heightCm: toNumberOrUndefined(e.target.value) })}
+                    onBlur={e => {
                       const n = toNumberOrUndefined(e.target.value);
-                      setFormData({ ...formData, heightCm: n == null ? undefined : clamp(n, 120, 220) });
+                      if (n != null) setFormData(prev => ({ ...prev, heightCm: clamp(n, 120, 220) }));
                     }}
                   />
                 </div>
 
-                {/* PBW display (readonly) - uses pbwOk, not canSave */}
                 <div className={`p-4 rounded-xl ${pbwOk ? 'bg-blue-50' : 'bg-gray-50'}`}>
-                  <div className="text-sm text-gray-600 mb-1">PBW (Peso Predicho) calculado</div>
+                  <div className="text-sm text-gray-600 mb-1">PCI / PBW (Peso Predicho) calculado</div>
                   <div className={`text-3xl font-bold ${pbwOk ? 'text-blue-900' : 'text-gray-400'}`}>
                     {pbwOk ? `${formData.predictedBodyWeight} kg` : '—'}
                   </div>
                   {!pbwOk && (
                     <div className="text-sm text-gray-600 mt-2">
-                      Completá <strong>sexo</strong> y <strong>talla</strong> si querés calcular Vt/kg (no bloquea el guardado).
+                      Completá <strong>sexo</strong> y <strong>talla</strong> para calcular el PCI (no bloquea el guardado).
                     </div>
                   )}
                 </div>
+              </div>
+            </CollapsibleSection>
+          )}
 
+          {/* STEP 4: Advanced Monitoring (Pplat, Ppeak, Vt Espirado/Vt-kg, ΔP, Compliance, Mechanical Power) */}
+          {formData.ventMode && (
+            <CollapsibleSection title="4) Monitorización Avanzada" subtitle="Protección pulmonar y Mechanical Power">
+              <div className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
-                  <VMIField
-                    label="Vt Programado"
-                    unit="ml"
-                    type="number"
-                    value={formData.tidalVolumeSet ?? ''}
-                    onChange={e => setFormData({ ...formData, tidalVolumeSet: toNumberOrUndefined(e.target.value) })}
-                  />
                   <VMIField
                     label="Vt Espirado"
                     educationKey="vtPerKg_ardsnet2000"
@@ -448,6 +469,14 @@ export function VMIEntryPage() {
                     type="number"
                     value={formData.tidalVolumeExpired ?? ''}
                     onChange={e => setFormData({ ...formData, tidalVolumeExpired: toNumberOrUndefined(e.target.value) })}
+                  />
+                  <VMIField
+                    label="Presión Plateau"
+                    educationKey="plateauPressure"
+                    unit="cmH₂O"
+                    type="number"
+                    value={formData.plateauPressure ?? ''}
+                    onChange={e => setFormData({ ...formData, plateauPressure: toNumberOrUndefined(e.target.value) })}
                   />
                 </div>
 
@@ -460,24 +489,14 @@ export function VMIEntryPage() {
                   </div>
                 )}
 
-                <div className="grid grid-cols-2 gap-4">
-                  <VMIField
-                    label="Presión Plateau"
-                    educationKey="plateauPressure"
-                    unit="cmH₂O"
-                    type="number"
-                    value={formData.plateauPressure ?? ''}
-                    onChange={e => setFormData({ ...formData, plateauPressure: toNumberOrUndefined(e.target.value) })}
-                  />
-                  <VMIField
-                    label="PEEP"
-                    educationKey="peep"
-                    unit="cmH₂O"
-                    type="number"
-                    value={formData.peep ?? ''}
-                    onChange={e => setFormData({ ...formData, peep: toNumberOrUndefined(e.target.value) })}
-                  />
-                </div>
+                <VMIField
+                  label="Presión Pico (Ppeak)"
+                  educationKey="peakPressure"
+                  unit="cmH₂O"
+                  type="number"
+                  value={formData.peakPressure ?? ''}
+                  onChange={e => setFormData({ ...formData, peakPressure: toNumberOrUndefined(e.target.value) })}
+                />
 
                 {calculations.drivingPressure > 0 && (
                   <div className={`p-4 rounded-xl ${calculations.drivingPressure > 15 ? 'bg-red-50' : 'bg-green-50'}`}>
@@ -488,81 +507,68 @@ export function VMIEntryPage() {
                   </div>
                 )}
 
-                {formData.controlVariable === 'volume' && (
-                  <VMIField
-                    label="Presión Pico (Ppeak)"
-                    educationKey="peakPressure"
-                    unit="cmH₂O"
-                    type="number"
-                    value={formData.peakPressure ?? ''}
-                    onChange={e => setFormData({ ...formData, peakPressure: toNumberOrUndefined(e.target.value) })}
-                  />
-                )}
-
                 {calculations.compliance && (
                   <div className="p-4 rounded-xl bg-blue-50">
                     <div className="text-sm text-gray-600 mb-1">Compliance Estática</div>
                     <div className="text-2xl font-bold text-blue-900">{calculations.compliance} ml/cmH₂O</div>
                   </div>
                 )}
-              </div>
-            </CollapsibleSection>
-          )}
 
-          {/* Mechanical Power Section */}
-          {formData.ventMode && formData.controlVariable && (
-            <CollapsibleSection title="⚡ Mechanical Power" subtitle="Energía transferida al sistema respiratorio">
-              <div className="space-y-4">
-                <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
-                  <p className="text-sm text-amber-900">
-                    <strong>Mechanical Power</strong> estima la energía por minuto transferida al sistema respiratorio.
-                    Es un indicador integrador y no reemplaza el juicio clínico.
-                  </p>
-                  <EducationalTooltip content={vmiEducation.mechanicalPower_gattinoni2016} />
-                </div>
-
-                {mpResult.canCalculate ? (
-                  <>
-                    <div
-                      className={`p-6 rounded-xl text-center ${
-                        (mpResult.value ?? 0) > 17 ? 'bg-red-50' : (mpResult.value ?? 0) > 12 ? 'bg-yellow-50' : 'bg-green-50'
-                      }`}
-                    >
-                      <div className="flex items-center justify-center gap-2 mb-2">
-                        <ZapIcon
-                          className={`w-6 h-6 ${
-                            (mpResult.value ?? 0) > 17 ? 'text-red-600' : (mpResult.value ?? 0) > 12 ? 'text-yellow-600' : 'text-green-600'
-                          }`}
-                        />
-                        <div className="text-sm text-gray-600">Mechanical Power</div>
-                      </div>
-                      <div
-                        className={`text-5xl font-bold ${
-                          (mpResult.value ?? 0) > 17 ? 'text-red-600' : (mpResult.value ?? 0) > 12 ? 'text-yellow-600' : 'text-green-600'
-                        }`}
-                      >
-                        {mpResult.value}
-                      </div>
-                      <div className="text-lg font-medium mt-1">J/min</div>
-                      <div className="text-sm mt-3 font-medium">
-                        {(mpResult.value ?? 0) > 17 && 'Alto riesgo de VILI'}
-                        {(mpResult.value ?? 0) > 12 && (mpResult.value ?? 0) <= 17 && 'Zona gris - Monitoreo estrecho'}
-                        {(mpResult.value ?? 0) <= 12 && 'Rango seguro'}
-                      </div>
+                {/* Mechanical Power */}
+                {formData.controlVariable && (
+                  <div className="pt-2 space-y-4">
+                    <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
+                      <p className="text-sm text-amber-900">
+                        <strong>Mechanical Power</strong> estima la energía por minuto transferida al sistema respiratorio.
+                        Es un indicador integrador y no reemplaza el juicio clínico.
+                      </p>
+                      <EducationalTooltip content={vmiEducation.mechanicalPower_gattinoni2016} />
                     </div>
 
-                    {mpResult.isApproximation && (
-                      <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
-                        <p className="text-sm text-blue-900">
-                          ℹ️ <strong>Estimación:</strong> {mpResult.reason}
-                        </p>
+                    {mpResult.canCalculate ? (
+                      <>
+                        <div
+                          className={`p-6 rounded-xl text-center ${
+                            (mpResult.value ?? 0) > 17 ? 'bg-red-50' : (mpResult.value ?? 0) > 12 ? 'bg-yellow-50' : 'bg-green-50'
+                          }`}
+                        >
+                          <div className="flex items-center justify-center gap-2 mb-2">
+                            <ZapIcon
+                              className={`w-6 h-6 ${
+                                (mpResult.value ?? 0) > 17 ? 'text-red-600' : (mpResult.value ?? 0) > 12 ? 'text-yellow-600' : 'text-green-600'
+                              }`}
+                            />
+                            <div className="text-sm text-gray-600">Mechanical Power</div>
+                          </div>
+                          <div
+                            className={`text-5xl font-bold ${
+                              (mpResult.value ?? 0) > 17 ? 'text-red-600' : (mpResult.value ?? 0) > 12 ? 'text-yellow-600' : 'text-green-600'
+                            }`}
+                          >
+                            {mpResult.value}
+                          </div>
+                          <div className="text-lg font-medium mt-1">J/min</div>
+                          <div className="text-sm mt-3 font-medium">
+                            {(mpResult.value ?? 0) > 17 && 'Alto riesgo de VILI'}
+                            {(mpResult.value ?? 0) > 12 && (mpResult.value ?? 0) <= 17 && 'Zona gris - Monitoreo estrecho'}
+                            {(mpResult.value ?? 0) <= 12 && 'Rango seguro'}
+                          </div>
+                        </div>
+
+                        {mpResult.isApproximation && (
+                          <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+                            <p className="text-sm text-blue-900">
+                              ℹ️ <strong>Estimación:</strong> {mpResult.reason}
+                            </p>
+                          </div>
+                        )}
+                      </>
+                    ) : (
+                      <div className="bg-gray-50 border border-gray-300 rounded-xl p-6 text-center">
+                        <p className="text-gray-600 font-medium mb-2">MP no calculable</p>
+                        <p className="text-sm text-gray-500">{mpResult.reason}</p>
                       </div>
                     )}
-                  </>
-                ) : (
-                  <div className="bg-gray-50 border border-gray-300 rounded-xl p-6 text-center">
-                    <p className="text-gray-600 font-medium mb-2">MP no calculable</p>
-                    <p className="text-sm text-gray-500">{mpResult.reason}</p>
                   </div>
                 )}
               </div>
@@ -570,7 +576,7 @@ export function VMIEntryPage() {
           )}
 
           {/* B) Synchrony */}
-          <CollapsibleSection title="3) Sincronía Paciente-Ventilador" subtitle="Evaluación de asincronías">
+          <CollapsibleSection title="5) Sincronía Paciente-Ventilador" subtitle="Evaluación de asincronías">
             <div className="space-y-4">
               <div>
                 <label className="flex items-center gap-3 p-4 border-2 border-gray-300 rounded-xl cursor-pointer hover:bg-gray-50">
@@ -625,17 +631,20 @@ export function VMIEntryPage() {
           </CollapsibleSection>
 
           {/* C) Oxygenation & Acid-Base */}
-          <CollapsibleSection title="4) Oxigenación y Equilibrio Ácido-Base" subtitle="Gasometría y parámetros de intercambio">
+          <CollapsibleSection title="6) Oxigenación y Equilibrio Ácido-Base" subtitle="Gasometría y parámetros de intercambio">
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
+                {/* SpO₂ bug fix: same clamp-on-blur pattern (min=0 rarely triggered
+                    the bug in practice, kept consistent anyway). */}
                 <VMIField
                   label="SpO₂"
                   unit="%"
                   type="number"
                   value={formData.spo2 ?? ''}
-                  onChange={e => {
+                  onChange={e => setFormData({ ...formData, spo2: toNumberOrUndefined(e.target.value) })}
+                  onBlur={e => {
                     const n = toNumberOrUndefined(e.target.value);
-                    setFormData({ ...formData, spo2: n == null ? undefined : clamp(n, 0, 100) });
+                    if (n != null) setFormData(prev => ({ ...prev, spo2: clamp(n, 0, 100) }));
                   }}
                 />
                 <VMIField
@@ -671,14 +680,16 @@ export function VMIEntryPage() {
                   value={formData.paco2 ?? ''}
                   onChange={e => setFormData({ ...formData, paco2: toNumberOrUndefined(e.target.value) })}
                 />
+                {/* pH bug fix: same clamp-on-blur pattern. */}
                 <VMIField
                   label="pH"
                   type="number"
                   step="0.01"
                   value={formData.ph ?? ''}
-                  onChange={e => {
+                  onChange={e => setFormData({ ...formData, ph: toNumberOrUndefined(e.target.value) })}
+                  onBlur={e => {
                     const n = toNumberOrUndefined(e.target.value);
-                    setFormData({ ...formData, ph: n == null ? undefined : clamp(n, 6.8, 7.8) });
+                    if (n != null) setFormData(prev => ({ ...prev, ph: clamp(n, 6.8, 7.8) }));
                   }}
                 />
                 <VMIField
@@ -695,7 +706,7 @@ export function VMIEntryPage() {
           </CollapsibleSection>
 
           {/* D) Weaning */}
-          <CollapsibleSection title="5) Destete de la Ventilación" subtitle="Evaluación y pruebas de destete">
+          <CollapsibleSection title="7) Destete de la Ventilación" subtitle="Evaluación y pruebas de destete">
             <div className="space-y-4">
               <VMISelect
                 label="Estado de Destete"
@@ -726,11 +737,15 @@ export function VMIEntryPage() {
 
                   {formData.sbtPerformed && (
                     <>
-                      <VMIField
+                      {/* Bug fix: "Tipo de SBT" era texto libre, pero el backend
+                          solo acepta 'psv' | 'cpap' | 't-piece' — cualquier otro
+                          texto (como sugería el placeholder anterior) hacía
+                          fallar el guardado completo del registro. */}
+                      <VMISelect
                         label="Tipo de SBT"
-                        placeholder="Ej: Tubo en T, PS 5-7"
+                        options={sbtTypeOptions}
                         value={formData.sbtType}
-                        onChange={e => setFormData({ ...formData, sbtType: e.target.value })}
+                        onChange={e => setFormData({ ...formData, sbtType: e.target.value as any })}
                       />
 
                       <VMISelect
@@ -759,7 +774,7 @@ export function VMIEntryPage() {
           </CollapsibleSection>
 
           {/* E) Mobilization */}
-          <CollapsibleSection title="6) Movilización y Rehabilitación" subtitle="Nivel de actividad física">
+          <CollapsibleSection title="8) Movilización y Rehabilitación" subtitle="Nivel de actividad física">
             <div className="space-y-4">
               <div>
                 <label className="text-sm font-medium text-gray-700 mb-2 block">Nivel máximo de movilización</label>

@@ -70,6 +70,9 @@ export interface IMVObservation extends ClinicalObservation {
   predictedBodyWeight: number;
   tidalVolumeSet: number;
   tidalVolumeExpired: number;
+  controlPressure?: number;
+  supportPressure?: number;
+  inspiratoryTime?: number;
   plateauPressure: number;
   peakPressure?: number;
   peep: number;
@@ -91,7 +94,7 @@ export interface IMVObservation extends ClinicalObservation {
   // Weaning assessment
   weaningStatus: WeaningStatus;
   sbtPerformed?: boolean;
-  sbtType?: string;
+  sbtType?: 'psv' | 'cpap' | 't-piece';
   sbtResult?: 'success' | 'failure';
   sbtFailureReason?: string;
 

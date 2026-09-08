@@ -92,6 +92,11 @@ export interface VMIRecord {
   predictedBodyWeight: number;
   tidalVolumeSet: number;
   tidalVolumeExpired: number;
+  // Mode-specific set parameter: controlPressure for PCV, supportPressure
+  // for PSV (tidalVolumeSet plays that role for VCV). Ti is common to all 3.
+  controlPressure?: number;
+  supportPressure?: number;
+  inspiratoryTime?: number;
   plateauPressure: number;
   peakPressure?: number; // NEW: For Mechanical Power
   peep: number;
@@ -113,7 +118,7 @@ export interface VMIRecord {
   // D) Weaning
   weaningStatus: WeaningStatus;
   sbtPerformed?: boolean;
-  sbtType?: string;
+  sbtType?: 'psv' | 'cpap' | 't-piece';
   sbtResult?: 'success' | 'failure';
   sbtFailureReason?: string;
 
