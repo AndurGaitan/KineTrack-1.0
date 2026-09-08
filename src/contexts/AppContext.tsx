@@ -199,6 +199,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
         age: patientData.age,
         admissionDiagnosis: patientData.admissionDiagnosis,
         antecedentes: patientData.antecedentes,
+        sex: patientData.sex,
+        heightCm: patientData.heightCm,
       });
       setState((prev) => ({ ...prev, patients: [...prev.patients, patient] }));
     } catch (error) {
@@ -216,6 +218,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
         age: updates.age,
         admissionDiagnosis: updates.admissionDiagnosis,
         antecedentes: updates.antecedentes,
+        sex: updates.sex,
+        heightCm: updates.heightCm,
       });
       setState((prev) => ({ ...prev, patients: prev.patients.map((p) => (p.id === id ? patient : p)) }));
     } catch (error) {

@@ -194,7 +194,7 @@ export function PatientDetailPage() {
 
         <Card>
           <div className="text-sm text-gray-600 mb-3">Contexto Clínico</div>
-          {!patient.age && !patient.admissionDiagnosis && patient.antecedentes.length === 0 ? <p className="text-sm text-gray-400 italic">
+          {!patient.age && !patient.admissionDiagnosis && !patient.sex && !patient.heightCm && patient.antecedentes.length === 0 ? <p className="text-sm text-gray-400 italic">
               Sin datos clínicos cargados — tocá "Editar" para completarlos.
             </p> : <div className="space-y-3">
               {(patient.age || patient.admissionDiagnosis) && <div className="flex flex-wrap gap-x-6 gap-y-2">
@@ -205,6 +205,20 @@ export function PatientDetailPage() {
                   {patient.admissionDiagnosis && <div>
                       <div className="text-xs text-gray-500">Diagnóstico de ingreso</div>
                       <div className="font-medium text-gray-900">{patient.admissionDiagnosis}</div>
+                    </div>}
+                </div>}
+              {(patient.sex || patient.heightCm || patient.predictedBodyWeight) && <div className="flex flex-wrap gap-x-6 gap-y-2">
+                  {patient.sex && <div>
+                      <div className="text-xs text-gray-500">Sexo</div>
+                      <div className="font-medium text-gray-900">{patient.sex === 'male' ? 'Masculino' : 'Femenino'}</div>
+                    </div>}
+                  {patient.heightCm && <div>
+                      <div className="text-xs text-gray-500">Talla</div>
+                      <div className="font-medium text-gray-900">{patient.heightCm} cm</div>
+                    </div>}
+                  {patient.predictedBodyWeight && <div>
+                      <div className="text-xs text-gray-500">PCI / PBW</div>
+                      <div className="font-medium text-gray-900">{patient.predictedBodyWeight} kg</div>
                     </div>}
                 </div>}
               {patient.antecedentes.length > 0 && <div>

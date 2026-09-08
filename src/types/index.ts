@@ -57,6 +57,11 @@ export interface Patient {
   age?: number;
   admissionDiagnosis?: string;
   antecedentes: string[];
+  // Sexo + talla, cargados una sola vez — predictedBodyWeight (arriba) se
+  // recalcula acá con la fórmula ARDSNet y de ahí en más cada monitorización
+  // VMI lo hereda automáticamente sin volver a pedirlo.
+  sex?: 'male' | 'female';
+  heightCm?: number;
   status: PatientStatus;
   closure?: PatientClosure;
   episodes: SupportEpisode[];

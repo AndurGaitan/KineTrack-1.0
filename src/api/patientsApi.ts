@@ -10,6 +10,8 @@ export type CreatePatientInput = {
   age?: number;
   admissionDiagnosis?: string;
   antecedentes?: string[];
+  sex?: 'male' | 'female';
+  heightCm?: number;
 };
 
 export type UpdatePatientInput = Partial<{
@@ -20,6 +22,8 @@ export type UpdatePatientInput = Partial<{
   age: number | null;
   admissionDiagnosis: string | null;
   antecedentes: string[];
+  sex: 'male' | 'female' | null;
+  heightCm: number | null;
 }>;
 
 export type ClosePatientInput = {

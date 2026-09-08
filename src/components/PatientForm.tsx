@@ -2,6 +2,9 @@ import { useState, FormEvent } from 'react';
 import { Input, Select } from './ui/Input';
 import { Button } from './ui/Button';
 import { Patient, Sector, SupportType } from '../types';
+import { calculatePBWKg, Sex } from '../utils/vmiCalculations';
+
+const clamp = (n: number, min: number, max: number) => Math.min(max, Math.max(min, n));
 interface PatientFormProps {
   sectors: Sector[];
   initialData?: Patient;
@@ -25,7 +28,9 @@ export function PatientForm({
     supportType: initialData?.supportType || '',
     age: initialData?.age?.toString() || '',
     admissionDiagnosis: initialData?.admissionDiagnosis || '',
-    antecedentes: initialData?.antecedentes || [] as string[]
+    antecedentes: initialData?.antecedentes || [] as string[],
+    sex: (initialData?.sex ?? '') as Sex | '',
+    heightCm: initialData?.heightCm ?? undefined as number | undefined
   });
   const [newAntecedente, setNewAntecedente] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -35,6 +40,10 @@ export function PatientForm({
     setFormData(f => ({ ...f, antecedentes: [...f.antecedentes, trimmed] }));
     setNewAntecedente('');
   };
+  // PCI/PBW se recalcula automático de sexo+talla — misma fórmula ARDSNet que
+  // usa el módulo VMI. No se re-pide en cada monitorización: se mide una vez
+  // acá y de ahí en más se hereda (frontend/src/pages/VMIEntryPage.tsx).
+  const predictedBodyWeight = formData.sex && formData.heightCm ? calculatePBWKg(formData.heightCm, formData.sex) ?? undefined : undefined;
   const removeAntecedente = (index: number) => {
     setFormData(f => ({ ...f, antecedentes: f.antecedentes.filter((_, i) => i !== index) }));
   };
@@ -64,7 +73,10 @@ export function PatientForm({
       supportType: formData.supportType as SupportType,
       age: formData.age ? Number(formData.age) : undefined,
       admissionDiagnosis: formData.admissionDiagnosis.trim() || undefined,
-      antecedentes: formData.antecedentes
+      antecedentes: formData.antecedentes,
+      sex: formData.sex || undefined,
+      heightCm: formData.heightCm,
+      predictedBodyWeight
     });
   };
   return <form onSubmit={handleSubmit} className="space-y-6">
@@ -122,6 +134,42 @@ export function PatientForm({
         ...formData,
         admissionDiagnosis: e.target.value
       })} placeholder="Ej: Neumonía grave, EPOC reagudizado" />
+
+        <div className="grid grid-cols-2 gap-4">
+          <Select label="Sexo" value={formData.sex} onChange={e => setFormData({
+          ...formData,
+          sex: e.target.value as Sex
+        })} options={[{
+          value: 'male',
+          label: 'Masculino'
+        }, {
+          value: 'female',
+          label: 'Femenino'
+        }]} />
+
+          <Input label="Talla (cm)" type="number" value={formData.heightCm ?? ''} onChange={e => {
+          const v = e.target.value;
+          setFormData({
+            ...formData,
+            heightCm: v === '' ? undefined : Number(v)
+          });
+        }} onBlur={e => {
+          const v = e.target.value;
+          if (v === '') return;
+          setFormData(f => ({
+            ...f,
+            heightCm: clamp(Number(v), 120, 220)
+          }));
+        }} placeholder="Ej: 170" />
+        </div>
+
+        <div className={`p-4 rounded-xl ${predictedBodyWeight ? 'bg-blue-50' : 'bg-gray-50'}`}>
+          <div className="text-sm text-gray-600 mb-1">PCI / PBW (Peso Predicho) — usado en VMI</div>
+          <div className={`text-2xl font-bold ${predictedBodyWeight ? 'text-blue-900' : 'text-gray-400'}`}>
+            {predictedBodyWeight ? `${predictedBodyWeight} kg` : '—'}
+          </div>
+          {!predictedBodyWeight && <div className="text-sm text-gray-600 mt-1">Completá sexo y talla para calcularlo automáticamente.</div>}
+        </div>
 
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">Antecedentes</label>

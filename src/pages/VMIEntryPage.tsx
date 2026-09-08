@@ -16,12 +16,10 @@ import {
 import {
   calculateVMI,
   generateVMIAlerts,
-  calculateMechanicalPower,
-  calculatePBWKg,
-  Sex
+  calculateMechanicalPower
 } from '../utils/vmiCalculations';
 import { ventModes, mobilizationLevels } from '../utils/vmiEducation';
-import { ZapIcon } from 'lucide-react';
+import { ZapIcon, EditIcon } from 'lucide-react';
 import { EducationalTooltip } from '../components/ui/Tooltip';
 import { vmiEducation } from '../utils/vmiEducation';
 
@@ -64,10 +62,9 @@ export function VMIEntryPage() {
     ventModeOther: '',
     controlVariable: '' as VentControlVariable | '',
 
-    // PBW AUTO ONLY (no defaults in production)
-    sex: '' as Sex | '',
-    heightCm: undefined as number | undefined,
-    predictedBodyWeight: 0,
+    // PCI/PBW ya no se pide acá — se mide una vez en la ficha del paciente
+    // (Contexto Clínico) y se hereda tal cual quedó guardado ahí.
+    predictedBodyWeight: patient?.predictedBodyWeight ?? 0,
 
     // Vent params (no defaults)
     tidalVolumeSet: undefined as number | undefined,
@@ -104,25 +101,6 @@ export function VMIEntryPage() {
     mobilizationLevel: 0 as MobilizationLevel,
     mobilizationBarrier: ''
   }));
-
-  // PBW auto-calc (single source of truth = predictedBodyWeight)
-  // IMPORTANT: PBW is OPTIONAL for saving. We still compute it when sex+height exist.
-  useEffect(() => {
-    if (!formData.sex || formData.heightCm == null) {
-      if (formData.predictedBodyWeight !== 0) {
-        setFormData(prev => ({ ...prev, predictedBodyWeight: 0 }));
-      }
-      return;
-    }
-
-    const pbw = calculatePBWKg(formData.heightCm, formData.sex as Sex);
-    const next = pbw ?? 0;
-
-    if (next !== formData.predictedBodyWeight) {
-      setFormData(prev => ({ ...prev, predictedBodyWeight: next }));
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [formData.heightCm, formData.sex]);
 
   const [calculations, setCalculations] = useState(() => calculateVMI(formData));
   const [alerts, setAlerts] = useState<string[]>([]);
@@ -415,43 +393,31 @@ export function VMIEntryPage() {
 
           {/* STEP 3: Predicted Body Weight (PCI/PBW) */}
           {formData.ventMode && (
-            <CollapsibleSection title="3) Peso Corporal Ideal (PCI)" subtitle="Sexo y talla para calcular el PBW automático">
+            <CollapsibleSection title="3) Peso Corporal Ideal (PCI)" subtitle="Se mide una sola vez en la ficha del paciente">
               <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <VMISelect
-                    label="Sexo"
-                    options={[
-                      { value: 'male', label: 'Masculino' },
-                      { value: 'female', label: 'Femenino' }
-                    ]}
-                    value={formData.sex}
-                    onChange={e => setFormData({ ...formData, sex: e.target.value as Sex })}
-                  />
-
-                  {/* Talla bug fix: same clamp-on-blur pattern as FiO₂. */}
-                  <VMIField
-                    label="Talla"
-                    unit="cm"
-                    type="number"
-                    value={formData.heightCm ?? ''}
-                    onChange={e => setFormData({ ...formData, heightCm: toNumberOrUndefined(e.target.value) })}
-                    onBlur={e => {
-                      const n = toNumberOrUndefined(e.target.value);
-                      if (n != null) setFormData(prev => ({ ...prev, heightCm: clamp(n, 120, 220) }));
-                    }}
-                  />
-                </div>
-
                 <div className={`p-4 rounded-xl ${pbwOk ? 'bg-blue-50' : 'bg-gray-50'}`}>
-                  <div className="text-sm text-gray-600 mb-1">PCI / PBW (Peso Predicho) calculado</div>
+                  <div className="text-sm text-gray-600 mb-1">PCI / PBW (Peso Predicho)</div>
                   <div className={`text-3xl font-bold ${pbwOk ? 'text-blue-900' : 'text-gray-400'}`}>
                     {pbwOk ? `${formData.predictedBodyWeight} kg` : '—'}
                   </div>
-                  {!pbwOk && (
+                  {pbwOk ? (
                     <div className="text-sm text-gray-600 mt-2">
-                      Completá <strong>sexo</strong> y <strong>talla</strong> para calcular el PCI (no bloquea el guardado).
+                      Calculado de sexo y talla ({patient.sex === 'male' ? 'Masculino' : 'Femenino'}, {patient.heightCm} cm) cargados en la
+                      ficha del paciente.
+                    </div>
+                  ) : (
+                    <div className="text-sm text-gray-600 mt-2">
+                      Este paciente no tiene sexo/talla cargados — no bloquea el guardado, pero el Vt/kg no se va a poder calcular.
                     </div>
                   )}
+                  <button
+                    type="button"
+                    onClick={() => navigate(`/patient/${patient.id}/edit`)}
+                    className="flex items-center gap-1.5 text-sm font-semibold text-blue-600 mt-3"
+                  >
+                    <EditIcon className="w-4 h-4" />
+                    {pbwOk ? 'Corregir en la ficha del paciente' : 'Cargar sexo y talla en la ficha del paciente'}
+                  </button>
                 </div>
               </div>
             </CollapsibleSection>
