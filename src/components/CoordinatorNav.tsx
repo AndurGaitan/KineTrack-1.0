@@ -8,6 +8,7 @@ const tabs = [
   { path: '/coordinator/protocols', label: 'Protocolos' },
   { path: '/coordinator/users', label: 'Usuarios' },
   { path: '/coordinator/vmi', label: 'VMI' },
+  { path: '/coordinator/carga-masiva', label: 'Carga Masiva' },
 ];
 
 export function CoordinatorNav() {

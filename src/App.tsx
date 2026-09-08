@@ -30,6 +30,7 @@ import { ProtocolsAdminPage } from './pages/coordinator/ProtocolsAdminPage';
 import { UsersAdminPage } from './pages/coordinator/UsersAdminPage';
 import { SchedulePage } from './pages/coordinator/SchedulePage';
 import { VMIPatientsListPage } from './pages/coordinator/VMIPatientsListPage';
+import { BulkPrestacionPage } from './pages/coordinator/BulkPrestacionPage';
 
 // Recharts (and the Recharts-only VMITrendsPage) is code-split out of the
 // main bundle — it roughly doubles the app's gzip size and only
@@ -175,6 +176,9 @@ function AppRoutes() {
           </ProtectedRoute>} />
       <Route path="/coordinator/vmi" element={<ProtectedRoute requireCoordinador>
             <VMIPatientsListPage />
+          </ProtectedRoute>} />
+      <Route path="/coordinator/carga-masiva" element={<ProtectedRoute requireCoordinador>
+            <BulkPrestacionPage />
           </ProtectedRoute>} />
     </Routes>;
 }
