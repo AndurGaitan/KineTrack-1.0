@@ -20,12 +20,33 @@ export const nivEducation = {
     target: 'HACOR > 5 a la hora 1: alto riesgo de fracaso (> 80%)',
     example: 'Evaluar a la 1h, 6h, 12h y 24h del inicio de VNI'
   },
-  ipapEpap: {
-    title: 'IPAP / EPAP (o PS / PEEP)',
-    definition: 'IPAP: presión inspiratoria máxima. EPAP: presión espiratoria (equivalente a PEEP).',
-    importance: 'La diferencia IPAP-EPAP determina el soporte ventilatorio. EPAP mantiene vía aérea abierta y recluta alvéolos.',
-    target: 'Inicio típico: IPAP 12-16, EPAP 4-6. Titular según respuesta',
-    example: 'Aumentar IPAP si persiste taquipnea/hipercapnia. Aumentar EPAP si hipoxemia.'
+  supportPressureNIV: {
+    title: 'Presión de Soporte (PS)',
+    definition: 'Presión inspiratoria adicional que entrega el ventilador por sobre el PEEP en cada ciclo, en modo PSV/CPAP.',
+    importance: 'Determina el volumen corriente asistido y el trabajo respiratorio del paciente. Es el principal ajuste para taquipnea o hipercapnia.',
+    target: 'Inicio típico: PS 8-12 cmH₂O. Titular según FR, Vt y confort del paciente',
+    example: 'Aumentar PS si persiste taquipnea o hipercapnia con buen esfuerzo inspiratorio.'
+  },
+  peepNIV: {
+    title: 'PEEP',
+    definition: 'Presión positiva al final de la espiración. Mantiene la vía aérea superior y los alvéolos abiertos entre ciclos.',
+    importance: 'Contrarresta la obstrucción/colapso de vía aérea superior y mejora la oxigenación al reclutar alvéolos.',
+    target: 'Inicio típico: PEEP 4-8 cmH₂O. Aumentar si persiste hipoxemia',
+    example: 'Presión pico entregada al paciente = PS + PEEP.'
+  },
+  expiratorySensitivity: {
+    title: 'Sensibilidad Espiratoria (Etrigger)',
+    definition: 'Umbral de flujo inspiratorio (como % del pico) al que el ventilador cicla de inspiración a espiración.',
+    importance: 'Un valor mal ajustado genera asincronías: ciclado tardío (fugas, EPOC) o precoz (interrumpe la inspiración del paciente).',
+    target: 'Rango típico: 25-40%. Bajar el % si hay ciclado precoz, subirlo si hay ciclado tardío/fugas',
+    example: 'Paciente con fuga alta por la interfaz: suele necesitar mayor % de sensibilidad espiratoria para ciclar a tiempo.'
+  },
+  gasometriaNIV: {
+    title: 'Gasometría Arterial en VNI',
+    definition: 'Panel de pH, PaO₂, PaCO₂, HCO₃ y SatO₂ para evaluar oxigenación, ventilación y equilibrio ácido-base.',
+    importance: 'Permite distinguir falla oxigenatoria de ventilatoria, detectar retención de CO₂ y objetivar la respuesta a los ajustes de PS/PEEP.',
+    target: 'Reevaluar tras cada cambio de parámetros relevante y en los controles programados (1h, 6h, 12h, 24h)',
+    example: 'PaCO₂ que no mejora pese a subir PS sugiere fuga excesiva o fatiga muscular, no solo falta de soporte.'
   },
   previousIMV: {
     title: 'Días Previos de VMI',

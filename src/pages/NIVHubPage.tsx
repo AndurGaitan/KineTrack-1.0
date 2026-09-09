@@ -4,6 +4,7 @@ import { useApp } from '../contexts/AppContext';
 import { Header } from '../components/ui/Header';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
+import { NIVSessionsCard } from '../components/NIVSessionsCard';
 import { WindIcon, TrendingUpIcon } from 'lucide-react';
 export function NIVHubPage() {
   const {
@@ -15,11 +16,13 @@ export function NIVHubPage() {
   const {
     patients,
     getPatientNIVRecords,
+    getActiveEpisode,
     sectors
   } = useApp();
   const patient = patients.find(p => p.id === patientId);
   const sector = patient ? sectors.find(s => s.id === patient.sectorId) : null;
   const records = patient ? getPatientNIVRecords(patient.id) : [];
+  const activeEpisode = patient ? getActiveEpisode(patient.id) : undefined;
   if (!patient || patient.supportType !== 'niv') {
     return <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
         <div className="text-center">
@@ -56,9 +59,9 @@ export function NIVHubPage() {
                 </div>
               </div>
               <div>
-                <div className="text-xs text-gray-600 mb-1">IPAP/EPAP</div>
+                <div className="text-xs text-gray-600 mb-1">PS/PEEP</div>
                 <div className="text-xl font-bold text-gray-900">
-                  {lastRecord.ipap}/{lastRecord.epap}
+                  {lastRecord.supportPressure}/{lastRecord.peep}
                 </div>
               </div>
               <div>
@@ -73,6 +76,8 @@ export function NIVHubPage() {
         <Button onClick={() => navigate(`/patient/${patient.id}/niv/new`)} fullWidth className="min-h-[64px] text-xl bg-purple-600">
           + Nueva Monitorización
         </Button>
+
+        <NIVSessionsCard patientId={patient.id} episodeId={activeEpisode?.id} />
 
         <div>
           <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
@@ -110,15 +115,15 @@ export function NIVHubPage() {
 
                       <div className="grid grid-cols-3 gap-4">
                         <div>
-                          <div className="text-xs text-gray-600 mb-1">IPAP</div>
+                          <div className="text-xs text-gray-600 mb-1">PS</div>
                           <div className="text-lg font-bold text-gray-900">
-                            {record.ipap}
+                            {record.supportPressure}
                           </div>
                         </div>
                         <div>
-                          <div className="text-xs text-gray-600 mb-1">EPAP</div>
+                          <div className="text-xs text-gray-600 mb-1">PEEP</div>
                           <div className="text-lg font-bold text-gray-900">
-                            {record.epap}
+                            {record.peep}
                           </div>
                         </div>
                         <div>

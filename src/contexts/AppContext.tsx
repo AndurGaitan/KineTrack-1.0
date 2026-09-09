@@ -1,5 +1,5 @@
 import { ReactNode, useEffect, useState, createContext, useContext } from 'react';
-import { AppState, User, Patient, ScoreRecord, VMIRecord, NIVRecord, HFNCRecord, TrachRecord, SupportType, AirwayEventInput } from '../types';
+import { AppState, User, Patient, ScoreRecord, VMIRecord, NIVRecord, NIVSession, HFNCRecord, TrachRecord, SupportType, AirwayEventInput } from '../types';
 import { PatientClosure, ClinicalObservationType } from '../domain/models';
 import {
   observationToVMIRecord,
@@ -12,6 +12,7 @@ import * as sectorsApi from '../api/sectorsApi';
 import * as patientsApi from '../api/patientsApi';
 import * as observationsApi from '../api/observationsApi';
 import * as scoresApi from '../api/scoresApi';
+import * as nivSessionsApi from '../api/nivSessionsApi';
 
 interface AppContextType extends AppState {
   isLoading: boolean;
@@ -43,6 +44,11 @@ interface AppContextType extends AppState {
   addNIVRecord: (record: Omit<NIVRecord, 'id' | 'timestamp'>) => Promise<void>;
   getPatientNIVRecords: (patientId: string, episodeId?: string) => NIVRecord[];
   getNIVRecord: (id: string) => NIVRecord | undefined;
+  startNIVSession: (patientId: string, episodeId?: string) => Promise<void>;
+  closeNIVSession: (id: string, endAt?: string) => Promise<void>;
+  addManualNIVSession: (session: Omit<NIVSession, 'id'>) => Promise<void>;
+  deleteNIVSession: (id: string) => Promise<void>;
+  getPatientNIVSessions: (patientId: string, episodeId?: string) => NIVSession[];
   addHFNCRecord: (record: Omit<HFNCRecord, 'id' | 'timestamp'>) => Promise<void>;
   getPatientHFNCRecords: (patientId: string, episodeId?: string) => HFNCRecord[];
   getHFNCRecord: (id: string) => HFNCRecord | undefined;
@@ -60,6 +66,7 @@ const initialState: AppState = {
   scores: [],
   vmiRecords: [],
   nivRecords: [],
+  nivSessions: [],
   hfncRecords: [],
   trachRecords: [],
 };
@@ -102,11 +109,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
     const perPatient = await Promise.all(
       patients.map(async (p) => {
-        const [observations, scores] = await Promise.all([
+        const [observations, scores, nivSessions] = await Promise.all([
           observationsApi.listObservations({ patientId: p.id }),
           scoresApi.listScores(p.id),
+          nivSessionsApi.listNivSessions({ patientId: p.id }),
         ]);
-        return { ...splitObservationsIntoLegacyRecords(observations), scores };
+        return { ...splitObservationsIntoLegacyRecords(observations), scores, nivSessions };
       })
     );
 
@@ -117,6 +125,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       scores: perPatient.flatMap((p) => p.scores),
       vmiRecords: perPatient.flatMap((p) => p.vmiRecords),
       nivRecords: perPatient.flatMap((p) => p.nivRecords),
+      nivSessions: perPatient.flatMap((p) => p.nivSessions),
       hfncRecords: perPatient.flatMap((p) => p.hfncRecords),
       trachRecords: perPatient.flatMap((p) => p.trachRecords),
     });
@@ -236,6 +245,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         scores: prev.scores.filter((s) => s.patientId !== id),
         vmiRecords: prev.vmiRecords.filter((v) => v.patientId !== id),
         nivRecords: prev.nivRecords.filter((n) => n.patientId !== id),
+        nivSessions: prev.nivSessions.filter((s) => s.patientId !== id),
         hfncRecords: prev.hfncRecords.filter((h) => h.patientId !== id),
         trachRecords: prev.trachRecords.filter((t) => t.patientId !== id),
       }));
@@ -349,6 +359,48 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const getNIVRecord = (id: string) => state.nivRecords.find((n) => n.id === id);
 
+  const startNIVSession = async (patientId: string, episodeId?: string) => {
+    try {
+      const session = await nivSessionsApi.createNivSession({ patientId, episodeId });
+      setState((prev) => ({ ...prev, nivSessions: [...prev.nivSessions, session] }));
+    } catch (error) {
+      reportError('iniciar sesión de VNI', error);
+    }
+  };
+
+  const closeNIVSession = async (id: string, endAt?: string) => {
+    try {
+      const session = await nivSessionsApi.updateNivSession(id, { endAt: endAt ?? new Date().toISOString() });
+      setState((prev) => ({ ...prev, nivSessions: prev.nivSessions.map((s) => (s.id === id ? session : s)) }));
+    } catch (error) {
+      reportError('finalizar sesión de VNI', error);
+    }
+  };
+
+  const addManualNIVSession = async (input: Omit<NIVSession, 'id'>) => {
+    try {
+      const session = await nivSessionsApi.createNivSession(input);
+      setState((prev) => ({ ...prev, nivSessions: [...prev.nivSessions, session] }));
+    } catch (error) {
+      reportError('cargar sesión de VNI', error);
+    }
+  };
+
+  const deleteNIVSession = async (id: string) => {
+    try {
+      await nivSessionsApi.deleteNivSession(id);
+      setState((prev) => ({ ...prev, nivSessions: prev.nivSessions.filter((s) => s.id !== id) }));
+    } catch (error) {
+      reportError('eliminar sesión de VNI', error);
+    }
+  };
+
+  const getPatientNIVSessions = (patientId: string, episodeId?: string) => {
+    return state.nivSessions
+      .filter((s) => s.patientId === patientId && (!episodeId || s.episodeId === episodeId))
+      .sort((a, b) => new Date(b.startAt).getTime() - new Date(a.startAt).getTime());
+  };
+
   const addHFNCRecord = async (record: Omit<HFNCRecord, 'id' | 'timestamp'>) => {
     try {
       const obs = await observationsApi.createObservation({ ...record, type: 'hfnc' });
@@ -413,6 +465,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
         addNIVRecord,
         getPatientNIVRecords,
         getNIVRecord,
+        startNIVSession,
+        closeNIVSession,
+        addManualNIVSession,
+        deleteNIVSession,
+        getPatientNIVSessions,
         addHFNCRecord,
         getPatientHFNCRecords,
         getHFNCRecord,

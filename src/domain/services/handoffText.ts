@@ -11,6 +11,7 @@ import {
   HFNCRecord,
   MrcAssessment,
   NIVRecord,
+  NIVSession,
   Patient,
   Prestacion,
   PrestacionType,
@@ -23,6 +24,7 @@ import {
 import { calculateEpisodeDuration } from './episodeService';
 import { cannulaFitOptions } from '../../utils/hfncEducation';
 import { interfaceTypes, nivModes, skinIntegrityOptions } from '../../utils/nivEducation';
+import { computeNIVUsageSummary } from '../../utils/nivCalculations';
 import { mobilizationLevels, ventModes, weaningStatuses } from '../../utils/vmiEducation';
 
 export type LatestSupportRecord =
@@ -42,6 +44,8 @@ export interface HandoffInput {
   /** Ventana usada para filtrar `prestaciones`, solo para el título de la sección. */
   shiftHours: number;
   mrcAssessment?: MrcAssessment;
+  /** Sesiones de VNI del episodio activo, si el soporte actual es VNI — para la línea de uso/destete. */
+  nivSessions?: NIVSession[];
 }
 
 const riskLabels: Record<RiskLevel, string> = { low: 'Bajo', medium: 'Medio', high: 'Alto' };
@@ -212,7 +216,7 @@ function buildImvSection(record: VMIRecord): string[] {
   return lines;
 }
 
-function buildNivSection(record: NIVRecord): string[] {
+function buildNivSection(record: NIVRecord, nivSessions: NIVSession[] | undefined): string[] {
   const interfaceLabel = interfaceTypes.find((i) => i.value === record.interfaceType)?.label || record.interfaceType;
   const modeLabel = nivModes.find((m) => m.value === record.mode)?.label || record.mode;
   const skinLabel = skinIntegrityOptions.find((s) => s.value === record.skinIntegrity)?.label || record.skinIntegrity;
@@ -220,15 +224,34 @@ function buildNivSection(record: NIVRecord): string[] {
   const params = [
     `Interfaz: ${interfaceLabel}`,
     `Modo: ${modeLabel}`,
-    `IPAP ${record.ipap} cmH2O`,
-    `EPAP ${record.epap} cmH2O`,
+    `PS ${record.supportPressure} cmH2O`,
+    `PEEP ${record.peep} cmH2O`,
+    `Sens. esp. ${record.expiratorySensitivity}%`,
     `FiO2 ${record.fio2}%`,
     record.leak != null ? `Fuga ${record.leak} l/min` : undefined,
   ].filter(Boolean);
   lines.push(params.join(' | '));
   lines.push(`HACOR: ${record.hacorScore} (riesgo ${riskLabels[record.hacorRisk]})`);
+  const gas = [
+    `pH ${record.ph}`,
+    `PaO2 ${record.pao2}`,
+    record.paco2 != null ? `PaCO2 ${record.paco2}` : undefined,
+    record.hco3 != null ? `HCO3 ${record.hco3}` : undefined,
+    record.spo2 != null ? `SatO2 ${record.spo2}%` : undefined,
+  ].filter(Boolean);
+  if (gas.length > 0) lines.push(`Gasometría: ${gas.join(' | ')}`);
+  if (record.hco3 != null) {
+    const interp = acidBaseInterpretation(record.ph, record.hco3);
+    if (interp) lines.push(`Equilibrio ácido-base: ${interp}`);
+  }
   lines.push(`Integridad de piel: ${skinLabel}${record.skinNotes ? ` (${record.skinNotes})` : ''}`);
   if (record.previousIMVDays != null) lines.push(`Días previos en VMI: ${record.previousIMVDays}`);
+  if (nivSessions && nivSessions.length > 0) {
+    const usage = computeNIVUsageSummary(nivSessions);
+    lines.push(
+      `Uso VNI: ${usage.hoursUsedLast24h}h en últimas 24h${usage.activeSession ? ' (sesión activa)' : ''} | ${usage.consecutiveDaysWithoutNIV} días consecutivos sin VNI`
+    );
+  }
   const nivAlertsText = formatAlerts(record.alerts);
   if (nivAlertsText) lines.push(`Alertas: ${nivAlertsText}`);
   return lines;
@@ -268,7 +291,7 @@ function buildTrachSection(record: TrachRecord): string[] {
   return lines;
 }
 
-function buildSupportSection(latest: LatestSupportRecord, patient: Patient): string[] {
+function buildSupportSection(latest: LatestSupportRecord, patient: Patient, nivSessions: NIVSession[] | undefined): string[] {
   if (!latest) {
     if (patient.supportType === 'conventional-oxygen' || patient.supportType === 'room-air') return [];
     return [`ESTADO RESPIRATORIO ACTUAL (${supportTypeLabel(patient.supportType)})`, 'Sin monitorización cargada todavía en este soporte.'];
@@ -277,7 +300,7 @@ function buildSupportSection(latest: LatestSupportRecord, patient: Patient): str
     case 'imv':
       return buildImvSection(latest.record);
     case 'niv':
-      return buildNivSection(latest.record);
+      return buildNivSection(latest.record, nivSessions);
     case 'hfnc':
       return buildHfncSection(latest.record);
     case 'traqueostomia':
@@ -320,7 +343,7 @@ export function buildHandoffText(input: HandoffInput): string {
   const sections: string[][] = [
     buildHeader(input.patient, input.sector),
     buildContextSection(input.patient, input.activeEpisode),
-    buildSupportSection(input.latestSupportRecord, input.patient),
+    buildSupportSection(input.latestSupportRecord, input.patient, input.nivSessions),
     buildPrestacionesSection(input.prestaciones, input.mrcAssessment, input.shiftHours),
   ].filter((section) => section.length > 0);
 

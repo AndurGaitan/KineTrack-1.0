@@ -126,14 +126,18 @@ export interface NIVObservation extends ClinicalObservation {
   skinNotes?: string;
   mode: NIVMode;
   modeOther?: string;
-  ipap: number;
-  epap: number;
+  supportPressure: number;
+  peep: number;
+  expiratorySensitivity: number;
   fio2: number;
   leak?: number;
   heartRate: number;
   ph: number;
   consciousness: number;
   pao2: number;
+  paco2?: number;
+  hco3?: number;
+  spo2?: number;
   respiratoryRate: number;
   previousIMVDays?: number;
   calculated: {

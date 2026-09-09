@@ -4,11 +4,20 @@ import { useApp } from '../contexts/AppContext';
 import { Header } from '../components/ui/Header';
 import { Button } from '../components/ui/Button';
 import { CollapsibleSection } from '../components/ui/Tooltip';
-import { VMIField, VMISelect } from '../components/VMIField';
+import { NIVField, NIVSelect } from '../components/NIVField';
 import { AlertPanel } from '../components/AlertPanel';
 import { NIVInterfaceType, SkinIntegrityStatus, NIVMode } from '../types';
 import { calculateHACORForNIV, generateNIVAlerts } from '../utils/nivCalculations';
 import { interfaceTypes, skinIntegrityOptions, lesionLocations, nivModes } from '../utils/nivEducation';
+
+// Helpers: keep numbers truly empty (avoid Number('') => 0), same pattern as VMIEntryPage.
+const toNumberOrUndefined = (v: string): number | undefined => {
+  const t = v.trim();
+  if (t === '') return undefined;
+  const n = Number(t);
+  return Number.isFinite(n) ? n : undefined;
+};
+
 export function NIVEntryPage() {
   const {
     patientId
@@ -33,11 +42,12 @@ export function NIVEntryPage() {
     skinIntegrity: '' as SkinIntegrityStatus | '',
     lesionLocations: [] as string[],
     skinNotes: '',
-    // NIV Parameters
+    // NIV Parameters (PSV/CPAP-style, not IPAP/EPAP)
     mode: '' as NIVMode | '',
     modeOther: '',
-    ipap: 12,
-    epap: 6,
+    supportPressure: 10,
+    peep: 5,
+    expiratorySensitivity: 25,
     fio2: 40,
     leak: 0,
     // HACOR Score
@@ -46,6 +56,10 @@ export function NIVEntryPage() {
     consciousness: 15,
     pao2: 80,
     respiratoryRate: 24,
+    // Rest of the ABG panel
+    paco2: undefined as number | undefined,
+    hco3: undefined as number | undefined,
+    spo2: undefined as number | undefined,
     // Previous IMV
     previousIMVDays: 0
   });
@@ -87,14 +101,18 @@ export function NIVEntryPage() {
       skinNotes: formData.skinNotes || undefined,
       mode: formData.mode as NIVMode,
       modeOther: formData.modeOther || undefined,
-      ipap: formData.ipap,
-      epap: formData.epap,
+      supportPressure: formData.supportPressure,
+      peep: formData.peep,
+      expiratorySensitivity: formData.expiratorySensitivity,
       fio2: formData.fio2,
       leak: formData.leak || undefined,
       heartRate: formData.heartRate,
       ph: formData.ph,
       consciousness: formData.consciousness,
       pao2: formData.pao2,
+      paco2: formData.paco2,
+      hco3: formData.hco3,
+      spo2: formData.spo2,
       respiratoryRate: formData.respiratoryRate,
       hacorScore: calculations.hacorScore,
       hacorRisk: calculations.hacorRisk,
@@ -159,7 +177,7 @@ export function NIVEntryPage() {
                 </div>
               </div>
 
-              {formData.interfaceType === 'other' && <VMIField label="Especificar interfaz" placeholder="Ej: Máscara custom, otro tipo" value={formData.interfaceOther} onChange={e => setFormData({
+              {formData.interfaceType === 'other' && <NIVField label="Especificar interfaz" placeholder="Ej: Máscara custom, otro tipo" value={formData.interfaceOther} onChange={e => setFormData({
               ...formData,
               interfaceOther: e.target.value
             })} />}
@@ -201,7 +219,7 @@ export function NIVEntryPage() {
                       </div>
                     </div>
 
-                    <VMIField label="Notas adicionales sobre la piel" placeholder="Ej: Eritema en puente nasal, aplicada protección" value={formData.skinNotes} onChange={e => setFormData({
+                    <NIVField label="Notas adicionales sobre la piel" placeholder="Ej: Eritema en puente nasal, aplicada protección" value={formData.skinNotes} onChange={e => setFormData({
                 ...formData,
                 skinNotes: e.target.value
               })} />
@@ -209,45 +227,50 @@ export function NIVEntryPage() {
             </div>
           </CollapsibleSection>
 
-          {/* NIV Parameters Section */}
-          <CollapsibleSection title="Parámetros de VNI" subtitle="Configuración del ventilador">
+          {/* NIV Parameters Section (PSV/CPAP-style) */}
+          <CollapsibleSection title="Parámetros de VNI" subtitle="Configuración del ventilador (modo PSV/CPAP)">
             <div className="space-y-4">
-              <VMISelect label="Modo ventilatorio" options={nivModes} value={formData.mode} onChange={e => setFormData({
+              <NIVSelect label="Modo ventilatorio" options={nivModes} value={formData.mode} onChange={e => setFormData({
               ...formData,
               mode: e.target.value as NIVMode
             })} required />
 
-              {formData.mode === 'other' && <VMIField label="Especificar modo" placeholder="Ej: AVAPS, otro modo" value={formData.modeOther} onChange={e => setFormData({
+              {formData.mode === 'other' && <NIVField label="Especificar modo" placeholder="Ej: AVAPS, otro modo" value={formData.modeOther} onChange={e => setFormData({
               ...formData,
               modeOther: e.target.value
             })} />}
 
               <div className="grid grid-cols-2 gap-4">
-                <VMIField label="IPAP" educationKey="ipapEpap" unit="cmH₂O" type="number" value={formData.ipap} onChange={e => setFormData({
+                <NIVField label="Presión de Soporte (PS)" educationKey="supportPressureNIV" unit="cmH₂O" type="number" value={formData.supportPressure} onChange={e => setFormData({
                 ...formData,
-                ipap: Number(e.target.value)
+                supportPressure: Number(e.target.value)
               })} required />
-                <VMIField label="EPAP" educationKey="ipapEpap" unit="cmH₂O" type="number" value={formData.epap} onChange={e => setFormData({
+                <NIVField label="PEEP" educationKey="peepNIV" unit="cmH₂O" type="number" value={formData.peep} onChange={e => setFormData({
                 ...formData,
-                epap: Number(e.target.value)
+                peep: Number(e.target.value)
               })} required />
               </div>
 
+              <NIVField label="Sensibilidad Espiratoria" educationKey="expiratorySensitivity" unit="%" type="number" value={formData.expiratorySensitivity} onChange={e => setFormData({
+              ...formData,
+              expiratorySensitivity: Number(e.target.value)
+            })} required />
+
               <div className="p-4 rounded-xl bg-purple-50">
                 <div className="text-sm text-gray-600 mb-1">
-                  Soporte ventilatorio (IPAP - EPAP)
+                  Presión pico (PS + PEEP)
                 </div>
                 <div className="text-3xl font-bold text-purple-900">
-                  {formData.ipap - formData.epap} cmH₂O
+                  {formData.supportPressure + formData.peep} cmH₂O
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
-                <VMIField label="FiO₂" unit="%" type="number" value={formData.fio2} onChange={e => setFormData({
+                <NIVField label="FiO₂" unit="%" type="number" value={formData.fio2} onChange={e => setFormData({
                 ...formData,
                 fio2: Number(e.target.value)
               })} required />
-                <VMIField label="Fuga estimada" unit="L/min" type="number" value={formData.leak} onChange={e => setFormData({
+                <NIVField label="Fuga estimada" unit="L/min" type="number" value={formData.leak} onChange={e => setFormData({
                 ...formData,
                 leak: Number(e.target.value)
               })} />
@@ -255,35 +278,50 @@ export function NIVEntryPage() {
             </div>
           </CollapsibleSection>
 
-          {/* HACOR Score Section */}
-          <CollapsibleSection title="Score HACOR" subtitle="Predicción de fracaso de VNI">
+          {/* Gasometry + HACOR Score Section */}
+          <CollapsibleSection title="Gasometría Arterial y Score HACOR" subtitle="Panel de ABG completo y predicción de fracaso de VNI">
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
-                <VMIField label="Frecuencia Cardíaca" educationKey="hacorNIV" unit="lpm" type="number" value={formData.heartRate} onChange={e => setFormData({
-                ...formData,
-                heartRate: Number(e.target.value)
-              })} required />
-                <VMIField label="pH" educationKey="hacorNIV" type="number" step="0.01" value={formData.ph} onChange={e => setFormData({
+                <NIVField label="pH" educationKey="hacorNIV" type="number" step="0.01" value={formData.ph} onChange={e => setFormData({
                 ...formData,
                 ph: Number(e.target.value)
               })} required />
-              </div>
-
-              <VMIField label="Glasgow (Conciencia)" educationKey="hacorNIV" type="number" value={formData.consciousness} onChange={e => setFormData({
-              ...formData,
-              consciousness: Number(e.target.value)
-            })} placeholder="3-15" required />
-
-              <div className="grid grid-cols-2 gap-4">
-                <VMIField label="PaO₂" educationKey="hacorNIV" unit="mmHg" type="number" value={formData.pao2} onChange={e => setFormData({
+                <NIVField label="PaO₂" educationKey="hacorNIV" unit="mmHg" type="number" value={formData.pao2} onChange={e => setFormData({
                 ...formData,
                 pao2: Number(e.target.value)
               })} required />
-                <VMIField label="Frecuencia Respiratoria" educationKey="hacorNIV" unit="rpm" type="number" value={formData.respiratoryRate} onChange={e => setFormData({
-                ...formData,
-                respiratoryRate: Number(e.target.value)
-              })} required />
               </div>
+
+              <div className="grid grid-cols-3 gap-4">
+                <NIVField label="PaCO₂" educationKey="gasometriaNIV" unit="mmHg" type="number" value={formData.paco2 ?? ''} onChange={e => setFormData({
+                ...formData,
+                paco2: toNumberOrUndefined(e.target.value)
+              })} />
+                <NIVField label="HCO₃" educationKey="gasometriaNIV" unit="mEq/L" type="number" step="0.1" value={formData.hco3 ?? ''} onChange={e => setFormData({
+                ...formData,
+                hco3: toNumberOrUndefined(e.target.value)
+              })} />
+                <NIVField label="SatO₂" educationKey="gasometriaNIV" unit="%" type="number" value={formData.spo2 ?? ''} onChange={e => setFormData({
+                ...formData,
+                spo2: toNumberOrUndefined(e.target.value)
+              })} />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <NIVField label="Frecuencia Cardíaca" educationKey="hacorNIV" unit="lpm" type="number" value={formData.heartRate} onChange={e => setFormData({
+                ...formData,
+                heartRate: Number(e.target.value)
+              })} required />
+                <NIVField label="Glasgow (Conciencia)" educationKey="hacorNIV" type="number" value={formData.consciousness} onChange={e => setFormData({
+                ...formData,
+                consciousness: Number(e.target.value)
+              })} placeholder="3-15" required />
+              </div>
+
+              <NIVField label="Frecuencia Respiratoria" educationKey="hacorNIV" unit="rpm" type="number" value={formData.respiratoryRate} onChange={e => setFormData({
+              ...formData,
+              respiratoryRate: Number(e.target.value)
+            })} required />
 
               <div className={`p-4 rounded-xl ${calculations.hacorScore > 5 ? 'bg-red-50' : calculations.hacorScore >= 3 ? 'bg-yellow-50' : 'bg-green-50'}`}>
                 <div className="text-sm text-gray-600 mb-1">Score HACOR</div>
@@ -302,7 +340,7 @@ export function NIVEntryPage() {
           {/* Previous IMV Section */}
           <CollapsibleSection title="Ventilación Mecánica Invasiva Previa" subtitle="Contexto de destete" defaultOpen={false}>
             <div className="space-y-4">
-              <VMIField label="Días previos en VMI" educationKey="previousIMV" unit="días" type="number" value={formData.previousIMVDays} onChange={e => setFormData({
+              <NIVField label="Días previos en VMI" educationKey="previousIMV" unit="días" type="number" value={formData.previousIMVDays} onChange={e => setFormData({
               ...formData,
               previousIMVDays: Number(e.target.value)
             })} placeholder="0 si no aplica" />

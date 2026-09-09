@@ -488,21 +488,21 @@ export function PatientDetailPage() {
                                           </div>
                                         </div>}
 
-                                    {episode.supportType === 'niv' && 'ipap' in record && <div className="grid grid-cols-4 gap-3 text-center">
+                                    {episode.supportType === 'niv' && 'expiratorySensitivity' in record && <div className="grid grid-cols-4 gap-3 text-center">
                                           <div>
                                             <div className="text-xs text-gray-600">
-                                              IPAP
+                                              PS
                                             </div>
                                             <div className="text-lg font-bold text-gray-900">
-                                              {record.ipap}
+                                              {record.supportPressure}
                                             </div>
                                           </div>
                                           <div>
                                             <div className="text-xs text-gray-600">
-                                              EPAP
+                                              PEEP
                                             </div>
                                             <div className="text-lg font-bold text-gray-900">
-                                              {record.epap}
+                                              {record.peep}
                                             </div>
                                           </div>
                                           <div>

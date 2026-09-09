@@ -162,11 +162,14 @@ export interface NIVRecord {
   lesionLocations: string[];
   skinNotes?: string;
 
-  // NIV Parameters
+  // NIV Parameters (PSV/CPAP-style: Presión de Soporte, PEEP, sensibilidad
+  // espiratoria — el equipo real que usa el kinesiólogo, no un BiPAP
+  // domiciliario con IPAP/EPAP)
   mode: NIVMode;
   modeOther?: string;
-  ipap: number;
-  epap: number;
+  supportPressure: number; // PS
+  peep: number;
+  expiratorySensitivity: number; // %
   fio2: number;
   leak?: number;
 
@@ -179,11 +182,28 @@ export interface NIVRecord {
   hacorScore: number;
   hacorRisk: RiskLevel;
 
+  // Rest of the ABG panel (pao2/ph above are the HACOR-required pair)
+  paco2?: number;
+  hco3?: number;
+  spo2?: number;
+
   // Previous IMV
   previousIMVDays?: number;
 
   // Alerts
   alerts: string[];
+}
+
+/// A documented window of actual NIV use (start/end) for tracking
+/// intermittent weaning — independent of NIVRecord parameter monitoring.
+/// `endAt` undefined means the session is still ongoing.
+export interface NIVSession {
+  id: string;
+  patientId: string;
+  episodeId?: string;
+  startAt: string;
+  endAt?: string;
+  notes?: string;
 }
 
 // HFNC (High-Flow Nasal Cannula) Types
@@ -247,6 +267,7 @@ export interface AppState {
   scores: ScoreRecord[];
   vmiRecords: VMIRecord[];
   nivRecords: NIVRecord[];
+  nivSessions: NIVSession[];
   hfncRecords: HFNCRecord[];
   trachRecords: TrachRecord[];
 }

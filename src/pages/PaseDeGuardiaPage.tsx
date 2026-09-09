@@ -22,6 +22,7 @@ export function PaseDeGuardiaPage() {
     getPatientNIVRecords,
     getPatientHFNCRecords,
     getPatientTrachRecords,
+    getPatientNIVSessions,
   } = useApp();
 
   const patient = patients.find((p) => p.id === patientId);
@@ -73,10 +74,13 @@ export function PaseDeGuardiaPage() {
 
   const activeEpisode = patient ? getActiveEpisode(patient.id) : undefined;
 
+  const nivSessions = patient && patient.supportType === 'niv' ? getPatientNIVSessions(patient.id, activeEpisode?.id) : undefined;
+
   const handoffText = useMemo(() => {
     if (!patient) return '';
-    return buildHandoffText({ patient, sector, activeEpisode, latestSupportRecord, prestaciones, shiftHours, mrcAssessment });
-  }, [patient, sector, activeEpisode, latestSupportRecord, prestaciones, shiftHours, mrcAssessment]);
+    return buildHandoffText({ patient, sector, activeEpisode, latestSupportRecord, prestaciones, shiftHours, mrcAssessment, nivSessions });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [patient, sector, activeEpisode, latestSupportRecord, prestaciones, shiftHours, mrcAssessment, nivSessions]);
 
   const hasAnyData = !!latestSupportRecord || prestaciones.length > 0 || !!mrcAssessment;
 
