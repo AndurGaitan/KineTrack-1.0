@@ -8,7 +8,7 @@ import { Button } from '../components/ui/Button';
 import { ChangeSupportModal } from '../components/ChangeSupportModal';
 import { ClosePatientModal } from '../components/ClosePatientModal';
 import { ActionSheet } from '../components/ActionSheet';
-import { EditIcon, BedDoubleIcon, ActivityIcon, WindIcon, DropletIcon, ChevronDownIcon, ChevronUpIcon, RepeatIcon, XCircleIcon, ClipboardPlusIcon, DumbbellIcon, ClipboardCheckIcon, BrainIcon, TrendingUpIcon, StethoscopeIcon } from 'lucide-react';
+import { EditIcon, BedDoubleIcon, ActivityIcon, WindIcon, DropletIcon, ChevronDownIcon, ChevronUpIcon, RepeatIcon, XCircleIcon, ClipboardPlusIcon, ClipboardListIcon, DumbbellIcon, ClipboardCheckIcon, BrainIcon, TrendingUpIcon, StethoscopeIcon } from 'lucide-react';
 import { SupportType, ClosureReason, AirwayEventInput } from '../types';
 const supportTypeLabels = {
   imv: 'VMI',
@@ -350,6 +350,12 @@ export function PatientDetailPage() {
             <Button variant="secondary" onClick={() => setShowPrestacionMenu(true)} fullWidth className="flex items-center justify-center gap-2">
               <ClipboardPlusIcon className="w-5 h-5" />
               + Registrar Prestación
+            </Button>
+
+            {/* Shift handoff text — ready to copy into WhatsApp or the clinical record */}
+            <Button variant="secondary" onClick={() => navigate(`/patient/${patient.id}/pase-de-guardia`)} fullWidth className="flex items-center justify-center gap-2">
+              <ClipboardListIcon className="w-5 h-5" />
+              Pase de Guardia
             </Button>
 
             {/* Action Buttons */}
