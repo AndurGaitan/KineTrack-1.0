@@ -106,7 +106,7 @@ export function PaseDeGuardiaPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Header title="Pase de Guardia" showBack />
+      <Header title="Evolución Kinésica" showBack />
       <main className="max-w-2xl mx-auto p-4 pb-24 space-y-6">
         <Card>
           <div className="text-sm text-gray-600 mb-1">Paciente</div>
@@ -150,7 +150,7 @@ export function PaseDeGuardiaPage() {
           />
           <Button type="button" onClick={handleCopy} fullWidth className="flex items-center justify-center gap-2">
             {copied ? <CheckIcon className="w-5 h-5" /> : <ClipboardCopyIcon className="w-5 h-5" />}
-            {copied ? 'Copiado' : 'Copiar pase de guardia'}
+            {copied ? 'Copiado' : 'Copiar evolución'}
           </Button>
         </Card>
       </main>

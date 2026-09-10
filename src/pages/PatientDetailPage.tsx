@@ -352,10 +352,10 @@ export function PatientDetailPage() {
               + Registrar Prestación
             </Button>
 
-            {/* Shift handoff text — ready to copy into WhatsApp or the clinical record */}
+            {/* Narrative note — ready to paste into the electronic clinical record */}
             <Button variant="secondary" onClick={() => navigate(`/patient/${patient.id}/pase-de-guardia`)} fullWidth className="flex items-center justify-center gap-2">
               <ClipboardListIcon className="w-5 h-5" />
-              Pase de Guardia
+              Evolución
             </Button>
 
             {/* Action Buttons */}
