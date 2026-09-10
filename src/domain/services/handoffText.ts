@@ -34,6 +34,25 @@ export type LatestSupportRecord =
   | { type: 'traqueostomia'; record: TrachRecord }
   | undefined;
 
+/**
+ * Picks the latest support record matching a patient's current support type
+ * from already-loaded (and already-sorted-desc) per-type record lists — the
+ * same selection logic PaseDeGuardiaPage and PaseGeneralPage both need.
+ */
+export function pickLatestSupportRecord(
+  patient: Patient,
+  vmiRecords: VMIRecord[],
+  nivRecords: NIVRecord[],
+  hfncRecords: HFNCRecord[],
+  trachRecords: TrachRecord[]
+): LatestSupportRecord {
+  if (patient.supportType === 'imv') return vmiRecords[0] ? { type: 'imv', record: vmiRecords[0] } : undefined;
+  if (patient.supportType === 'niv') return nivRecords[0] ? { type: 'niv', record: nivRecords[0] } : undefined;
+  if (patient.supportType === 'hfnc') return hfncRecords[0] ? { type: 'hfnc', record: hfncRecords[0] } : undefined;
+  if (patient.supportType === 'traqueostomia') return trachRecords[0] ? { type: 'traqueostomia', record: trachRecords[0] } : undefined;
+  return undefined;
+}
+
 export interface HandoffInput {
   patient: Patient;
   sector?: Sector;
@@ -48,35 +67,37 @@ export interface HandoffInput {
   nivSessions?: NIVSession[];
 }
 
-const riskLabels: Record<RiskLevel, string> = { low: 'Bajo', medium: 'Medio', high: 'Alto' };
+// Exported: reused verbatim by generalHandoffText.ts so both the per-patient
+// and the general (multi-patient) handoff texts use the same terminology.
+export const riskLabels: Record<RiskLevel, string> = { low: 'Bajo', medium: 'Medio', high: 'Alto' };
 
-const sbtTypeLabels: Record<string, string> = {
+export const sbtTypeLabels: Record<string, string> = {
   psv: 'Presión de Soporte (PSV)',
   cpap: 'CPAP',
   't-piece': 'Tubo en T',
 };
 
-const swallowingLabels: Record<string, string> = {
+export const swallowingLabels: Record<string, string> = {
   apta: 'Apta',
   'no-apta': 'No apta',
   'con-restricciones': 'Con restricciones',
 };
 
-const prestacionTypeLabels: Record<PrestacionType, string> = {
+export const prestacionTypeLabels: Record<PrestacionType, string> = {
   'kinesioterapia-respiratoria': 'Kinesioterapia respiratoria',
   'kinesioterapia-motora': 'Kinesioterapia motora',
   evaluacion: 'Evaluación',
   progresion: 'Progresión',
 };
 
-const mrcStatusLabels: Record<string, string> = {
+export const mrcStatusLabels: Record<string, string> = {
   evaluable: 'Evaluable',
   'no-evaluable': 'No evaluable',
   parcial: 'Parcial',
   desconocido: 'Desconocido',
 };
 
-function fmtDate(iso: string): string {
+export function fmtDate(iso: string): string {
   return new Date(iso).toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' });
 }
 
@@ -99,19 +120,19 @@ function stripAlertEmoji(alert: string): string {
   return alert.replace(/^[✓⚠️⚡ℹ️]+\s*/u, '').trim();
 }
 
-function formatAlerts(alerts: string[]): string | undefined {
+export function formatAlerts(alerts: string[]): string | undefined {
   if (alerts.length === 0) return undefined;
   return alerts.map(stripAlertEmoji).join('; ');
 }
 
-function pfInterpretation(pf: number): string {
+export function pfInterpretation(pf: number): string {
   if (pf < 100) return 'SDRA severo';
   if (pf < 200) return 'SDRA moderado';
   if (pf < 300) return 'SDRA leve';
   return 'normal';
 }
 
-function acidBaseInterpretation(ph: number, hco3: number): string | undefined {
+export function acidBaseInterpretation(ph: number, hco3: number): string | undefined {
   if (ph >= 7.35 && ph <= 7.45) return 'balance normal';
   if (ph < 7.35 && hco3 < 22) return 'acidosis metabólica';
   if (ph < 7.35 && hco3 >= 22) return 'acidosis respiratoria';
@@ -143,7 +164,7 @@ function buildContextSection(patient: Patient, activeEpisode: SupportEpisode | u
   return lines.length > 1 ? lines : [...lines, 'Sin datos de contexto cargados'];
 }
 
-function supportTypeLabel(type: Patient['supportType']): string {
+export function supportTypeLabel(type: Patient['supportType']): string {
   const labels: Record<Patient['supportType'], string> = {
     imv: 'VMI',
     niv: 'VNI',

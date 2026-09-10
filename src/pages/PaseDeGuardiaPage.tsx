@@ -6,7 +6,7 @@ import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import * as prestacionesApi from '../api/prestacionesApi';
 import * as mrcApi from '../api/mrcApi';
-import { buildHandoffText, LatestSupportRecord } from '../domain/services/handoffText';
+import { buildHandoffText, pickLatestSupportRecord } from '../domain/services/handoffText';
 import { MrcAssessment, Prestacion } from '../types';
 import { CheckIcon, ClipboardCopyIcon } from 'lucide-react';
 
@@ -50,25 +50,15 @@ export function PaseDeGuardiaPage() {
       .finally(() => setLoading(false));
   }, [patient?.id, shiftHours]);
 
-  const latestSupportRecord: LatestSupportRecord = useMemo(() => {
+  const latestSupportRecord = useMemo(() => {
     if (!patient) return undefined;
-    if (patient.supportType === 'imv') {
-      const record = getPatientVMIRecords(patient.id)[0];
-      return record ? { type: 'imv', record } : undefined;
-    }
-    if (patient.supportType === 'niv') {
-      const record = getPatientNIVRecords(patient.id)[0];
-      return record ? { type: 'niv', record } : undefined;
-    }
-    if (patient.supportType === 'hfnc') {
-      const record = getPatientHFNCRecords(patient.id)[0];
-      return record ? { type: 'hfnc', record } : undefined;
-    }
-    if (patient.supportType === 'traqueostomia') {
-      const record = getPatientTrachRecords(patient.id)[0];
-      return record ? { type: 'traqueostomia', record } : undefined;
-    }
-    return undefined;
+    return pickLatestSupportRecord(
+      patient,
+      getPatientVMIRecords(patient.id),
+      getPatientNIVRecords(patient.id),
+      getPatientHFNCRecords(patient.id),
+      getPatientTrachRecords(patient.id)
+    );
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [patient, getPatientVMIRecords, getPatientNIVRecords, getPatientHFNCRecords, getPatientTrachRecords]);
 

@@ -4,7 +4,7 @@ import { useApp } from '../contexts/AppContext';
 import { Header } from '../components/ui/Header';
 import { SectorCard } from '../components/SectorCard';
 import { Button } from '../components/ui/Button';
-import { ArchiveIcon, UserCircleIcon } from 'lucide-react';
+import { ArchiveIcon, ClipboardListIcon, UserCircleIcon } from 'lucide-react';
 import { getActivePatientsCount, getClosedPatientsCount } from '../domain/services/patientService';
 export function DashboardPage() {
   const navigate = useNavigate();
@@ -26,6 +26,11 @@ export function DashboardPage() {
             <strong>💡 Tip:</strong> Seleccioná una UCI y tocá una cama para agregar un paciente.
           </p>
         </div>
+
+        <Button variant="secondary" onClick={() => navigate('/pase-general')} fullWidth className="mb-6 flex items-center justify-center gap-2">
+          <ClipboardListIcon className="w-5 h-5" />
+          Pase de Guardia General
+        </Button>
 
         <div className="space-y-4">
           {sectors.map(sector => <SectorCard key={sector.id} sector={sector} patientCount={getActivePatientsCount(patients, sector.id)} onClick={() => navigate(`/sector/${sector.id}`)} />)}

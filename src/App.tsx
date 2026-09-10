@@ -25,6 +25,7 @@ import { ProfilePage } from './pages/ProfilePage';
 import { PrestacionFormPage } from './pages/PrestacionFormPage';
 import { MrcAssessmentFormPage } from './pages/MrcAssessmentFormPage';
 import { PaseDeGuardiaPage } from './pages/PaseDeGuardiaPage';
+import { PaseGeneralPage } from './pages/PaseGeneralPage';
 import { CoordinatorDashboardPage } from './pages/coordinator/CoordinatorDashboardPage';
 import { SectorsAdminPage } from './pages/coordinator/SectorsAdminPage';
 import { ProtocolsAdminPage } from './pages/coordinator/ProtocolsAdminPage';
@@ -160,6 +161,9 @@ function AppRoutes() {
           </ProtectedRoute>} />
       <Route path="/patient/:patientId/pase-de-guardia" element={<ProtectedRoute>
             <PaseDeGuardiaPage />
+          </ProtectedRoute>} />
+      <Route path="/pase-general" element={<ProtectedRoute>
+            <PaseGeneralPage />
           </ProtectedRoute>} />
 
       {/* Coordinator module */}
