@@ -60,6 +60,7 @@ export function NIVEntryPage() {
     paco2: undefined as number | undefined,
     hco3: undefined as number | undefined,
     spo2: undefined as number | undefined,
+    baseExcess: undefined as number | undefined,
     // Previous IMV
     previousIMVDays: 0
   });
@@ -113,6 +114,7 @@ export function NIVEntryPage() {
       paco2: formData.paco2,
       hco3: formData.hco3,
       spo2: formData.spo2,
+      baseExcess: formData.baseExcess,
       respiratoryRate: formData.respiratoryRate,
       hacorScore: calculations.hacorScore,
       hacorRisk: calculations.hacorRisk,
@@ -281,29 +283,38 @@ export function NIVEntryPage() {
           {/* Gasometry + HACOR Score Section */}
           <CollapsibleSection title="Gasometría Arterial y Score HACOR" subtitle="Panel de ABG completo y predicción de fracaso de VNI">
             <div className="space-y-4">
+              {/* Orden de reporte de gasometría: pH, PaCO₂, PaO₂, HCO₃, SatO₂,
+                  Exceso de Bases (FiO₂ ya se carga arriba, en Parámetros de VNI). */}
               <div className="grid grid-cols-2 gap-4">
                 <NIVField label="pH" educationKey="hacorNIV" type="number" step="0.01" value={formData.ph} onChange={e => setFormData({
                 ...formData,
                 ph: Number(e.target.value)
               })} required />
-                <NIVField label="PaO₂" educationKey="hacorNIV" unit="mmHg" type="number" value={formData.pao2} onChange={e => setFormData({
-                ...formData,
-                pao2: Number(e.target.value)
-              })} required />
-              </div>
-
-              <div className="grid grid-cols-3 gap-4">
                 <NIVField label="PaCO₂" educationKey="gasometriaNIV" unit="mmHg" type="number" value={formData.paco2 ?? ''} onChange={e => setFormData({
                 ...formData,
                 paco2: toNumberOrUndefined(e.target.value)
               })} />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <NIVField label="PaO₂" educationKey="hacorNIV" unit="mmHg" type="number" value={formData.pao2} onChange={e => setFormData({
+                ...formData,
+                pao2: Number(e.target.value)
+              })} required />
                 <NIVField label="HCO₃" educationKey="gasometriaNIV" unit="mEq/L" type="number" step="0.1" value={formData.hco3 ?? ''} onChange={e => setFormData({
                 ...formData,
                 hco3: toNumberOrUndefined(e.target.value)
               })} />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
                 <NIVField label="SatO₂" educationKey="gasometriaNIV" unit="%" type="number" value={formData.spo2 ?? ''} onChange={e => setFormData({
                 ...formData,
                 spo2: toNumberOrUndefined(e.target.value)
+              })} />
+                <NIVField label="Exceso de Bases (BE)" educationKey="gasometriaNIV" unit="mEq/L" type="number" step="0.1" value={formData.baseExcess ?? ''} onChange={e => setFormData({
+                ...formData,
+                baseExcess: toNumberOrUndefined(e.target.value)
               })} />
               </div>
 

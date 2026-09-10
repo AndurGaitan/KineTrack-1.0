@@ -90,6 +90,7 @@ export interface IMVObservation extends ClinicalObservation {
   paco2?: number;
   ph?: number;
   hco3?: number;
+  baseExcess?: number;
 
   // Weaning assessment
   weaningStatus: WeaningStatus;
@@ -138,6 +139,7 @@ export interface NIVObservation extends ClinicalObservation {
   paco2?: number;
   hco3?: number;
   spo2?: number;
+  baseExcess?: number;
   respiratoryRate: number;
   previousIMVDays?: number;
   calculated: {

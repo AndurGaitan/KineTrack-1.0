@@ -119,6 +119,7 @@ export interface VMIRecord {
   paco2?: number;
   ph?: number;
   hco3?: number; // NEW: Bicarbonate
+  baseExcess?: number;
 
   // D) Weaning
   weaningStatus: WeaningStatus;
@@ -186,6 +187,7 @@ export interface NIVRecord {
   paco2?: number;
   hco3?: number;
   spo2?: number;
+  baseExcess?: number;
 
   // Previous IMV
   previousIMVDays?: number;

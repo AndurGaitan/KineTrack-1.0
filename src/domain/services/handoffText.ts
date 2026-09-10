@@ -206,11 +206,17 @@ function buildImvSection(record: VMIRecord): string[] {
   ].filter(Boolean);
   lines.push(`Mecánica: ${mechanics.join(' | ')}`);
 
+  // Orden de reporte de gasometría: pH, PaCO2, PaO2, HCO3, SatO2, Exceso de
+  // Bases, FiO2 (P/F queda al final, es un índice calculado, no un valor
+  // reportado por el analizador).
   const gas = [
     record.ph != null ? `pH ${record.ph}` : undefined,
     record.paco2 != null ? `PaCO2 ${record.paco2}` : undefined,
     record.pao2 != null ? `PaO2 ${record.pao2}` : undefined,
     record.hco3 != null ? `HCO3 ${record.hco3}` : undefined,
+    record.spo2 != null ? `SatO2 ${record.spo2}%` : undefined,
+    record.baseExcess != null ? `EB ${record.baseExcess}` : undefined,
+    `FiO2 ${record.fio2}%`,
     record.pfRatio != null ? `P/F ${record.pfRatio} (${pfInterpretation(record.pfRatio)})` : undefined,
   ].filter(Boolean);
   if (gas.length > 0) lines.push(`Gasometría: ${gas.join(' | ')}`);
@@ -253,12 +259,16 @@ function buildNivSection(record: NIVRecord, nivSessions: NIVSession[] | undefine
   ].filter(Boolean);
   lines.push(params.join(' | '));
   lines.push(`HACOR: ${record.hacorScore} (riesgo ${riskLabels[record.hacorRisk]})`);
+  // Orden de reporte de gasometría: pH, PaCO2, PaO2, HCO3, SatO2, Exceso de
+  // Bases, FiO2.
   const gas = [
     `pH ${record.ph}`,
-    `PaO2 ${record.pao2}`,
     record.paco2 != null ? `PaCO2 ${record.paco2}` : undefined,
+    `PaO2 ${record.pao2}`,
     record.hco3 != null ? `HCO3 ${record.hco3}` : undefined,
     record.spo2 != null ? `SatO2 ${record.spo2}%` : undefined,
+    record.baseExcess != null ? `EB ${record.baseExcess}` : undefined,
+    `FiO2 ${record.fio2}%`,
   ].filter(Boolean);
   if (gas.length > 0) lines.push(`Gasometría: ${gas.join(' | ')}`);
   if (record.hco3 != null) {

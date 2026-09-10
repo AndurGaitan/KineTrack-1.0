@@ -166,38 +166,55 @@ export function NIVRecordDetailPage() {
             Gasometría Arterial
           </h3>
           <div className="space-y-4">
+            {/* Orden de reporte de gasometría: pH, PaCO₂, PaO₂, HCO₃, SatO₂,
+                Exceso de Bases, FiO₂. */}
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <div className="text-sm text-gray-600 mb-1">pH</div>
                 <div className="text-2xl font-bold text-gray-900">{record.ph}</div>
               </div>
+              {record.paco2 !== undefined && <div>
+                  <div className="text-sm text-gray-600 mb-1">PaCO₂</div>
+                  <div className="text-2xl font-bold text-gray-900">
+                    {record.paco2} mmHg
+                  </div>
+                </div>}
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
               <div>
                 <div className="text-sm text-gray-600 mb-1">PaO₂</div>
                 <div className="text-2xl font-bold text-gray-900">
                   {record.pao2} mmHg
                 </div>
               </div>
-            </div>
-
-            <div className="grid grid-cols-3 gap-4">
-              {record.paco2 !== undefined && <div>
-                  <div className="text-sm text-gray-600 mb-1">PaCO₂</div>
-                  <div className="text-xl font-bold text-gray-900">
-                    {record.paco2} mmHg
-                  </div>
-                </div>}
               {record.hco3 !== undefined && <div>
                   <div className="text-sm text-gray-600 mb-1">HCO₃</div>
-                  <div className="text-xl font-bold text-gray-900">
+                  <div className="text-2xl font-bold text-gray-900">
                     {record.hco3} mEq/L
                   </div>
                 </div>}
+            </div>
+
+            <div className="grid grid-cols-3 gap-4">
               {record.spo2 !== undefined && <div>
                   <div className="text-sm text-gray-600 mb-1">SatO₂</div>
                   <div className="text-xl font-bold text-gray-900">
                     {record.spo2}%
                   </div>
                 </div>}
+              {record.baseExcess !== undefined && <div>
+                  <div className="text-sm text-gray-600 mb-1">Exceso de Bases</div>
+                  <div className="text-xl font-bold text-gray-900">
+                    {record.baseExcess} mEq/L
+                  </div>
+                </div>}
+              <div>
+                <div className="text-sm text-gray-600 mb-1">FiO₂</div>
+                <div className="text-xl font-bold text-gray-900">
+                  {record.fio2}%
+                </div>
+              </div>
             </div>
 
             {record.hco3 !== undefined && <div className={`p-4 rounded-xl ${record.ph < 7.35 || record.ph > 7.45 ? 'bg-yellow-50 border border-yellow-200' : 'bg-green-50 border border-green-200'}`}>

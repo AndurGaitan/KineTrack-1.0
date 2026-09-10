@@ -86,11 +86,16 @@ function narrateImv(record: VMIRecord): string {
     .join(', ');
   parts.push(`Mecánica ventilatoria: ${mech}.`);
 
+  // Orden de reporte de gasometría: pH, PaCO₂, PaO₂, HCO₃, SatO₂, Exceso de
+  // Bases, FiO₂.
   const gasBits = [
     record.ph != null ? `pH ${record.ph}` : undefined,
     record.paco2 != null ? `PaCO₂ ${record.paco2}` : undefined,
     record.pao2 != null ? `PaO₂ ${record.pao2}` : undefined,
     record.hco3 != null ? `HCO₃ ${record.hco3}` : undefined,
+    record.spo2 != null ? `SatO₂ ${record.spo2}%` : undefined,
+    record.baseExcess != null ? `exceso de bases ${record.baseExcess}` : undefined,
+    `FiO₂ ${record.fio2}%`,
   ].filter(Boolean);
   if (gasBits.length > 0) {
     let gasSentence = `Gasometría: ${gasBits.join(', ')}`;
@@ -150,12 +155,16 @@ function narrateNiv(record: NIVRecord, nivSessions: NIVSession[] | undefined): s
   );
   parts.push(`HACOR ${record.hacorScore}, riesgo ${riskLabels[record.hacorRisk]}.`);
 
+  // Orden de reporte de gasometría: pH, PaCO₂, PaO₂, HCO₃, SatO₂, Exceso de
+  // Bases, FiO₂.
   const gasBits = [
     `pH ${record.ph}`,
-    `PaO₂ ${record.pao2}`,
     record.paco2 != null ? `PaCO₂ ${record.paco2}` : undefined,
+    `PaO₂ ${record.pao2}`,
     record.hco3 != null ? `HCO₃ ${record.hco3}` : undefined,
     record.spo2 != null ? `SatO₂ ${record.spo2}%` : undefined,
+    record.baseExcess != null ? `exceso de bases ${record.baseExcess}` : undefined,
+    `FiO₂ ${record.fio2}%`,
   ].filter(Boolean);
   let gasSentence = `Gasometría: ${gasBits.join(', ')}`;
   if (record.hco3 != null) {

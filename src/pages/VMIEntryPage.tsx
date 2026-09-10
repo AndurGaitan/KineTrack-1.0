@@ -89,6 +89,7 @@ export function VMIEntryPage() {
     paco2: undefined as number | undefined,
     ph: undefined as number | undefined,
     hco3: undefined as number | undefined,
+    baseExcess: undefined as number | undefined,
 
     // D) Weaning
     weaningStatus: 'not-candidate' as WeaningStatus,
@@ -214,6 +215,7 @@ export function VMIEntryPage() {
       paco2: formData.paco2 ?? undefined,
       ph: formData.ph ?? undefined,
       hco3: formData.hco3 ?? undefined,
+      baseExcess: formData.baseExcess ?? undefined,
 
       weaningStatus: formData.weaningStatus,
       sbtPerformed: formData.sbtPerformed || undefined,
@@ -596,23 +598,34 @@ export function VMIEntryPage() {
             </div>
           </CollapsibleSection>
 
-          {/* C) Oxygenation & Acid-Base */}
+          {/* C) Oxygenation & Acid-Base — orden de reporte de gasometría:
+              pH, PaCO₂, PaO₂, HCO₃, SatO₂, Exceso de Bases (FiO₂ ya se
+              carga en Configuración del Ventilador, arriba). */}
           <CollapsibleSection title="6) Oxigenación y Equilibrio Ácido-Base" subtitle="Gasometría y parámetros de intercambio">
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
-                {/* SpO₂ bug fix: same clamp-on-blur pattern (min=0 rarely triggered
-                    the bug in practice, kept consistent anyway). */}
+                {/* pH bug fix: same clamp-on-blur pattern. */}
                 <VMIField
-                  label="SpO₂"
-                  unit="%"
+                  label="pH"
                   type="number"
-                  value={formData.spo2 ?? ''}
-                  onChange={e => setFormData({ ...formData, spo2: toNumberOrUndefined(e.target.value) })}
+                  step="0.01"
+                  value={formData.ph ?? ''}
+                  onChange={e => setFormData({ ...formData, ph: toNumberOrUndefined(e.target.value) })}
                   onBlur={e => {
                     const n = toNumberOrUndefined(e.target.value);
-                    if (n != null) setFormData(prev => ({ ...prev, spo2: clamp(n, 0, 100) }));
+                    if (n != null) setFormData(prev => ({ ...prev, ph: clamp(n, 6.8, 7.8) }));
                   }}
                 />
+                <VMIField
+                  label="PaCO₂"
+                  unit="mmHg"
+                  type="number"
+                  value={formData.paco2 ?? ''}
+                  onChange={e => setFormData({ ...formData, paco2: toNumberOrUndefined(e.target.value) })}
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
                 <VMIField
                   label="PaO₂"
                   educationKey="pfRatio"
@@ -620,6 +633,15 @@ export function VMIEntryPage() {
                   type="number"
                   value={formData.pao2 ?? ''}
                   onChange={e => setFormData({ ...formData, pao2: toNumberOrUndefined(e.target.value) })}
+                />
+                <VMIField
+                  label="HCO₃"
+                  educationKey="hco3"
+                  unit="mEq/L"
+                  type="number"
+                  step="0.1"
+                  value={formData.hco3 ?? ''}
+                  onChange={e => setFormData({ ...formData, hco3: toNumberOrUndefined(e.target.value) })}
                 />
               </div>
 
@@ -638,34 +660,27 @@ export function VMIEntryPage() {
                 </div>
               )}
 
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-2 gap-4">
+                {/* SpO₂ bug fix: same clamp-on-blur pattern (min=0 rarely triggered
+                    the bug in practice, kept consistent anyway). */}
                 <VMIField
-                  label="PaCO₂"
-                  unit="mmHg"
+                  label="SpO₂"
+                  unit="%"
                   type="number"
-                  value={formData.paco2 ?? ''}
-                  onChange={e => setFormData({ ...formData, paco2: toNumberOrUndefined(e.target.value) })}
-                />
-                {/* pH bug fix: same clamp-on-blur pattern. */}
-                <VMIField
-                  label="pH"
-                  type="number"
-                  step="0.01"
-                  value={formData.ph ?? ''}
-                  onChange={e => setFormData({ ...formData, ph: toNumberOrUndefined(e.target.value) })}
+                  value={formData.spo2 ?? ''}
+                  onChange={e => setFormData({ ...formData, spo2: toNumberOrUndefined(e.target.value) })}
                   onBlur={e => {
                     const n = toNumberOrUndefined(e.target.value);
-                    if (n != null) setFormData(prev => ({ ...prev, ph: clamp(n, 6.8, 7.8) }));
+                    if (n != null) setFormData(prev => ({ ...prev, spo2: clamp(n, 0, 100) }));
                   }}
                 />
                 <VMIField
-                  label="HCO₃"
-                  educationKey="hco3"
+                  label="Exceso de Bases (BE)"
                   unit="mEq/L"
                   type="number"
                   step="0.1"
-                  value={formData.hco3 ?? ''}
-                  onChange={e => setFormData({ ...formData, hco3: toNumberOrUndefined(e.target.value) })}
+                  value={formData.baseExcess ?? ''}
+                  onChange={e => setFormData({ ...formData, baseExcess: toNumberOrUndefined(e.target.value) })}
                 />
               </div>
             </div>

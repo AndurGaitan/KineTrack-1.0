@@ -293,6 +293,37 @@ export function VMIRecordDetailPage() {
             Oxigenación y Equilibrio Ácido-Base
           </h3>
           <div className="space-y-4">
+            {/* Orden de reporte de gasometría: pH, PaCO₂, PaO₂, HCO₃, SatO₂, Exceso de Bases, FiO₂. */}
+            <div className="grid grid-cols-2 gap-4">
+              {record.ph && <div>
+                  <div className="text-sm text-gray-600 mb-1">pH</div>
+                  <div className="text-xl font-bold text-gray-900">
+                    {record.ph}
+                  </div>
+                </div>}
+              {record.paco2 && <div>
+                  <div className="text-sm text-gray-600 mb-1">PaCO₂</div>
+                  <div className="text-xl font-bold text-gray-900">
+                    {record.paco2} mmHg
+                  </div>
+                </div>}
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              {record.pao2 && <div>
+                  <div className="text-sm text-gray-600 mb-1">PaO₂</div>
+                  <div className="text-2xl font-bold text-gray-900">
+                    {record.pao2} mmHg
+                  </div>
+                </div>}
+              {record.hco3 && <div>
+                  <div className="text-sm text-gray-600 mb-1">HCO₃</div>
+                  <div className="text-xl font-bold text-gray-900">
+                    {record.hco3} mEq/L
+                  </div>
+                </div>}
+            </div>
+
             {record.pfRatio && <div className={`p-4 rounded-xl ${record.pfRatio < 200 ? 'bg-red-50' : 'bg-green-50'}`}>
                 <div className="text-sm text-gray-600 mb-1">Relación P/F</div>
                 <div className={`text-3xl font-bold ${record.pfRatio < 200 ? 'text-red-600' : 'text-green-600'}`}>
@@ -306,40 +337,25 @@ export function VMIRecordDetailPage() {
                 </div>
               </div>}
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-3 gap-4">
               {record.spo2 && <div>
                   <div className="text-sm text-gray-600 mb-1">SpO₂</div>
-                  <div className="text-2xl font-bold text-gray-900">
+                  <div className="text-xl font-bold text-gray-900">
                     {record.spo2}%
                   </div>
                 </div>}
-              {record.pao2 && <div>
-                  <div className="text-sm text-gray-600 mb-1">PaO₂</div>
-                  <div className="text-2xl font-bold text-gray-900">
-                    {record.pao2} mmHg
-                  </div>
-                </div>}
-            </div>
-
-            <div className="grid grid-cols-3 gap-4">
-              {record.paco2 && <div>
-                  <div className="text-sm text-gray-600 mb-1">PaCO₂</div>
+              {record.baseExcess != null && <div>
+                  <div className="text-sm text-gray-600 mb-1">Exceso de Bases</div>
                   <div className="text-xl font-bold text-gray-900">
-                    {record.paco2} mmHg
+                    {record.baseExcess} mEq/L
                   </div>
                 </div>}
-              {record.ph && <div>
-                  <div className="text-sm text-gray-600 mb-1">pH</div>
-                  <div className="text-xl font-bold text-gray-900">
-                    {record.ph}
-                  </div>
-                </div>}
-              {record.hco3 && <div>
-                  <div className="text-sm text-gray-600 mb-1">HCO₃</div>
-                  <div className="text-xl font-bold text-gray-900">
-                    {record.hco3} mEq/L
-                  </div>
-                </div>}
+              <div>
+                <div className="text-sm text-gray-600 mb-1">FiO₂</div>
+                <div className="text-xl font-bold text-gray-900">
+                  {record.fio2}%
+                </div>
+              </div>
             </div>
 
             {/* Acid-Base Interpretation */}
