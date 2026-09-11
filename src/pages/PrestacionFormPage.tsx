@@ -40,6 +40,7 @@ export function PrestacionFormPage() {
   const [error, setError] = useState<string | null>(null);
 
   const showOxygenFields = type === 'kinesioterapia-respiratoria' && patient?.supportType === 'conventional-oxygen';
+  const showDuration = type !== 'kinesioterapia-respiratoria' && type !== 'kinesioterapia-motora';
 
   if (!patient) {
     return (
@@ -58,7 +59,7 @@ export function PrestacionFormPage() {
       await prestacionesApi.createPrestacion({
         patientId: patient.id,
         type,
-        durationMinutes: durationMinutes ? Number(durationMinutes) : undefined,
+        durationMinutes: showDuration && durationMinutes ? Number(durationMinutes) : undefined,
         notes: notes || undefined,
         oxygenDevice: showOxygenFields && oxygenDevice ? oxygenDevice : undefined,
         oxygenLiters: showOxygenFields && oxygenLiters ? Number(oxygenLiters) : undefined,
@@ -112,13 +113,15 @@ export function PrestacionFormPage() {
             </div>
           )}
 
-          <Input
-            label="Duración (minutos, opcional)"
-            type="number"
-            value={durationMinutes}
-            onChange={(e) => setDurationMinutes(e.target.value)}
-            placeholder="Ej: 20"
-          />
+          {showDuration && (
+            <Input
+              label="Duración (minutos, opcional)"
+              type="number"
+              value={durationMinutes}
+              onChange={(e) => setDurationMinutes(e.target.value)}
+              placeholder="Ej: 20"
+            />
+          )}
           <Input
             label="Notas (opcional)"
             value={notes}
