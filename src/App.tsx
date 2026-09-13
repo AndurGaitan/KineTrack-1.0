@@ -2,6 +2,7 @@ import React, { Suspense, lazy } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AppProvider, useApp } from './contexts/AppContext';
 import { BottomNav } from './components/BottomNav';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import { LoginPage } from './pages/LoginPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { SectorDetailPage } from './pages/SectorDetailPage';
@@ -192,8 +193,10 @@ function AppRoutes() {
 }
 export function App() {
   return <BrowserRouter>
-      <AppProvider>
-        <AppRoutes />
-      </AppProvider>
+      <ErrorBoundary>
+        <AppProvider>
+          <AppRoutes />
+        </AppProvider>
+      </ErrorBoundary>
     </BrowserRouter>;
 }

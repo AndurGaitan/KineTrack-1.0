@@ -113,15 +113,29 @@ export function PaseGeneralPage() {
       if (navigator.clipboard && window.isSecureContext) {
         await navigator.clipboard.writeText(handoffText);
       } else {
+        // Standard offscreen-textarea fallback for execCommand('copy').
+        // Deliberately `position: absolute; left: -9999px` (in normal flow,
+        // just moved off-screen) rather than `position: fixed; opacity: 0`
+        // — a fixed element with no inset properties keeps its static-flow
+        // position, which can end up overlapping visible content while
+        // staying invisible-but-interactive. The try/finally guarantees
+        // cleanup even if execCommand throws (deprecated API, unreliable
+        // across browsers), so a failed copy can't leave a stray element
+        // sitting over the page.
         const textarea = document.createElement('textarea');
         textarea.value = handoffText;
-        textarea.style.position = 'fixed';
-        textarea.style.opacity = '0';
+        textarea.setAttribute('readonly', '');
+        textarea.style.position = 'absolute';
+        textarea.style.top = '0';
+        textarea.style.left = '-9999px';
         document.body.appendChild(textarea);
-        textarea.focus();
-        textarea.select();
-        document.execCommand('copy');
-        document.body.removeChild(textarea);
+        try {
+          textarea.focus();
+          textarea.select();
+          document.execCommand('copy');
+        } finally {
+          document.body.removeChild(textarea);
+        }
       }
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);

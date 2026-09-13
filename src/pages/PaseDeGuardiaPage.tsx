@@ -79,15 +79,23 @@ export function PaseDeGuardiaPage() {
       if (navigator.clipboard && window.isSecureContext) {
         await navigator.clipboard.writeText(handoffText);
       } else {
+        // See PaseGeneralPage.tsx's handleCopy for why this uses an
+        // offscreen-absolute textarea + try/finally instead of
+        // fixed/opacity-0 with unguarded cleanup.
         const textarea = document.createElement('textarea');
         textarea.value = handoffText;
-        textarea.style.position = 'fixed';
-        textarea.style.opacity = '0';
+        textarea.setAttribute('readonly', '');
+        textarea.style.position = 'absolute';
+        textarea.style.top = '0';
+        textarea.style.left = '-9999px';
         document.body.appendChild(textarea);
-        textarea.focus();
-        textarea.select();
-        document.execCommand('copy');
-        document.body.removeChild(textarea);
+        try {
+          textarea.focus();
+          textarea.select();
+          document.execCommand('copy');
+        } finally {
+          document.body.removeChild(textarea);
+        }
       }
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
