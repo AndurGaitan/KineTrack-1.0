@@ -292,6 +292,9 @@ export interface Prestacion {
   notes?: string;
   oxygenDevice?: OxygenDeviceType;
   oxygenLiters?: number;
+  // Only meaningful for type: 'kinesioterapia-motora' — same 0-4 scale as
+  // VMIRecord.mobilizationLevel. Backs QI-05 (movilización precoz).
+  mobilizationLevel?: MobilizationLevel;
 }
 
 export type MrcStatus = 'evaluable' | 'no-evaluable' | 'parcial' | 'desconocido';
@@ -398,5 +401,10 @@ export interface DashboardSummary {
     };
     qi03Dauci: QIResultBase & { patientsVmiMasDe7Dias: number; daucicConfirmada: number };
     qi04ProtocolosVigentes: QIResultBase & { protocolosPriorizados: number; protocolosVigentes: number };
+    qi05MovilizacionPrecoz: QIResultBase & {
+      episodiosElegibles: number;
+      episodiosATiempo: number;
+      episodiosSinMovilizacion: number;
+    };
   };
 }

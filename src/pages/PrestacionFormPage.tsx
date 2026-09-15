@@ -5,7 +5,8 @@ import { Header } from '../components/ui/Header';
 import { Button } from '../components/ui/Button';
 import { Select, Input } from '../components/ui/Input';
 import * as prestacionesApi from '../api/prestacionesApi';
-import { OxygenDeviceType, PrestacionType } from '../types';
+import { MobilizationLevel, OxygenDeviceType, PrestacionType } from '../types';
+import { mobilizationLevels } from '../utils/vmiEducation';
 
 const typeOptions: { value: PrestacionType; label: string }[] = [
   { value: 'kinesioterapia-respiratoria', label: 'Kinesioterapia respiratoria' },
@@ -20,6 +21,16 @@ const oxygenDeviceOptions: { value: OxygenDeviceType; label: string }[] = [
   { value: 'mascara-venturi', label: 'Máscara Venturi' },
   { value: 'mascara-no-reinhalacion', label: 'Máscara de no reinhalación' },
 ];
+
+// Misma escala 0-4 que ya usa Monitorización VMI — reutilizada acá para que
+// una sesión de kinesioterapia motora pueda documentar el nivel de
+// movilización aunque no se esté haciendo monitorización completa. La
+// primera vez que un paciente en VMI llega a nivel ≥1 (acá o en un
+// registro VMI) cuenta como inicio de movilización precoz para QI-05.
+const mobilizationOptions: { value: string; label: string }[] = mobilizationLevels.map((level) => ({
+  value: String(level.value),
+  label: `${level.label} — ${level.description}`,
+}));
 
 export function PrestacionFormPage() {
   const { patientId } = useParams<{ patientId: string }>();
@@ -36,11 +47,13 @@ export function PrestacionFormPage() {
   const [notes, setNotes] = useState('');
   const [oxygenDevice, setOxygenDevice] = useState<OxygenDeviceType | ''>('');
   const [oxygenLiters, setOxygenLiters] = useState('');
+  const [mobilizationLevel, setMobilizationLevel] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const showOxygenFields = type === 'kinesioterapia-respiratoria' && patient?.supportType === 'conventional-oxygen';
   const showDuration = type !== 'kinesioterapia-respiratoria' && type !== 'kinesioterapia-motora';
+  const showMobilization = type === 'kinesioterapia-motora';
 
   if (!patient) {
     return (
@@ -63,6 +76,8 @@ export function PrestacionFormPage() {
         notes: notes || undefined,
         oxygenDevice: showOxygenFields && oxygenDevice ? oxygenDevice : undefined,
         oxygenLiters: showOxygenFields && oxygenLiters ? Number(oxygenLiters) : undefined,
+        mobilizationLevel:
+          showMobilization && mobilizationLevel !== '' ? (Number(mobilizationLevel) as MobilizationLevel) : undefined,
       });
       navigate(`/patient/${patient.id}`);
     } catch (err) {
@@ -109,6 +124,25 @@ export function PrestacionFormPage() {
                 value={oxygenLiters}
                 onChange={(e) => setOxygenLiters(e.target.value)}
                 placeholder="Ej: 3"
+              />
+            </div>
+          )}
+
+          {showMobilization && (
+            <div className="space-y-2">
+              {patient.supportType === 'imv' && (
+                <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+                  <p className="text-sm text-blue-900">
+                    <strong>💡</strong> Paciente en VMI — si es la primera vez que se moviliza (nivel 1 o más), esta
+                    fecha queda como inicio de movilización precoz para el bundle de prevención de NAVM.
+                  </p>
+                </div>
+              )}
+              <Select
+                label="Tipo de movilización (opcional)"
+                value={mobilizationLevel}
+                onChange={(e) => setMobilizationLevel(e.target.value)}
+                options={mobilizationOptions}
               />
             </div>
           )}

@@ -211,13 +211,25 @@ export function CoordinatorDashboardPage() {
             </div>
 
             <div>
-              <h2 className="text-lg font-bold text-gray-900 mb-3">Indicadores de calidad</h2>
+              <h2 className="text-lg font-bold text-gray-900 mb-1">Bundle de prevención de NAVM</h2>
+              <p className="text-xs text-gray-500 mb-3">Los dos componentes del bundle que dependen de kinesiología.</p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <QICard
                   title="QI-01 · PVE en días elegibles"
                   formula="días-paciente elegibles con ≥1 PVE / total días-paciente elegibles"
                   result={summary.qualityIndicators.qi01PveDiasElegibles}
                 />
+                <QICard
+                  title="QI-05 · Movilización precoz"
+                  formula="episodios VMI con 1ª movilización ≤48h / episodios con ventana de 48h ya cumplida"
+                  result={summary.qualityIndicators.qi05MovilizacionPrecoz}
+                />
+              </div>
+            </div>
+
+            <div>
+              <h2 className="text-lg font-bold text-gray-900 mb-3">Otros indicadores de calidad</h2>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <QICard
                   title="QI-02 · Reintubación ≤48h"
                   formula="reintubadas ≤48h / programadas con seguimiento completo"
