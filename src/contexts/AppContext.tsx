@@ -18,7 +18,6 @@ interface AppContextType extends AppState {
   isLoading: boolean;
   authError: string | null;
   login: (email: string, password: string) => Promise<void>;
-  register: (name: string, email: string, password: string) => Promise<void>;
   logout: () => void;
   updateProfile: (name: string) => Promise<void>;
   addPatient: (patient: Omit<Patient, 'id' | 'createdAt' | 'status' | 'episodes'>) => Promise<void>;
@@ -161,21 +160,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
       await loadWorkspace(user);
     } catch (error) {
       setAuthError(error instanceof Error ? error.message : 'No se pudo iniciar sesión');
-      throw error;
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const register = async (name: string, email: string, password: string) => {
-    setAuthError(null);
-    try {
-      const { token, user } = await authApi.register({ name, email, password });
-      setToken(token);
-      setIsLoading(true);
-      await loadWorkspace(user);
-    } catch (error) {
-      setAuthError(error instanceof Error ? error.message : 'No se pudo crear la cuenta');
       throw error;
     } finally {
       setIsLoading(false);
@@ -445,7 +429,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
         isLoading,
         authError,
         login,
-        register,
         logout,
         updateProfile,
         addPatient,
