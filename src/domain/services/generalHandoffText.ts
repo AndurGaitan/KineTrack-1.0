@@ -10,7 +10,7 @@
  * facts.
  */
 import { MrcAssessment, NIVSession, Patient, Prestacion, Sector, SupportEpisode } from '../../types';
-import { LatestSupportRecord, fmtDate, narrateContext, narratePrestaciones, narrateSupport } from './clinicalNarrative';
+import { LatestSupportRecord, TrachNarrativeInput, fmtDate, narrateContext, narratePrestaciones, narrateSupport } from './clinicalNarrative';
 
 export interface GeneralHandoffPatientInput {
   patient: Patient;
@@ -21,6 +21,7 @@ export interface GeneralHandoffPatientInput {
   prestaciones: Prestacion[];
   mrcAssessment?: MrcAssessment;
   nivSessions?: NIVSession[];
+  trach?: TrachNarrativeInput;
 }
 
 export interface GeneralHandoffInput {
@@ -29,11 +30,11 @@ export interface GeneralHandoffInput {
 }
 
 function buildPatientBlock(input: GeneralHandoffPatientInput): string {
-  const { patient, sector, activeEpisode, latestSupportRecord, prestaciones, mrcAssessment, nivSessions } = input;
+  const { patient, sector, activeEpisode, latestSupportRecord, prestaciones, mrcAssessment, nivSessions, trach } = input;
   const location = [sector?.name, patient.bedLabel ? `cama ${patient.bedLabel}` : undefined].filter(Boolean).join(', ');
   const header = `${patient.alias}${location ? ` (${location})` : ''}${patient.age != null ? `, ${patient.age} años` : ''}`;
 
-  const body = [narrateContext(patient, activeEpisode), narrateSupport(latestSupportRecord, patient, nivSessions), narratePrestaciones(prestaciones, mrcAssessment)]
+  const body = [narrateContext(patient, activeEpisode), narrateSupport(latestSupportRecord, patient, nivSessions, trach), narratePrestaciones(prestaciones, mrcAssessment)]
     .filter(Boolean)
     .join(' ');
 

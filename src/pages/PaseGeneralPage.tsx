@@ -5,9 +5,10 @@ import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import * as prestacionesApi from '../api/prestacionesApi';
 import * as mrcApi from '../api/mrcApi';
+import * as trachApi from '../api/trachApi';
 import { buildGeneralHandoffText, GeneralHandoffPatientInput } from '../domain/services/generalHandoffText';
 import { pickLatestSupportRecord } from '../domain/services/handoffText';
-import { MrcAssessment, Prestacion } from '../types';
+import { MrcAssessment, Prestacion, TrachOverview } from '../types';
 import { CheckIcon, ClipboardCopyIcon, UsersIcon } from 'lucide-react';
 
 function startOfToday(): string {
@@ -31,6 +32,7 @@ export function PaseGeneralPage() {
 
   const [prestacionesHoy, setPrestacionesHoy] = useState<Prestacion[]>([]);
   const [mrcByPatient, setMrcByPatient] = useState<Record<string, MrcAssessment | undefined>>({});
+  const [trachByPatient, setTrachByPatient] = useState<Record<string, TrachOverview>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
@@ -44,7 +46,12 @@ export function PaseGeneralPage() {
       .then(async (result) => {
         setPrestacionesHoy(result);
         const patientIds = [...new Set(result.map((p) => p.patientId))];
-        const mrcResults = await Promise.all(patientIds.map((id) => mrcApi.listMrcAssessments(id)));
+        const trachIds = patientIds.filter((id) => patients.find((p) => p.id === id)?.supportType === 'traqueostomia');
+        const [mrcResults, trachResult] = await Promise.all([
+          Promise.all(patientIds.map((id) => mrcApi.listMrcAssessments(id))),
+          trachIds.length > 0 ? trachApi.getTrachOverview(trachIds) : Promise.resolve({} as Record<string, TrachOverview>),
+        ]);
+        setTrachByPatient(trachResult);
         const byPatient: Record<string, MrcAssessment | undefined> = {};
         patientIds.forEach((id, i) => {
           byPatient[id] = [...mrcResults[i]].sort((a, b) => new Date(b.assessedAt).getTime() - new Date(a.assessedAt).getTime())[0];
@@ -90,6 +97,10 @@ export function PaseGeneralPage() {
           prestaciones: [...prestaciones].sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()),
           mrcAssessment: mrcByPatient[patientId],
           nivSessions,
+          trach:
+            patient.supportType === 'traqueostomia'
+              ? { records: getPatientTrachRecords(patient.id), overview: trachByPatient[patientId] ?? null, episode: activeEpisode }
+              : undefined,
         };
         return input;
       })
@@ -101,7 +112,7 @@ export function PaseGeneralPage() {
       return bedSortOrder(a.patient, a.sector?.name) - bedSortOrder(b.patient, b.sector?.name);
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [prestacionesHoy, mrcByPatient, patients, sectors]);
+  }, [prestacionesHoy, mrcByPatient, trachByPatient, patients, sectors]);
 
   const handoffText = useMemo(() => {
     if (!user || patientInputs.length === 0) return '';

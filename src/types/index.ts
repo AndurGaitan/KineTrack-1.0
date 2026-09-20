@@ -249,17 +249,119 @@ export interface TrachRecord {
   performedByUserId: string;
   timestamp: string;
   type: 'traqueostomia';
-  glasgow: number;
+  // Estado (snapshot of the trach's current state — every field optional)
+  cuffStatus?: TrachCuffStatus;
+  ventilatorySupport?: TrachVentilatorySupport;
+  secretionAmount?: TrachSecretionAmount;
+  secretionCharacter?: TrachSecretionCharacter;
+  glasgow?: number;
   pemax?: number;
   cuffDeflationPerformed: boolean;
   cuffDeflationTolerated?: boolean;
   cuffDeflationNotes?: string;
-  cappedTrialPerformed: boolean;
+  // Legacy — superseded by TrachOcclusionTrial; only present on old records.
+  cappedTrialPerformed?: boolean;
   cappedTrialTolerated?: boolean;
   cappedTrialNotes?: string;
   swallowingTest?: SwallowingTestResult;
   blueTest?: BlueTestResult;
   alerts: string[];
+}
+
+export type TrachCuffStatus = 'insuflado' | 'desinsuflado' | 'sin-balon';
+export type TrachVentilatorySupport = 'aire-ambiente' | 'oxigeno' | 'hfnc' | 'vmi-intermitente';
+export type TrachSecretionAmount = 'ausente' | 'escasa' | 'moderada' | 'abundante';
+export type TrachSecretionCharacter = 'mucosa' | 'mucopurulenta' | 'purulenta' | 'hemoptoica';
+
+// ---- Decannulation process (optional, professional-initiated) -------------
+// Seven longitudinal domains. There is deliberately no score, percentage or
+// "apto/no apto": every domain keeps observed data, the institutional
+// reference and the professional's interpretation as separate things.
+export type TrachDomain =
+  | 'estabilidad'
+  | 'via-aerea-superior'
+  | 'secreciones'
+  | 'pemax'
+  | 'proteccion'
+  | 'oclusion'
+  | 'rescate';
+export type TrachDomainStatus = 'pendiente' | 'favorable' | 'condicionado' | 'desfavorable' | 'no-evaluable';
+
+export interface TrachDomainAssessment {
+  id: string;
+  processId: string;
+  domain: TrachDomain;
+  status: TrachDomainStatus;
+  notes?: string;
+  observed?: Record<string, unknown>;
+  assessedAt: string;
+  assessedByUserId: string;
+}
+
+export type TrachOcclusionEventType = 'desaturacion' | 'disnea' | 'secreciones' | 'retiro-tapon' | 'otro';
+export type TrachOcclusionResult = 'tolerada' | 'no-tolerada' | 'interrumpida';
+
+export interface TrachOcclusionEntry {
+  id: string;
+  trialId: string;
+  kind: 'control' | 'evento';
+  at: string;
+  spo2?: number;
+  respiratoryRate?: number;
+  heartRate?: number;
+  eventType?: TrachOcclusionEventType;
+  notes?: string;
+  recordedByUserId: string;
+}
+
+export interface TrachOcclusionTrial {
+  id: string;
+  processId: string;
+  patientId: string;
+  startedAt: string;
+  startedByUserId: string;
+  endedAt?: string;
+  endedByUserId?: string;
+  result?: TrachOcclusionResult;
+  resultNotes?: string;
+  entries: TrachOcclusionEntry[];
+}
+
+export interface TrachRescueChecklistItemState {
+  checked: boolean;
+  at: string;
+  byUserId: string;
+}
+
+export interface TrachDecannulationProcess {
+  id: string;
+  patientId: string;
+  episodeId?: string;
+  startedAt: string;
+  startedByUserId: string;
+  endedAt?: string;
+  endedByUserId?: string;
+  outcome?: 'decanulado' | 'suspendido';
+  endNotes?: string;
+  rescueChecklist: Record<string, TrachRescueChecklistItemState>;
+  assessments: TrachDomainAssessment[];
+  occlusionTrials: TrachOcclusionTrial[];
+}
+
+export interface TrachAspiration {
+  id: string;
+  patientId: string;
+  episodeId?: string;
+  performedByUserId: string;
+  timestamp: string;
+  count: number;
+  secretionAmount?: 'escasa' | 'moderada' | 'abundante';
+}
+
+export interface TrachOverview {
+  activeProcess: TrachDecannulationProcess | null;
+  pastProcesses: { id: string; startedAt: string; endedAt: string; outcome?: 'decanulado' | 'suspendido'; endNotes?: string }[];
+  aspirations: TrachAspiration[];
 }
 
 export interface AppState {

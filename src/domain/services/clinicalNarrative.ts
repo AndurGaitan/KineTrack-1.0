@@ -19,6 +19,7 @@ import {
   PrestacionType,
   RiskLevel,
   SupportEpisode,
+  TrachOverview,
   TrachRecord,
   VMIRecord,
 } from '../../types';
@@ -27,6 +28,15 @@ import { cannulaFitOptions } from '../../utils/hfncEducation';
 import { interfaceTypes, nivModes, skinIntegrityOptions } from '../../utils/nivEducation';
 import { computeNIVUsageSummary } from '../../utils/nivCalculations';
 import { mobilizationLevels, ventModes, weaningStatuses } from '../../utils/vmiEducation';
+import {
+  aspirationBlocks,
+  cuffStatusLabels,
+  describeStatusOneLine,
+  hoursFreeOfVmi,
+  secretionAmountLabels,
+  secretionCharacterLabels,
+  ventilatorySupportLabels,
+} from './trachDecannulation';
 
 export type LatestSupportRecord =
   | { type: 'imv'; record: VMIRecord }
@@ -290,27 +300,80 @@ function narrateHfnc(record: HFNCRecord): string {
   return parts.join(' ');
 }
 
-function narrateTraqueostomia(record: TrachRecord): string {
+/** Todo lo que hace falta para narrar una traqueostomía: estado, aspiraciones y proceso de decanulación. */
+export interface TrachNarrativeInput {
+  /** Registros de estado, del más nuevo al más viejo. */
+  records: TrachRecord[];
+  overview?: TrachOverview | null;
+  episode?: SupportEpisode;
+}
+
+function latestOf<T>(records: TrachRecord[], pick: (r: TrachRecord) => T | undefined): T | undefined {
+  for (const r of records) {
+    const v = pick(r);
+    if (v !== undefined) return v;
+  }
+  return undefined;
+}
+
+function narrateTraqueostomia(input: TrachNarrativeInput): string {
+  const { records, overview, episode } = input;
+  const now = new Date();
   const parts: string[] = [];
-  parts.push(`Traqueostomizado, en respiración espontánea. Glasgow ${record.glasgow}${record.pemax != null ? `, PEmax ${record.pemax}` : ''}.`);
-  if (record.cuffDeflationPerformed) {
-    parts.push(
-      `Desinsuflación de cuff ${record.cuffDeflationTolerated ? 'tolerada' : 'no tolerada'}${record.cuffDeflationNotes ? ` (${record.cuffDeflationNotes})` : ''}.`
-    );
-  }
-  if (record.cappedTrialPerformed) {
-    parts.push(
-      `Prueba de tapado ${record.cappedTrialTolerated ? 'tolerada' : 'no tolerada'}${record.cappedTrialNotes ? ` (${record.cappedTrialNotes})` : ''}.`
-    );
-  }
-  if (record.swallowingTest) parts.push(`Deglución: ${swallowingLabels[record.swallowingTest] ?? record.swallowingTest}.`);
-  if (record.blueTest) parts.push(`Blue test ${record.blueTest === 'positivo' ? 'positivo' : 'negativo'}.`);
-  const alertsText = formatAlerts(record.alerts);
-  if (alertsText) parts.push(`${alertsText}.`);
+
+  const hours = hoursFreeOfVmi(episode, now);
+  const freeDays = hours !== undefined ? Math.floor(hours / 24) : 0;
+  const freeText = hours !== undefined ? `, ${freeDays} ${freeDays === 1 ? 'día libre' : 'días libres'} de VMI` : '';
+  parts.push(`Traqueostomizado, en respiración espontánea${freeText}.`);
+
+  // Estado: lo último que se sabe de cada ítem (una actualización puede traer solo algunos).
+  const cuff = latestOf(records, (r) => r.cuffStatus);
+  const support = latestOf(records, (r) => r.ventilatorySupport);
+  const state: string[] = [];
+  if (cuff) state.push(`neumotaponamiento ${cuffStatusLabels[cuff].toLowerCase()}`);
+  if (support) state.push(`con ${ventilatorySupportLabels[support].toLowerCase()}`);
+  if (state.length > 0) parts.push(`${state.join(', ').replace(/^./, (c) => c.toUpperCase())}.`);
+
+  const amount = latestOf(records, (r) => r.secretionAmount);
+  const character = latestOf(records, (r) => r.secretionCharacter);
+  const asp24h = aspirationBlocks(overview?.aspirations ?? [], now).reduce((sum, b) => sum + b.count, 0);
+  const secretions: string[] = [];
+  if (amount) secretions.push(`Secreciones ${secretionAmountLabels[amount].toLowerCase().replace('sin secreciones', 'ausentes')}${character ? ` ${secretionCharacterLabels[character]}` : ''}`);
+  if (asp24h > 0) secretions.push(`${asp24h} ${asp24h === 1 ? 'aspiración' : 'aspiraciones'} en las últimas 24 horas`);
+  if (secretions.length > 0) parts.push(`${secretions.join('; ')}.`);
+
+  const glasgow = latestOf(records, (r) => r.glasgow);
+  const pemax = latestOf(records, (r) => r.pemax);
+  const measures: string[] = [];
+  if (glasgow !== undefined) measures.push(`Glasgow ${glasgow}`);
+  if (pemax !== undefined) measures.push(`Pemáx ${pemax} cmH2O`);
+  if (measures.length > 0) parts.push(`${measures.join(', ')}.`);
+
+  const cuffTest = records.find((r) => r.cuffDeflationPerformed);
+  if (cuffTest) parts.push(`Prueba de balón desinflado ${cuffTest.cuffDeflationTolerated ? 'tolerada' : 'no tolerada'}${cuffTest.cuffDeflationNotes ? ` (${cuffTest.cuffDeflationNotes})` : ''}.`);
+  const capped = records.find((r) => r.cappedTrialPerformed);
+  if (capped) parts.push(`Prueba de cánula tapada ${capped.cappedTrialTolerated ? 'tolerada' : 'no tolerada'} (registro previo).`);
+  const swallow = latestOf(records, (r) => r.swallowingTest);
+  if (swallow) parts.push(`Deglución: ${swallowingLabels[swallow] ?? swallow}.`);
+  const blue = latestOf(records, (r) => r.blueTest);
+  if (blue) parts.push(`Blue test ${blue === 'positivo' ? 'positivo' : 'negativo'}.`);
+
+  if (overview?.activeProcess) parts.push(describeStatusOneLine(overview.activeProcess, now));
+
+  if (records.length === 0 && !overview?.activeProcess && asp24h === 0) parts.push('Sin seguimiento de traqueostomía cargado todavía.');
   return parts.join(' ');
 }
 
-export function narrateSupport(latest: LatestSupportRecord, patient: Patient, nivSessions: NIVSession[] | undefined): string {
+export function narrateSupport(
+  latest: LatestSupportRecord,
+  patient: Patient,
+  nivSessions: NIVSession[] | undefined,
+  trach?: TrachNarrativeInput
+): string {
+  // La traqueostomía se narra con el estado + aspiraciones + proceso, no solo con el último registro.
+  if (patient.supportType === 'traqueostomia') {
+    return narrateTraqueostomia(trach ?? { records: latest?.type === 'traqueostomia' ? [latest.record] : [] });
+  }
   if (!latest) {
     if (patient.supportType === 'conventional-oxygen') return 'Con oxígeno convencional.';
     if (patient.supportType === 'room-air') return 'En aire ambiente.';
@@ -324,7 +387,7 @@ export function narrateSupport(latest: LatestSupportRecord, patient: Patient, ni
     case 'hfnc':
       return narrateHfnc(latest.record);
     case 'traqueostomia':
-      return narrateTraqueostomia(latest.record);
+      return narrateTraqueostomia({ records: [latest.record] });
   }
 }
 

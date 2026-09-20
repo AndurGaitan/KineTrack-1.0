@@ -20,6 +20,7 @@ import {
   narratePrestaciones,
   narrateSupport,
   pickLatestSupportRecord,
+  TrachNarrativeInput,
 } from './clinicalNarrative';
 
 export type { LatestSupportRecord };
@@ -37,6 +38,8 @@ export interface HandoffInput {
   mrcAssessment?: MrcAssessment;
   /** Sesiones de VNI del episodio activo, si el soporte actual es VNI — para la oración de uso/destete. */
   nivSessions?: NIVSession[];
+  /** Estado + aspiraciones + proceso de decanulación, si el soporte actual es traqueostomía. */
+  trach?: TrachNarrativeInput;
 }
 
 function buildHeader(patient: Patient, sector: Sector | undefined): string {
@@ -50,7 +53,7 @@ export function buildHandoffText(input: HandoffInput): string {
   const header = buildHeader(input.patient, input.sector);
   const body = [
     narrateContext(input.patient, input.activeEpisode),
-    narrateSupport(input.latestSupportRecord, input.patient, input.nivSessions),
+    narrateSupport(input.latestSupportRecord, input.patient, input.nivSessions, input.trach),
     narratePrestaciones(input.prestaciones, input.mrcAssessment, `En las últimas ${input.shiftHours} horas`),
   ]
     .filter(Boolean)

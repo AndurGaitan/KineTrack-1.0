@@ -328,7 +328,7 @@ export function PatientDetailPage() {
                       </h3>
                     </div>
                     <p className="text-sm text-gray-700">
-                      Días sin VMI, Glasgow, PEmax, pruebas de balón/cánula y deglución para{' '}
+                      Estado de la traqueostomía, actividad (KTR/KTM) y proceso de decanulación para{' '}
                       {supportTypeFullLabels[supportType]}
                     </p>
                   </div>
@@ -448,7 +448,7 @@ export function PatientDetailPage() {
                                       {episode.supportType === 'hfnc' && 'roxIndex' in record && <Badge variant="risk" type={record.roxIndex >= 4.88 ? 'low' : record.roxIndex >= 3.85 ? 'medium' : 'high'}>
                                             ROX {record.roxIndex}
                                           </Badge>}
-                                      {episode.supportType === 'traqueostomia' && 'glasgow' in record && <Badge className="bg-indigo-100 text-indigo-700">
+                                      {episode.supportType === 'traqueostomia' && 'cuffDeflationPerformed' in record && record.glasgow !== undefined && <Badge className="bg-indigo-100 text-indigo-700">
                                             Glasgow {record.glasgow}
                                           </Badge>}
                                     </div>
@@ -558,18 +558,18 @@ export function PatientDetailPage() {
                                           </div>
                                         </div>}
 
-                                    {episode.supportType === 'traqueostomia' && 'glasgow' in record && <div className="grid grid-cols-3 gap-3 text-center">
+                                    {episode.supportType === 'traqueostomia' && 'cuffDeflationPerformed' in record && <div className="grid grid-cols-3 gap-3 text-center">
                                           <div>
                                             <div className="text-xs text-gray-600">
-                                              Glasgow
+                                              Balón
                                             </div>
-                                            <div className="text-lg font-bold text-gray-900">
-                                              {record.glasgow}
+                                            <div className="text-sm font-bold text-gray-900">
+                                              {record.cuffStatus ? { insuflado: 'Insuflado', desinsuflado: 'Desinsuflado', 'sin-balon': 'Sin balón' }[record.cuffStatus] : '-'}
                                             </div>
                                           </div>
                                           <div>
                                             <div className="text-xs text-gray-600">
-                                              PEmax
+                                              Pemáx
                                             </div>
                                             <div className="text-lg font-bold text-gray-900">
                                               {record.pemax ?? '-'}
