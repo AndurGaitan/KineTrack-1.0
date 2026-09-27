@@ -1,11 +1,21 @@
 import { useState, FormEvent } from 'react';
 import { XIcon } from 'lucide-react';
 import { Button } from './ui/Button';
-import { AirwayEventInput, AirwayEventType, SupportType } from '../types';
+import { SectorBedPicker } from './SectorBedPicker';
+import { AirwayEventInput, AirwayEventType, Patient, Sector, SupportType } from '../types';
+import { toLocalDateTimeInputValue } from '../utils/dateInput';
 interface ChangeSupportModalProps {
   currentSupport: SupportType;
+  patient: Patient;
+  sectors: Sector[];
   onClose: () => void;
-  onConfirm: (newSupport: SupportType, reason: string, date: string, airwayEvent?: AirwayEventInput) => void;
+  onConfirm: (
+    newSupport: SupportType,
+    reason: string,
+    date: string,
+    airwayEvent?: AirwayEventInput,
+    location?: { sectorId: string; bedId: string }
+  ) => void;
 }
 const supportOptions = [{
   value: 'imv',
@@ -49,19 +59,25 @@ function getAirwayQuestion(
 
 export function ChangeSupportModal({
   currentSupport,
+  patient,
+  sectors,
   onClose,
   onConfirm
 }: ChangeSupportModalProps) {
   const [newSupport, setNewSupport] = useState<SupportType | ''>('');
   const [reason, setReason] = useState('');
   const [customReason, setCustomReason] = useState('');
-  const [date, setDate] = useState(() => {
-    const now = new Date();
-    return now.toISOString().slice(0, 16);
-  });
+  const [date, setDate] = useState(() => toLocalDateTimeInputValue(new Date()));
   const airwayQuestion = getAirwayQuestion(currentSupport, newSupport);
   const [wasAirwayEvent, setWasAirwayEvent] = useState<'' | 'si' | 'no'>('');
   const [classification, setClassification] = useState<'programada' | 'accidental' | ''>('');
+
+  // Reubicación opcional junto con el cambio de soporte (p. ej. UCI -> sala
+  // general al bajar a oxígeno convencional/aire ambiente).
+  const [alsoRelocate, setAlsoRelocate] = useState(false);
+  const [sectorId, setSectorId] = useState(patient.sectorId);
+  const [bedId, setBedId] = useState('');
+  const [locationError, setLocationError] = useState<string | null>(null);
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
@@ -78,10 +94,23 @@ export function ChangeSupportModal({
       }
     }
 
-    onConfirm(newSupport as SupportType, finalReason, new Date(date).toISOString(), airwayEvent);
+    let location: { sectorId: string; bedId: string } | undefined;
+    if (alsoRelocate) {
+      if (!bedId) {
+        setLocationError('Seleccioná una cama');
+        return;
+      }
+      location = { sectorId, bedId };
+    }
+
+    onConfirm(newSupport as SupportType, finalReason, new Date(date).toISOString(), airwayEvent, location);
   };
 
-  const canSubmit = !!newSupport && (!airwayQuestion || wasAirwayEvent !== '' ) && !(airwayQuestion?.type === 'extubacion' && wasAirwayEvent === 'si' && !classification);
+  const canSubmit =
+    !!newSupport &&
+    (!airwayQuestion || wasAirwayEvent !== '') &&
+    !(airwayQuestion?.type === 'extubacion' && wasAirwayEvent === 'si' && !classification) &&
+    !(alsoRelocate && !bedId);
 
   return <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 p-4">
       <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
@@ -142,6 +171,48 @@ export function ChangeSupportModal({
               Fecha y hora del cambio
             </label>
             <input type="datetime-local" value={date} onChange={e => setDate(e.target.value)} className="w-full min-h-[56px] px-4 text-lg border-2 border-gray-300 rounded-xl focus:border-blue-600 focus:outline-none" required />
+          </div>
+
+          <div className="rounded-xl border-2 border-gray-200 p-4 space-y-4">
+            <label className="flex items-center gap-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={alsoRelocate}
+                onChange={e => {
+                  setAlsoRelocate(e.target.checked);
+                  setLocationError(null);
+                  if (e.target.checked) {
+                    setSectorId(patient.sectorId);
+                    setBedId('');
+                  }
+                }}
+                className="w-5 h-5"
+              />
+              <span className="text-sm font-medium text-gray-700">
+                El paciente también cambia de sector/cama
+              </span>
+            </label>
+            <p className="text-xs text-gray-500 -mt-2">
+              Útil, por ejemplo, al pasar a sala general.
+            </p>
+            {alsoRelocate && (
+              <SectorBedPicker
+                sectors={sectors}
+                sectorId={sectorId}
+                bedId={bedId}
+                currentBedId={patient.bedId}
+                onSectorChange={id => {
+                  setSectorId(id);
+                  setBedId('');
+                  setLocationError(null);
+                }}
+                onBedChange={id => {
+                  setBedId(id);
+                  setLocationError(null);
+                }}
+                bedError={locationError ?? undefined}
+              />
+            )}
           </div>
 
           {airwayQuestion && <div className="bg-amber-50 border-2 border-amber-200 rounded-xl p-4 space-y-3">

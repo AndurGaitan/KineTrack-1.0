@@ -3,14 +3,16 @@ import { Input, Select } from './ui/Input';
 import { Button } from './ui/Button';
 import { Patient, Sector, SupportType } from '../types';
 import { calculatePBWKg, Sex } from '../utils/vmiCalculations';
+import { toLocalDateTimeInputValue } from '../utils/dateInput';
 
 const clamp = (n: number, min: number, max: number) => Math.min(max, Math.max(min, n));
+
 interface PatientFormProps {
   sectors: Sector[];
   initialData?: Patient;
   prefilledSectorId?: string;
   prefilledBedId?: string;
-  onSubmit: (data: Omit<Patient, 'id' | 'createdAt' | 'status' | 'episodes'>) => void;
+  onSubmit: (data: Omit<Patient, 'id' | 'createdAt' | 'status' | 'episodes'> & { admissionDate?: string }) => void;
   onCancel: () => void;
 }
 export function PatientForm({
@@ -21,6 +23,8 @@ export function PatientForm({
   onSubmit,
   onCancel
 }: PatientFormProps) {
+  const isEdit = !!initialData;
+  const now = new Date();
   const [formData, setFormData] = useState({
     alias: initialData?.alias || '',
     sectorId: initialData?.sectorId || prefilledSectorId || '',
@@ -30,8 +34,12 @@ export function PatientForm({
     admissionDiagnosis: initialData?.admissionDiagnosis || '',
     antecedentes: initialData?.antecedentes || [] as string[],
     sex: (initialData?.sex ?? '') as Sex | '',
-    heightCm: initialData?.heightCm ?? undefined as number | undefined
+    heightCm: initialData?.heightCm ?? undefined as number | undefined,
+    // Solo se usa al crear — para pacientes que ya estaban internados y hoy
+    // recién se cargan al sistema. Por defecto, ahora mismo.
+    admissionDate: toLocalDateTimeInputValue(now)
   });
+  const nowInputValue = toLocalDateTimeInputValue(now);
   const [newAntecedente, setNewAntecedente] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
   const addAntecedente = () => {
@@ -62,6 +70,9 @@ export function PatientForm({
     if (!formData.sectorId) newErrors.sectorId = 'Requerido';
     if (!formData.bedId) newErrors.bedId = 'Requerido';
     if (!formData.supportType) newErrors.supportType = 'Requerido';
+    if (!isEdit && formData.admissionDate && new Date(formData.admissionDate).getTime() > Date.now()) {
+      newErrors.admissionDate = 'No puede ser una fecha futura';
+    }
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
       return;
@@ -76,7 +87,8 @@ export function PatientForm({
       antecedentes: formData.antecedentes,
       sex: formData.sex || undefined,
       heightCm: formData.heightCm,
-      predictedBodyWeight
+      predictedBodyWeight,
+      admissionDate: !isEdit && formData.admissionDate ? new Date(formData.admissionDate).toISOString() : undefined
     });
   };
   return <form onSubmit={handleSubmit} className="space-y-6">
@@ -84,6 +96,21 @@ export function PatientForm({
       ...formData,
       alias: e.target.value
     })} placeholder="Ej: PAC-001" error={errors.alias} />
+
+      {!isEdit && <Input
+        label="Fecha y hora de ingreso"
+        type="datetime-local"
+        value={formData.admissionDate}
+        max={nowInputValue}
+        onChange={e => setFormData({
+          ...formData,
+          admissionDate: e.target.value
+        })}
+        error={errors.admissionDate}
+      />}
+      {!isEdit && <p className="text-xs text-gray-500 -mt-4">
+        Si el paciente ya estaba internado, colocá la fecha real de ingreso.
+      </p>}
 
       <Select label="Sector" value={formData.sectorId} onChange={e => setFormData({
       ...formData,

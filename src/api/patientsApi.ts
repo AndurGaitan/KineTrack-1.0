@@ -12,6 +12,8 @@ export type CreatePatientInput = {
   antecedentes?: string[];
   sex?: 'male' | 'female';
   heightCm?: number;
+  // Retroactive entry: paciente ya internado hace días. Default: ahora.
+  admissionDate?: string;
 };
 
 export type UpdatePatientInput = Partial<{
@@ -37,6 +39,10 @@ export type ChangeSupportInput = {
   reason?: string;
   date?: string;
   airwayEvent?: AirwayEventInput;
+  // Reubicación opcional junto con el cambio de soporte (p. ej. UCI -> sala
+  // general al pasar a oxígeno convencional/aire ambiente). Van juntos.
+  sectorId?: string;
+  bedId?: string;
 };
 
 export function listPatients(params?: { sectorId?: string; status?: 'active' | 'closed'; includeInactive?: boolean }) {

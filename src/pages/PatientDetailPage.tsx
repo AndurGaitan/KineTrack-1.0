@@ -6,6 +6,7 @@ import { Card } from '../components/ui/Card';
 import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
 import { ChangeSupportModal } from '../components/ChangeSupportModal';
+import { ChangeBedModal } from '../components/ChangeBedModal';
 import { ClosePatientModal } from '../components/ClosePatientModal';
 import { ActionSheet } from '../components/ActionSheet';
 import { EditIcon, BedDoubleIcon, ActivityIcon, WindIcon, DropletIcon, ChevronDownIcon, ChevronUpIcon, RepeatIcon, XCircleIcon, ClipboardPlusIcon, ClipboardListIcon, DumbbellIcon, ClipboardCheckIcon, BrainIcon, TrendingUpIcon, StethoscopeIcon } from 'lucide-react';
@@ -82,6 +83,7 @@ export function PatientDetailPage() {
     getPatientTrachRecords,
     getPatientEpisodes,
     changeSupportType,
+    updatePatient,
     closePatient
   } = useApp();
   const patient = patients.find(p => p.id === id);
@@ -89,6 +91,7 @@ export function PatientDetailPage() {
   const episodes = patient ? getPatientEpisodes(patient.id) : [];
   const [expandedEpisodes, setExpandedEpisodes] = useState<Record<string, boolean>>({});
   const [showChangeSupportModal, setShowChangeSupportModal] = useState(false);
+  const [showChangeBedModal, setShowChangeBedModal] = useState(false);
   const [showClosePatientModal, setShowClosePatientModal] = useState(false);
   const [showPrestacionMenu, setShowPrestacionMenu] = useState(false);
   if (!patient || !sector) {
@@ -139,9 +142,19 @@ export function PatientDetailPage() {
     }
     return `${diffHours} hora${diffHours !== 1 ? 's' : ''}`;
   };
-  const handleChangeSupport = (newSupport: SupportType, reason: string, date: string, airwayEvent?: AirwayEventInput) => {
-    changeSupportType(patient.id, newSupport, reason, date, airwayEvent);
+  const handleChangeSupport = (
+    newSupport: SupportType,
+    reason: string,
+    date: string,
+    airwayEvent?: AirwayEventInput,
+    location?: { sectorId: string; bedId: string }
+  ) => {
+    changeSupportType(patient.id, newSupport, reason, date, airwayEvent, location);
     setShowChangeSupportModal(false);
+  };
+  const handleChangeBed = (sectorId: string, bedId: string) => {
+    updatePatient(patient.id, { sectorId, bedId });
+    setShowChangeBedModal(false);
   };
   const handleClosePatient = (reason: ClosureReason, date: string, notes: string) => {
     closePatient(patient.id, {
@@ -364,11 +377,15 @@ export function PatientDetailPage() {
                 <RepeatIcon className="w-5 h-5" />
                 Cambiar Soporte
               </Button>
-              <Button variant="danger" onClick={() => setShowClosePatientModal(true)} className="flex items-center justify-center gap-2">
-                <XCircleIcon className="w-5 h-5" />
-                Cerrar Caso
+              <Button variant="secondary" onClick={() => setShowChangeBedModal(true)} className="flex items-center justify-center gap-2">
+                <BedDoubleIcon className="w-5 h-5" />
+                Cambiar de Cama
               </Button>
             </div>
+            <Button variant="danger" onClick={() => setShowClosePatientModal(true)} fullWidth className="flex items-center justify-center gap-2">
+              <XCircleIcon className="w-5 h-5" />
+              Cerrar Caso
+            </Button>
           </>}
 
         {/* Episode History */}
@@ -604,7 +621,9 @@ export function PatientDetailPage() {
         </div>
       </main>
 
-      {showChangeSupportModal && <ChangeSupportModal currentSupport={patient.supportType} onClose={() => setShowChangeSupportModal(false)} onConfirm={handleChangeSupport} />}
+      {showChangeSupportModal && <ChangeSupportModal currentSupport={patient.supportType} patient={patient} sectors={sectors} onClose={() => setShowChangeSupportModal(false)} onConfirm={handleChangeSupport} />}
+
+      {showChangeBedModal && <ChangeBedModal patient={patient} sectors={sectors} onClose={() => setShowChangeBedModal(false)} onConfirm={handleChangeBed} />}
 
       {showClosePatientModal && <ClosePatientModal patientAlias={patient.alias} onClose={() => setShowClosePatientModal(false)} onConfirm={handleClosePatient} />}
 

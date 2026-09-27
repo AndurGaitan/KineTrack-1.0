@@ -2,6 +2,7 @@ import { useState, FormEvent } from 'react';
 import { XIcon, AlertTriangleIcon } from 'lucide-react';
 import { Button } from './ui/Button';
 import { ClosureReason } from '../types';
+import { toLocalDateTimeInputValue } from '../utils/dateInput';
 interface ClosePatientModalProps {
   patientAlias: string;
   onClose: () => void;
@@ -30,10 +31,7 @@ export function ClosePatientModal({
   onConfirm
 }: ClosePatientModalProps) {
   const [reason, setReason] = useState<ClosureReason | ''>('');
-  const [date, setDate] = useState(() => {
-    const now = new Date();
-    return now.toISOString().slice(0, 16);
-  });
+  const [date, setDate] = useState(() => toLocalDateTimeInputValue(new Date()));
   const [notes, setNotes] = useState('');
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();

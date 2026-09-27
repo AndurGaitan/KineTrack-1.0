@@ -20,7 +20,9 @@ interface AppContextType extends AppState {
   login: (email: string, password: string) => Promise<void>;
   logout: () => void;
   updateProfile: (name: string) => Promise<void>;
-  addPatient: (patient: Omit<Patient, 'id' | 'createdAt' | 'status' | 'episodes'>) => Promise<void>;
+  addPatient: (
+    patient: Omit<Patient, 'id' | 'createdAt' | 'status' | 'episodes'> & { admissionDate?: string }
+  ) => Promise<void>;
   updatePatient: (id: string, patient: Partial<Patient>) => Promise<void>;
   deletePatient: (id: string) => Promise<void>;
   closePatient: (id: string, closure: PatientClosure) => Promise<void>;
@@ -29,7 +31,8 @@ interface AppContextType extends AppState {
     newSupport: SupportType,
     reason?: string,
     date?: string,
-    airwayEvent?: AirwayEventInput
+    airwayEvent?: AirwayEventInput,
+    location?: { sectorId: string; bedId: string }
   ) => Promise<void>;
   refreshSectors: () => Promise<void>;
   getActiveEpisode: (patientId: string) => any;
@@ -181,7 +184,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const addPatient = async (patientData: Omit<Patient, 'id' | 'createdAt' | 'status' | 'episodes'>) => {
+  const addPatient = async (
+    patientData: Omit<Patient, 'id' | 'createdAt' | 'status' | 'episodes'> & { admissionDate?: string }
+  ) => {
     try {
       const patient = await patientsApi.createPatient({
         alias: patientData.alias,
@@ -194,6 +199,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         antecedentes: patientData.antecedentes,
         sex: patientData.sex,
         heightCm: patientData.heightCm,
+        admissionDate: patientData.admissionDate,
       });
       setState((prev) => ({ ...prev, patients: [...prev.patients, patient] }));
     } catch (error) {
@@ -252,10 +258,18 @@ export function AppProvider({ children }: { children: ReactNode }) {
     newSupport: SupportType,
     reason?: string,
     date?: string,
-    airwayEvent?: AirwayEventInput
+    airwayEvent?: AirwayEventInput,
+    location?: { sectorId: string; bedId: string }
   ) => {
     try {
-      const patient = await patientsApi.changeSupportType(patientId, { newSupport, reason, date, airwayEvent });
+      const patient = await patientsApi.changeSupportType(patientId, {
+        newSupport,
+        reason,
+        date,
+        airwayEvent,
+        sectorId: location?.sectorId,
+        bedId: location?.bedId,
+      });
       setState((prev) => ({ ...prev, patients: prev.patients.map((p) => (p.id === patientId ? patient : p)) }));
     } catch (error) {
       reportError('cambiar tipo de soporte', error);
