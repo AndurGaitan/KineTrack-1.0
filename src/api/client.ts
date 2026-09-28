@@ -13,6 +13,20 @@ export function clearToken(): void {
   window.localStorage.removeItem(TOKEN_STORAGE_KEY);
 }
 
+// A 401 while we DID send a token means the session died mid-use (expired,
+// or invalidated — e.g. a coordinador reset that user's password). Distinct
+// from a 401 on /auth/login (no token attached), which just means wrong
+// credentials and must stay on the login form to show that message.
+// `redirecting` guards against the burst of concurrent requests the app
+// fires on load all trying to redirect at once.
+let redirecting = false;
+function handleSessionExpired(): void {
+  if (redirecting) return;
+  redirecting = true;
+  clearToken();
+  window.location.href = '/?sessionExpired=1';
+}
+
 export async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
   const token = getToken();
 
@@ -26,6 +40,10 @@ export async function apiFetch<T>(path: string, options?: RequestInit): Promise<
   });
 
   if (!res.ok) {
+    if (token && res.status === 401) {
+      handleSessionExpired();
+    }
+
     const text = await res.text();
     let message = text || `Error ${res.status}`;
     try {
