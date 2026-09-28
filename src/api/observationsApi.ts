@@ -17,9 +17,16 @@ export function createObservation(input: CreateObservationInput) {
   });
 }
 
-export function listObservations(params: { patientId: string; episodeId?: string; type?: ObservationType }) {
+export function listObservations(params: {
+  patientId?: string;
+  /** Varios pacientes en una sola solicitud — usar patientId o patientIds, no ambos. */
+  patientIds?: string[];
+  episodeId?: string;
+  type?: ObservationType;
+}) {
   const qs = new URLSearchParams();
-  qs.set('patientId', params.patientId);
+  if (params.patientId) qs.set('patientId', params.patientId);
+  if (params.patientIds) qs.set('patientIds', params.patientIds.join(','));
   if (params.episodeId) qs.set('episodeId', params.episodeId);
   if (params.type) qs.set('type', params.type);
   return apiFetch<AnyObservation[]>(`/api/observations?${qs.toString()}`);

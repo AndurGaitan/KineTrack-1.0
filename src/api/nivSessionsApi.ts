@@ -15,9 +15,15 @@ export type UpdateNivSessionInput = Partial<{
   notes: string;
 }>;
 
-export function listNivSessions(params: { patientId: string; episodeId?: string }) {
+export function listNivSessions(params: {
+  patientId?: string;
+  /** Varios pacientes en una sola solicitud — usar patientId o patientIds, no ambos. */
+  patientIds?: string[];
+  episodeId?: string;
+}) {
   const qs = new URLSearchParams();
-  qs.set('patientId', params.patientId);
+  if (params.patientId) qs.set('patientId', params.patientId);
+  if (params.patientIds) qs.set('patientIds', params.patientIds.join(','));
   if (params.episodeId) qs.set('episodeId', params.episodeId);
   return apiFetch<NIVSession[]>(`/api/niv-sessions?${qs.toString()}`);
 }

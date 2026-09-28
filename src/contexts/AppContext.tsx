@@ -100,36 +100,40 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
   const [authError, setAuthError] = useState<string | null>(null);
 
-  // Loads sectors, patients, and every patient's observations/scores. Simple
-  // (not paginated) eager load — fine at ICU-ward scale; would need lazy
-  // per-patient loading if the patient list grows much larger.
+  // Loads sectors, patients, and every patient's observations/scores/NIV
+  // sessions. Not paginated — fine at ICU-ward scale — but batched into a
+  // fixed 5 requests total (not 2 + 3 per patient): with the shared DB's
+  // connection pool, firing 3 requests per patient on every login was the
+  // single biggest slowdown in the app (~130 concurrent requests with the
+  // patient counts this service already has).
   const loadWorkspace = async (user: User) => {
     const [sectors, patients] = await Promise.all([
       sectorsApi.listSectors(),
       patientsApi.listPatients({ includeInactive: true }),
     ]);
 
-    const perPatient = await Promise.all(
-      patients.map(async (p) => {
-        const [observations, scores, nivSessions] = await Promise.all([
-          observationsApi.listObservations({ patientId: p.id }),
-          scoresApi.listScores(p.id),
-          nivSessionsApi.listNivSessions({ patientId: p.id }),
-        ]);
-        return { ...splitObservationsIntoLegacyRecords(observations), scores, nivSessions };
-      })
-    );
+    const patientIds = patients.map((p) => p.id);
+    const [observations, scores, nivSessions] =
+      patientIds.length === 0
+        ? [[], [], []]
+        : await Promise.all([
+            observationsApi.listObservations({ patientIds }),
+            scoresApi.listScores({ patientIds }),
+            nivSessionsApi.listNivSessions({ patientIds }),
+          ]);
+
+    const { vmiRecords, nivRecords, hfncRecords, trachRecords } = splitObservationsIntoLegacyRecords(observations);
 
     setState({
       user,
       sectors,
       patients,
-      scores: perPatient.flatMap((p) => p.scores),
-      vmiRecords: perPatient.flatMap((p) => p.vmiRecords),
-      nivRecords: perPatient.flatMap((p) => p.nivRecords),
-      nivSessions: perPatient.flatMap((p) => p.nivSessions),
-      hfncRecords: perPatient.flatMap((p) => p.hfncRecords),
-      trachRecords: perPatient.flatMap((p) => p.trachRecords),
+      scores,
+      vmiRecords,
+      nivRecords,
+      nivSessions,
+      hfncRecords,
+      trachRecords,
     });
   };
 
