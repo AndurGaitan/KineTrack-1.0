@@ -374,6 +374,7 @@ export interface AppState {
   nivSessions: NIVSession[];
   hfncRecords: HFNCRecord[];
   trachRecords: TrachRecord[];
+  prestaciones: Prestacion[];
 }
 
 // ---------------------------------------------------------------------------

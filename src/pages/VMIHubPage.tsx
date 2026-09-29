@@ -1,10 +1,11 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useApp } from '../contexts/AppContext';
 import { Header } from '../components/ui/Header';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
 import { VMIRecordCard } from '../components/VMIRecordCard';
+import { ActivityCard } from '../components/ActivityCard';
 import { ActivityIcon, TrendingUpIcon } from 'lucide-react';
 export function VMIHubPage() {
   const {
@@ -16,12 +17,15 @@ export function VMIHubPage() {
   const {
     patients,
     getPatientVMIRecords,
+    getPatientPrestaciones,
     sectors,
     user
   } = useApp();
   const patient = patients.find(p => p.id === patientId);
   const sector = patient ? sectors.find(s => s.id === patient.sectorId) : null;
   const records = patient ? getPatientVMIRecords(patient.id) : [];
+  const prestaciones = patient ? getPatientPrestaciones(patient.id) : [];
+  const now = useMemo(() => new Date(), [prestaciones, records.length]);
   if (!patient || patient.supportType !== 'imv') {
     return <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
         <div className="text-center">
@@ -71,6 +75,8 @@ export function VMIHubPage() {
               </div>
             </div>}
         </div>
+
+        <ActivityCard patientId={patient.id} prestaciones={prestaciones} now={now} />
 
         <Button onClick={() => navigate(`/patient/${patient.id}/vmi/new`)} fullWidth className="min-h-[64px] text-xl">
           + Nueva Monitorización

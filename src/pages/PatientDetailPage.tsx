@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useApp } from '../contexts/AppContext';
 import { Header } from '../components/ui/Header';
@@ -9,6 +9,7 @@ import { ChangeSupportModal } from '../components/ChangeSupportModal';
 import { ChangeBedModal } from '../components/ChangeBedModal';
 import { ClosePatientModal } from '../components/ClosePatientModal';
 import { ActionSheet } from '../components/ActionSheet';
+import { ActivityCard } from '../components/ActivityCard';
 import { EditIcon, BedDoubleIcon, ActivityIcon, WindIcon, DropletIcon, ChevronDownIcon, ChevronUpIcon, RepeatIcon, XCircleIcon, ClipboardPlusIcon, ClipboardListIcon, DumbbellIcon, ClipboardCheckIcon, BrainIcon, TrendingUpIcon, StethoscopeIcon } from 'lucide-react';
 import { SupportType, ClosureReason, AirwayEventInput } from '../types';
 const supportTypeLabels = {
@@ -82,6 +83,7 @@ export function PatientDetailPage() {
     getPatientHFNCRecords,
     getPatientTrachRecords,
     getPatientEpisodes,
+    getPatientPrestaciones,
     changeSupportType,
     updatePatient,
     closePatient
@@ -89,6 +91,8 @@ export function PatientDetailPage() {
   const patient = patients.find(p => p.id === id);
   const sector = patient ? sectors.find(s => s.id === patient.sectorId) : null;
   const episodes = patient ? getPatientEpisodes(patient.id) : [];
+  const prestaciones = patient ? getPatientPrestaciones(patient.id) : [];
+  const now = useMemo(() => new Date(), [prestaciones]);
   const [expandedEpisodes, setExpandedEpisodes] = useState<Record<string, boolean>>({});
   const [showChangeSupportModal, setShowChangeSupportModal] = useState(false);
   const [showChangeBedModal, setShowChangeBedModal] = useState(false);
@@ -351,13 +355,9 @@ export function PatientDetailPage() {
                 </Button>
               </Card>}
 
-            {supportType === 'conventional-oxygen' && <Card className="bg-gray-50 border-gray-200">
-                <div className="text-center py-6">
-                  <p className="text-gray-600">
-                    Soporte respiratorio básico - Sin módulo avanzado disponible
-                  </p>
-                </div>
-              </Card>}
+            {(supportType === 'conventional-oxygen' || supportType === 'room-air') && (
+              <ActivityCard patientId={patient.id} prestaciones={prestaciones} now={now} />
+            )}
 
             {/* Team productivity / quality logging */}
             <Button variant="secondary" onClick={() => setShowPrestacionMenu(true)} fullWidth className="flex items-center justify-center gap-2">

@@ -1,10 +1,11 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useApp } from '../contexts/AppContext';
 import { Header } from '../components/ui/Header';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
 import { NIVSessionsCard } from '../components/NIVSessionsCard';
+import { ActivityCard } from '../components/ActivityCard';
 import { WindIcon, TrendingUpIcon } from 'lucide-react';
 export function NIVHubPage() {
   const {
@@ -17,12 +18,15 @@ export function NIVHubPage() {
     patients,
     getPatientNIVRecords,
     getActiveEpisode,
+    getPatientPrestaciones,
     sectors
   } = useApp();
   const patient = patients.find(p => p.id === patientId);
   const sector = patient ? sectors.find(s => s.id === patient.sectorId) : null;
   const records = patient ? getPatientNIVRecords(patient.id) : [];
   const activeEpisode = patient ? getActiveEpisode(patient.id) : undefined;
+  const prestaciones = patient ? getPatientPrestaciones(patient.id) : [];
+  const now = useMemo(() => new Date(), [prestaciones, records.length]);
   if (!patient || patient.supportType !== 'niv') {
     return <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
         <div className="text-center">
@@ -72,6 +76,8 @@ export function NIVHubPage() {
               </div>
             </div>}
         </div>
+
+        <ActivityCard patientId={patient.id} prestaciones={prestaciones} now={now} />
 
         <Button onClick={() => navigate(`/patient/${patient.id}/niv/new`)} fullWidth className="min-h-[64px] text-xl bg-purple-600">
           + Nueva Monitorización

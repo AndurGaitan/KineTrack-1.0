@@ -1,16 +1,15 @@
 import { useState } from 'react';
-import { Card } from '../ui/Card';
-import * as prestacionesApi from '../../api/prestacionesApi';
-import { mobilizationLevels } from '../../utils/vmiEducation';
-import { ago } from '../../domain/services/trachDecannulation';
-import type { MobilizationLevel, Prestacion } from '../../types';
+import { Card } from './ui/Card';
+import { useApp } from '../contexts/AppContext';
+import { mobilizationLevels } from '../utils/vmiEducation';
+import { ago } from '../domain/services/trachDecannulation';
+import type { MobilizationLevel, Prestacion } from '../types';
 import { DumbbellIcon, StethoscopeIcon } from 'lucide-react';
 
-interface TrachActivityCardProps {
+interface ActivityCardProps {
   patientId: string;
   prestaciones: Prestacion[];
   now: Date;
-  onChanged: () => void | Promise<void>;
 }
 
 function startOfToday(now: Date): number {
@@ -24,7 +23,8 @@ function startOfToday(now: Date): number {
  * productivity dashboard, the timeline and QI-05 (movilización precoz) already
  * read, so logging here is the *only* entry for that work.
  */
-export function TrachActivityCard({ patientId, prestaciones, now, onChanged }: TrachActivityCardProps) {
+export function ActivityCard({ patientId, prestaciones, now }: ActivityCardProps) {
+  const { addPrestacion } = useApp();
   const [busy, setBusy] = useState<'ktr' | 'ktm' | null>(null);
   const [pickingLevel, setPickingLevel] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -42,14 +42,13 @@ export function TrachActivityCard({ patientId, prestaciones, now, onChanged }: T
     setError(null);
     setMessage(null);
     try {
-      await prestacionesApi.createPrestacion({
+      await addPrestacion({
         patientId,
         type: kind === 'ktr' ? 'kinesioterapia-respiratoria' : 'kinesioterapia-motora',
         mobilizationLevel,
       });
       setMessage(kind === 'ktr' ? '✓ Kinesioterapia respiratoria registrada' : '✓ Kinesioterapia motora registrada');
       setPickingLevel(false);
-      await onChanged();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'No se pudo registrar la prestación');
     } finally {

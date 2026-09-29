@@ -4,7 +4,7 @@ import { useApp } from '../contexts/AppContext';
 import { Header } from '../components/ui/Header';
 import { Button } from '../components/ui/Button';
 import { TrachStatusCard } from '../components/trach/TrachStatusCard';
-import { TrachActivityCard } from '../components/trach/TrachActivityCard';
+import { ActivityCard } from '../components/ActivityCard';
 import { DecannulationPanel } from '../components/trach/DecannulationPanel';
 import { TrachTimeline } from '../components/trach/TrachTimeline';
 import { useTrachData } from '../hooks/useTrachData';
@@ -23,12 +23,13 @@ import { WindIcon } from 'lucide-react';
 export function TrachHubPage() {
   const { patientId } = useParams<{ patientId: string }>();
   const navigate = useNavigate();
-  const { patients, getPatientTrachRecords, getActiveEpisode, sectors } = useApp();
+  const { patients, getPatientTrachRecords, getActiveEpisode, getPatientPrestaciones, sectors } = useApp();
   const patient = patients.find((p) => p.id === patientId);
   const sector = patient ? sectors.find((s) => s.id === patient.sectorId) : null;
   const records = patient ? getPatientTrachRecords(patient.id) : [];
   const activeEpisode = patient ? getActiveEpisode(patient.id) : undefined;
-  const { overview, prestaciones, loading, error, reload, setActiveProcess } = useTrachData(patient?.id);
+  const prestaciones = patient ? getPatientPrestaciones(patient.id) : [];
+  const { overview, loading, error, reload, setActiveProcess } = useTrachData(patient?.id);
 
   const now = useMemo(() => new Date(), [overview, prestaciones, records.length]);
   const ctx: TrachContext = { now, episode: activeEpisode, records, overview };
@@ -75,7 +76,7 @@ export function TrachHubPage() {
 
         <TrachStatusCard patientId={patient.id} ctx={ctx} onUpdateState={goToUpdateState} onChanged={reload} />
 
-        <TrachActivityCard patientId={patient.id} prestaciones={prestaciones} now={now} onChanged={reload} />
+        <ActivityCard patientId={patient.id} prestaciones={prestaciones} now={now} />
 
         {loading && !overview ? (
           <div className="bg-white rounded-2xl border border-gray-100 p-5 text-sm text-gray-500">Cargando proceso de decanulación...</div>

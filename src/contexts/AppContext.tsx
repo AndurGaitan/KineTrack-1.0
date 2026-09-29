@@ -1,5 +1,5 @@
 import { ReactNode, useEffect, useState, createContext, useContext } from 'react';
-import { AppState, User, Patient, ScoreRecord, VMIRecord, NIVRecord, NIVSession, HFNCRecord, TrachRecord, SupportType, AirwayEventInput } from '../types';
+import { AppState, User, Patient, ScoreRecord, VMIRecord, NIVRecord, NIVSession, HFNCRecord, TrachRecord, SupportType, AirwayEventInput, Prestacion, PrestacionType, OxygenDeviceType, MobilizationLevel } from '../types';
 import { PatientClosure, ClinicalObservationType } from '../domain/models';
 import {
   observationToVMIRecord,
@@ -13,6 +13,7 @@ import * as patientsApi from '../api/patientsApi';
 import * as observationsApi from '../api/observationsApi';
 import * as scoresApi from '../api/scoresApi';
 import * as nivSessionsApi from '../api/nivSessionsApi';
+import * as prestacionesApi from '../api/prestacionesApi';
 
 interface AppContextType extends AppState {
   isLoading: boolean;
@@ -57,6 +58,16 @@ interface AppContextType extends AppState {
   addTrachRecord: (record: Omit<TrachRecord, 'id' | 'timestamp' | 'performedByUserId' | 'type' | 'alerts'>) => Promise<void>;
   getPatientTrachRecords: (patientId: string, episodeId?: string) => TrachRecord[];
   getTrachRecord: (id: string) => TrachRecord | undefined;
+  addPrestacion: (input: {
+    patientId: string;
+    type: PrestacionType;
+    durationMinutes?: number;
+    notes?: string;
+    oxygenDevice?: OxygenDeviceType;
+    oxygenLiters?: number;
+    mobilizationLevel?: MobilizationLevel;
+  }) => Promise<void>;
+  getPatientPrestaciones: (patientId: string) => Prestacion[];
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -71,6 +82,7 @@ const initialState: AppState = {
   nivSessions: [],
   hfncRecords: [],
   trachRecords: [],
+  prestaciones: [],
 };
 
 /** Splits the flat observations list returned by the API into the legacy per-type record shapes the UI expects. */
@@ -101,11 +113,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [authError, setAuthError] = useState<string | null>(null);
 
   // Loads sectors, patients, and every patient's observations/scores/NIV
-  // sessions. Not paginated — fine at ICU-ward scale — but batched into a
-  // fixed 5 requests total (not 2 + 3 per patient): with the shared DB's
-  // connection pool, firing 3 requests per patient on every login was the
-  // single biggest slowdown in the app (~130 concurrent requests with the
-  // patient counts this service already has).
+  // sessions/prestaciones. Not paginated — fine at ICU-ward scale — but
+  // batched into a fixed 6 requests total (not 2 + 4 per patient): with the
+  // shared DB's connection pool, firing several requests per patient on
+  // every login was the single biggest slowdown in the app (~130 concurrent
+  // requests with the patient counts this service already has).
   const loadWorkspace = async (user: User) => {
     const [sectors, patients] = await Promise.all([
       sectorsApi.listSectors(),
@@ -113,13 +125,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
     ]);
 
     const patientIds = patients.map((p) => p.id);
-    const [observations, scores, nivSessions] =
+    const [observations, scores, nivSessions, prestaciones] =
       patientIds.length === 0
-        ? [[], [], []]
+        ? [[], [], [], []]
         : await Promise.all([
             observationsApi.listObservations({ patientIds }),
             scoresApi.listScores({ patientIds }),
             nivSessionsApi.listNivSessions({ patientIds }),
+            prestacionesApi.listPrestaciones({ patientIds }),
           ]);
 
     const { vmiRecords, nivRecords, hfncRecords, trachRecords } = splitObservationsIntoLegacyRecords(observations);
@@ -134,6 +147,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       nivSessions,
       hfncRecords,
       trachRecords,
+      prestaciones,
     });
   };
 
@@ -242,6 +256,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         nivSessions: prev.nivSessions.filter((s) => s.patientId !== id),
         hfncRecords: prev.hfncRecords.filter((h) => h.patientId !== id),
         trachRecords: prev.trachRecords.filter((t) => t.patientId !== id),
+        prestaciones: prev.prestaciones.filter((p) => p.patientId !== id),
       }));
     } catch (error) {
       reportError('eliminar paciente', error);
@@ -440,6 +455,28 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const getTrachRecord = (id: string) => state.trachRecords.find((t) => t.id === id);
 
+  const addPrestacion = async (input: {
+    patientId: string;
+    type: PrestacionType;
+    durationMinutes?: number;
+    notes?: string;
+    oxygenDevice?: OxygenDeviceType;
+    oxygenLiters?: number;
+    mobilizationLevel?: MobilizationLevel;
+  }) => {
+    // No reportError here (unlike the other add* methods): ActivityCard
+    // awaits this call and shows its own inline error message, so a global
+    // alert on top would just duplicate it.
+    const created = await prestacionesApi.createPrestacion(input);
+    setState((prev) => ({ ...prev, prestaciones: [...prev.prestaciones, created] }));
+  };
+
+  const getPatientPrestaciones = (patientId: string) => {
+    return state.prestaciones
+      .filter((p) => p.patientId === patientId)
+      .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+  };
+
   return (
     <AppContext.Provider
       value={{
@@ -477,6 +514,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
         addTrachRecord,
         getPatientTrachRecords,
         getTrachRecord,
+        addPrestacion,
+        getPatientPrestaciones,
       }}
     >
       {children}
