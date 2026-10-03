@@ -35,24 +35,24 @@ export function VMIRecordCard({
         </div>
 
         <div className="grid grid-cols-3 gap-4">
-          <div>
-            <div className="text-xs text-gray-600 mb-1">Vt/kg</div>
-            <div className={`text-lg font-bold ${record.vtPerKg > 8 ? 'text-red-600' : 'text-gray-900'}`}>
-              {record.vtPerKg}
-            </div>
-          </div>
-          <div>
-            <div className="text-xs text-gray-600 mb-1">ΔP</div>
-            <div className={`text-lg font-bold ${record.drivingPressure > 15 ? 'text-red-600' : 'text-gray-900'}`}>
-              {record.drivingPressure}
-            </div>
-          </div>
-          <div>
-            <div className="text-xs text-gray-600 mb-1">Pplat</div>
-            <div className={`text-lg font-bold ${record.plateauPressure > 30 ? 'text-red-600' : 'text-gray-900'}`}>
-              {record.plateauPressure}
-            </div>
-          </div>
+          {record.vtPerKg > 0 && <div>
+              <div className="text-xs text-gray-600 mb-1">Vt/kg</div>
+              <div className={`text-lg font-bold ${record.vtPerKg > 8 ? 'text-red-600' : 'text-gray-900'}`}>
+                {record.vtPerKg}
+              </div>
+            </div>}
+          {record.drivingPressure > 0 && <div>
+              <div className="text-xs text-gray-600 mb-1">ΔP</div>
+              <div className={`text-lg font-bold ${record.drivingPressure > 15 ? 'text-red-600' : 'text-gray-900'}`}>
+                {record.drivingPressure}
+              </div>
+            </div>}
+          {record.plateauPressure != null && <div>
+              <div className="text-xs text-gray-600 mb-1">Pplat</div>
+              <div className={`text-lg font-bold ${record.plateauPressure > 30 ? 'text-red-600' : 'text-gray-900'}`}>
+                {record.plateauPressure}
+              </div>
+            </div>}
         </div>
 
         {criticalAlerts.length > 0 && <div className="flex items-center gap-2 text-sm text-yellow-700 bg-yellow-50 rounded-lg px-3 py-2">

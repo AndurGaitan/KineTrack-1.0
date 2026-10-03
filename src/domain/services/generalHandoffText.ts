@@ -33,8 +33,9 @@ export interface GeneralHandoffInput {
 
 function buildPatientBlock(input: GeneralHandoffPatientInput): string {
   const { patient, sector, activeEpisode, latestSupportRecord, prestaciones, mrcAssessment, nivSessions, trach } = input;
-  const location = [sector?.name, patient.bedLabel ? `cama ${patient.bedLabel}` : undefined].filter(Boolean).join(', ');
-  const header = `${patient.alias}${location ? ` (${location})` : ''}${patient.age != null ? `, ${patient.age} años` : ''}`;
+  // Primero la cama, después el nombre: "Cama 2 (UCI) - ALIAS, 50 años".
+  const bed = patient.bedLabel ? `Cama ${patient.bedLabel}${sector?.name ? ` (${sector.name})` : ''}` : sector?.name;
+  const header = `${bed ? `${bed} - ` : ''}${patient.alias}${patient.age != null ? `, ${patient.age} años` : ''}`;
 
   // Pase diario: solo se narra el soporte si hoy se cargó algo (último registro
   // del día, o seguimiento de traqueostomía de hoy); lo no cargado no se escribe.

@@ -62,7 +62,7 @@ export function VMIRecordDetailPage() {
   });
   const ventModeLabel = ventModes.find(m => m.value === record.ventMode)?.label || record.ventMode;
   const mobilizationLabel = mobilizationLevels.find(m => m.value === record.mobilizationLevel)?.label || '';
-  const controlVariableLabel = record.controlVariable === 'volume' ? 'Volumen' : record.controlVariable === 'pressure' ? 'Presión' : 'Dual';
+  const controlVariableLabel = record.controlVariable === 'volume' ? 'Volumen' : record.controlVariable === 'pressure' ? 'Presión' : record.controlVariable === 'dual' ? 'Dual' : undefined;
   return <div className="min-h-screen bg-gray-50">
       <Header title="Detalle de Monitorización VMI" showBack showPatientList sectorId={sector?.id} />
 
@@ -106,15 +106,15 @@ export function VMIRecordDetailPage() {
                   ({record.ventModeOther})
                 </div>}
             </div>
-            <div>
-              <div className="text-sm text-gray-600 mb-1">
-                Variable de Control
-              </div>
-              <div className="text-xl font-bold text-gray-900">
-                {controlVariableLabel}
-              </div>
-            </div>
-            {record.ventMode === 'VC' && <div>
+            {controlVariableLabel && <div>
+                <div className="text-sm text-gray-600 mb-1">
+                  Variable de Control
+                </div>
+                <div className="text-xl font-bold text-gray-900">
+                  {controlVariableLabel}
+                </div>
+              </div>}
+            {record.ventMode === 'VC' && record.tidalVolumeSet != null && <div>
                 <div className="text-sm text-gray-600 mb-1">VT</div>
                 <div className="text-xl font-bold text-gray-900">
                   {record.tidalVolumeSet} ml
@@ -180,51 +180,51 @@ export function VMIRecordDetailPage() {
             Monitorización Avanzada
           </h3>
           <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <div className="text-sm text-gray-600 mb-1">Peso Predicho</div>
-                <div className="text-2xl font-bold text-gray-900">
-                  {record.predictedBodyWeight} kg
-                </div>
-              </div>
-              <div>
-                <div className="text-sm text-gray-600 mb-1">
-                  Frecuencia Resp.
-                </div>
-                <div className="text-2xl font-bold text-gray-900">
-                  {record.respiratoryRate || '-'} rpm
-                </div>
-              </div>
-            </div>
+            {(record.predictedBodyWeight > 0 || record.respiratoryRate) && <div className="grid grid-cols-2 gap-4">
+                {record.predictedBodyWeight > 0 && <div>
+                    <div className="text-sm text-gray-600 mb-1">Peso Predicho</div>
+                    <div className="text-2xl font-bold text-gray-900">
+                      {record.predictedBodyWeight} kg
+                    </div>
+                  </div>}
+                {record.respiratoryRate && <div>
+                    <div className="text-sm text-gray-600 mb-1">
+                      Frecuencia Resp.
+                    </div>
+                    <div className="text-2xl font-bold text-gray-900">
+                      {record.respiratoryRate} rpm
+                    </div>
+                  </div>}
+              </div>}
+
+            {(record.vtPerKg > 0 || record.plateauPressure != null || record.drivingPressure > 0) && <div className="grid grid-cols-3 gap-4">
+                {record.vtPerKg > 0 && <div className={`p-4 rounded-xl ${record.vtPerKg > 8 ? 'bg-red-50' : 'bg-green-50'}`}>
+                    <div className="text-sm text-gray-600 mb-1">Vt/kg</div>
+                    <div className={`text-3xl font-bold ${record.vtPerKg > 8 ? 'text-red-600' : 'text-green-600'}`}>
+                      {record.vtPerKg}
+                    </div>
+                  </div>}
+                {record.plateauPressure != null && <div className={`p-4 rounded-xl ${record.plateauPressure > 30 ? 'bg-red-50' : 'bg-green-50'}`}>
+                    <div className="text-sm text-gray-600 mb-1">Pplat</div>
+                    <div className={`text-3xl font-bold ${record.plateauPressure > 30 ? 'text-red-600' : 'text-green-600'}`}>
+                      {record.plateauPressure}
+                    </div>
+                  </div>}
+                {record.drivingPressure > 0 && <div className={`p-4 rounded-xl ${record.drivingPressure > 15 ? 'bg-red-50' : 'bg-green-50'}`}>
+                    <div className="text-sm text-gray-600 mb-1">ΔP</div>
+                    <div className={`text-3xl font-bold ${record.drivingPressure > 15 ? 'text-red-600' : 'text-green-600'}`}>
+                      {record.drivingPressure}
+                    </div>
+                  </div>}
+              </div>}
 
             <div className="grid grid-cols-3 gap-4">
-              <div className={`p-4 rounded-xl ${record.vtPerKg > 8 ? 'bg-red-50' : 'bg-green-50'}`}>
-                <div className="text-sm text-gray-600 mb-1">Vt/kg</div>
-                <div className={`text-3xl font-bold ${record.vtPerKg > 8 ? 'text-red-600' : 'text-green-600'}`}>
-                  {record.vtPerKg}
-                </div>
-              </div>
-              <div className={`p-4 rounded-xl ${record.plateauPressure > 30 ? 'bg-red-50' : 'bg-green-50'}`}>
-                <div className="text-sm text-gray-600 mb-1">Pplat</div>
-                <div className={`text-3xl font-bold ${record.plateauPressure > 30 ? 'text-red-600' : 'text-green-600'}`}>
-                  {record.plateauPressure}
-                </div>
-              </div>
-              <div className={`p-4 rounded-xl ${record.drivingPressure > 15 ? 'bg-red-50' : 'bg-green-50'}`}>
-                <div className="text-sm text-gray-600 mb-1">ΔP</div>
-                <div className={`text-3xl font-bold ${record.drivingPressure > 15 ? 'text-red-600' : 'text-green-600'}`}>
-                  {record.drivingPressure}
-                </div>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-3 gap-4">
-              <div>
-                <div className="text-sm text-gray-600 mb-1">Vt Espirado</div>
-                <div className="text-xl font-bold text-gray-900">
-                  {record.tidalVolumeExpired} ml
-                </div>
-              </div>
+              {record.tidalVolumeExpired != null && <div>
+                  <div className="text-sm text-gray-600 mb-1">Vt Espirado</div>
+                  <div className="text-xl font-bold text-gray-900">
+                    {record.tidalVolumeExpired} ml
+                  </div>
+                </div>}
               {record.peakPressure && <div>
                   <div className="text-sm text-gray-600 mb-1">Ppeak</div>
                   <div className="text-xl font-bold text-gray-900">
@@ -287,8 +287,8 @@ export function VMIRecordDetailPage() {
             </div>
           </Card>}
 
-        {/* Oxygenation & Acid-Base (UPDATED) */}
-        <Card>
+        {/* Oxygenation & Acid-Base — solo si se cargó algún valor de gasometría */}
+        {(record.ph || record.paco2 || record.pao2 || record.hco3 || record.spo2 || record.baseExcess != null) && <Card>
           <h3 className="text-lg font-bold text-gray-900 mb-4">
             Oxigenación y Equilibrio Ácido-Base
           </h3>
@@ -352,7 +352,7 @@ export function VMIRecordDetailPage() {
               </div>
             </div>
           </div>
-        </Card>
+        </Card>}
 
         {/* Weaning */}
         <Card>

@@ -103,9 +103,12 @@ function stripAlertEmoji(alert: string): string {
   return alert.replace(/^[✓⚠️⚡ℹ️]+\s*/u, '').trim();
 }
 
+// Las confirmaciones (✓ "Vt/kg protectivo", "Pplat adecuada"...) repiten valores
+// que la nota ya informa: solo se incluyen las advertencias.
 export function formatAlerts(alerts: string[]): string | undefined {
-  if (alerts.length === 0) return undefined;
-  return alerts.map(stripAlertEmoji).join('; ');
+  const warnings = alerts.filter((a) => !a.startsWith('✓'));
+  if (warnings.length === 0) return undefined;
+  return warnings.map(stripAlertEmoji).join('; ');
 }
 
 export function supportTypeLabel(type: Patient['supportType']): string {
@@ -138,7 +141,7 @@ export function narrateContext(patient: Patient, activeEpisode: SupportEpisode |
 function narrateImv(record: VMIRecord): string {
   const modeLabel = ventModes.find((m) => m.value === record.ventMode)?.label || record.ventMode;
   const setParam =
-    record.ventMode === 'VC'
+    record.ventMode === 'VC' && record.tidalVolumeSet != null
       ? `VT ${record.tidalVolumeSet} ml`
       : record.ventMode === 'PC' && record.controlPressure != null
         ? `PC ${record.controlPressure} cmH2O`
@@ -152,9 +155,10 @@ function narrateImv(record: VMIRecord): string {
   );
 
   const mech = [
-    record.vtPerKg != null ? `Vt/kg ${record.vtPerKg}` : undefined,
+    // vtPerKg / drivingPressure vienen en 0 cuando falta el dato con el que se calculan.
+    record.vtPerKg > 0 ? `Vt/kg ${record.vtPerKg}` : undefined,
     record.plateauPressure != null ? `Pplat ${record.plateauPressure}${record.plateauPressure > 30 ? ' (elevada)' : ''}` : undefined,
-    record.drivingPressure != null ? `driving pressure ${record.drivingPressure}${record.drivingPressure > 15 ? ' (elevada)' : ''}` : undefined,
+    record.drivingPressure > 0 ? `driving pressure ${record.drivingPressure}${record.drivingPressure > 15 ? ' (elevada)' : ''}` : undefined,
     record.compliance != null ? `compliance ${record.compliance}` : undefined,
     record.mechanicalPower != null ? `mechanical power ${record.mechanicalPower}` : undefined,
   ]
@@ -171,10 +175,10 @@ function narrateImv(record: VMIRecord): string {
     record.hco3 != null ? `HCO₃ ${record.hco3}` : undefined,
     record.spo2 != null ? `SatO₂ ${record.spo2}%` : undefined,
     record.baseExcess != null ? `exceso de bases ${record.baseExcess}` : undefined,
-    `FiO₂ ${record.fio2}%`,
   ].filter(Boolean);
+  // La gasometría se narra solo si se cargó algún valor (FiO₂ por sí sola no cuenta).
   if (gasBits.length > 0) {
-    let gasSentence = `Gasometría: ${gasBits.join(', ')}`;
+    let gasSentence = `Gasometría: ${gasBits.join(', ')}, FiO₂ ${record.fio2}%`;
     if (record.pfRatio != null) gasSentence += ` (P/F ${record.pfRatio})`;
     parts.push(`${gasSentence}.`);
   }
@@ -186,7 +190,7 @@ function narrateImv(record: VMIRecord): string {
     if (record.sbtResult) {
       weaningSentence += ` (${record.sbtResult === 'success' ? 'exitosa' : 'fallida'}${record.sbtResult === 'failure' && record.sbtFailureReason ? `: ${record.sbtFailureReason}` : ''})`;
     }
-  } else {
+  } else if (record.sbtPerformed === false) {
     weaningSentence += ', SBT no realizada';
   }
   parts.push(`${weaningSentence}.`);

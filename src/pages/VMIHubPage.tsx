@@ -55,18 +55,18 @@ export function VMIHubPage() {
           </div>
 
           {lastRecord && <div className="grid grid-cols-3 gap-4 pt-4 border-t border-gray-200">
-              <div>
-                <div className="text-xs text-gray-600 mb-1">Último Vt/kg</div>
-                <div className={`text-xl font-bold ${lastRecord.vtPerKg > 8 ? 'text-red-600' : 'text-green-600'}`}>
-                  {lastRecord.vtPerKg}
-                </div>
-              </div>
-              <div>
-                <div className="text-xs text-gray-600 mb-1">Último P/F</div>
-                <div className="text-xl font-bold text-gray-900">
-                  {lastRecord.pfRatio || '-'}
-                </div>
-              </div>
+              {lastRecord.vtPerKg > 0 && <div>
+                  <div className="text-xs text-gray-600 mb-1">Último Vt/kg</div>
+                  <div className={`text-xl font-bold ${lastRecord.vtPerKg > 8 ? 'text-red-600' : 'text-green-600'}`}>
+                    {lastRecord.vtPerKg}
+                  </div>
+                </div>}
+              {lastRecord.pfRatio ? <div>
+                  <div className="text-xs text-gray-600 mb-1">Último P/F</div>
+                  <div className="text-xl font-bold text-gray-900">
+                    {lastRecord.pfRatio}
+                  </div>
+                </div> : null}
               <div>
                 <div className="text-xs text-gray-600 mb-1">Movilización</div>
                 <div className="text-xl font-bold text-gray-900">
