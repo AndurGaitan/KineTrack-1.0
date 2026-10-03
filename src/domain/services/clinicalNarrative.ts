@@ -108,22 +108,6 @@ export function formatAlerts(alerts: string[]): string | undefined {
   return alerts.map(stripAlertEmoji).join('; ');
 }
 
-export function pfInterpretation(pf: number): string {
-  if (pf < 100) return 'SDRA severo';
-  if (pf < 200) return 'SDRA moderado';
-  if (pf < 300) return 'SDRA leve';
-  return 'normal';
-}
-
-export function acidBaseInterpretation(ph: number, hco3: number): string | undefined {
-  if (ph >= 7.35 && ph <= 7.45) return 'balance normal';
-  if (ph < 7.35 && hco3 < 22) return 'acidosis metabólica';
-  if (ph < 7.35 && hco3 >= 22) return 'acidosis respiratoria';
-  if (ph > 7.45 && hco3 > 26) return 'alcalosis metabólica';
-  if (ph > 7.45 && hco3 <= 26) return 'alcalosis respiratoria';
-  return undefined;
-}
-
 export function supportTypeLabel(type: Patient['supportType']): string {
   const labels: Record<Patient['supportType'], string> = {
     imv: 'VMI',
@@ -168,15 +152,15 @@ function narrateImv(record: VMIRecord): string {
   );
 
   const mech = [
-    `Vt/kg ${record.vtPerKg}`,
-    `Pplat ${record.plateauPressure}${record.plateauPressure > 30 ? ' (elevada)' : ''}`,
-    `driving pressure ${record.drivingPressure}${record.drivingPressure > 15 ? ' (elevada)' : ''}`,
+    record.vtPerKg != null ? `Vt/kg ${record.vtPerKg}` : undefined,
+    record.plateauPressure != null ? `Pplat ${record.plateauPressure}${record.plateauPressure > 30 ? ' (elevada)' : ''}` : undefined,
+    record.drivingPressure != null ? `driving pressure ${record.drivingPressure}${record.drivingPressure > 15 ? ' (elevada)' : ''}` : undefined,
     record.compliance != null ? `compliance ${record.compliance}` : undefined,
     record.mechanicalPower != null ? `mechanical power ${record.mechanicalPower}` : undefined,
   ]
     .filter(Boolean)
     .join(', ');
-  parts.push(`Mecánica ventilatoria: ${mech}.`);
+  if (mech) parts.push(`Mecánica ventilatoria: ${mech}.`);
 
   // Orden de reporte de gasometría: pH, PaCO₂, PaO₂, HCO₃, SatO₂, Exceso de
   // Bases, FiO₂.
@@ -191,11 +175,7 @@ function narrateImv(record: VMIRecord): string {
   ].filter(Boolean);
   if (gasBits.length > 0) {
     let gasSentence = `Gasometría: ${gasBits.join(', ')}`;
-    if (record.pfRatio != null) gasSentence += ` (P/F ${record.pfRatio}, ${pfInterpretation(record.pfRatio)})`;
-    if (record.ph != null && record.hco3 != null) {
-      const interp = acidBaseInterpretation(record.ph, record.hco3);
-      if (interp) gasSentence += `, ${interp}`;
-    }
+    if (record.pfRatio != null) gasSentence += ` (P/F ${record.pfRatio})`;
     parts.push(`${gasSentence}.`);
   }
 
@@ -258,12 +238,7 @@ function narrateNiv(record: NIVRecord, nivSessions: NIVSession[] | undefined): s
     record.baseExcess != null ? `exceso de bases ${record.baseExcess}` : undefined,
     `FiO₂ ${record.fio2}%`,
   ].filter(Boolean);
-  let gasSentence = `Gasometría: ${gasBits.join(', ')}`;
-  if (record.hco3 != null) {
-    const interp = acidBaseInterpretation(record.ph, record.hco3);
-    if (interp) gasSentence += `, ${interp}`;
-  }
-  parts.push(`${gasSentence}.`);
+  parts.push(`Gasometría: ${gasBits.join(', ')}.`);
 
   parts.push(`Piel: ${skinLabel}${record.skinNotes ? ` (${record.skinNotes})` : ''}.`);
 
@@ -306,6 +281,8 @@ export interface TrachNarrativeInput {
   records: TrachRecord[];
   overview?: TrachOverview | null;
   episode?: SupportEpisode;
+  /** Pase diario: no avisar "sin seguimiento cargado" cuando hoy no hubo nada. */
+  omitEmptyNotice?: boolean;
 }
 
 function latestOf<T>(records: TrachRecord[], pick: (r: TrachRecord) => T | undefined): T | undefined {
@@ -360,7 +337,7 @@ function narrateTraqueostomia(input: TrachNarrativeInput): string {
 
   if (overview?.activeProcess) parts.push(describeStatusOneLine(overview.activeProcess, now));
 
-  if (records.length === 0 && !overview?.activeProcess && asp24h === 0) parts.push('Sin seguimiento de traqueostomía cargado todavía.');
+  if (!input.omitEmptyNotice && records.length === 0 && !overview?.activeProcess && asp24h === 0) parts.push('Sin seguimiento de traqueostomía cargado todavía.');
   return parts.join(' ');
 }
 

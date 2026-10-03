@@ -216,19 +216,6 @@ export function NIVRecordDetailPage() {
                 </div>
               </div>
             </div>
-
-            {record.hco3 !== undefined && <div className={`p-4 rounded-xl ${record.ph < 7.35 || record.ph > 7.45 ? 'bg-yellow-50 border border-yellow-200' : 'bg-green-50 border border-green-200'}`}>
-                <div className="text-sm font-medium text-gray-900 mb-1">
-                  Equilibrio Ácido-Base
-                </div>
-                <div className="text-sm text-gray-700">
-                  {record.ph >= 7.35 && record.ph <= 7.45 && 'Balance normal'}
-                  {record.ph < 7.35 && record.hco3 < 22 && 'Acidosis metabólica'}
-                  {record.ph < 7.35 && record.hco3 >= 22 && 'Acidosis respiratoria'}
-                  {record.ph > 7.45 && record.hco3 > 26 && 'Alcalosis metabólica'}
-                  {record.ph > 7.45 && record.hco3 <= 26 && 'Alcalosis respiratoria'}
-                </div>
-              </div>}
           </div>
         </Card>
 

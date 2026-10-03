@@ -68,26 +68,6 @@ export function generateNIVAlerts(record: Partial<NIVRecord>): string[] {
     alerts.push('Paciente con VMI prolongada previa - Mayor riesgo de debilidad muscular respiratoria');
   }
 
-  // Acid-base interpretation (same logic as vmiCalculations.ts)
-  if (record.ph !== undefined && record.hco3 !== undefined) {
-    if (record.ph < 7.35) {
-      if (record.hco3 < 22) {
-        alerts.push(`⚠️ Acidosis metabólica (pH: ${record.ph}, HCO₃: ${record.hco3}) - Evaluar causa y corrección`);
-      } else {
-        alerts.push(`⚠️ Acidosis respiratoria (pH: ${record.ph}) - Considerar ajuste ventilatorio`);
-      }
-    } else if (record.ph > 7.45) {
-      if (record.hco3 > 26) {
-        alerts.push(`⚡ Alcalosis metabólica (pH: ${record.ph}, HCO₃: ${record.hco3})`);
-      }
-    }
-  }
-
-  // Hypercapnia
-  if (record.paco2 !== undefined && record.paco2 > 45) {
-    alerts.push(`PaCO₂ > 45 mmHg (${record.paco2}) - Retención de CO₂, vigilar respuesta a VNI`);
-  }
-
   return alerts;
 }
 

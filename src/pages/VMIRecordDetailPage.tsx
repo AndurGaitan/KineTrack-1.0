@@ -324,16 +324,10 @@ export function VMIRecordDetailPage() {
                 </div>}
             </div>
 
-            {record.pfRatio && <div className={`p-4 rounded-xl ${record.pfRatio < 200 ? 'bg-red-50' : 'bg-green-50'}`}>
+            {record.pfRatio && <div className="p-4 rounded-xl bg-gray-50">
                 <div className="text-sm text-gray-600 mb-1">Relación P/F</div>
-                <div className={`text-3xl font-bold ${record.pfRatio < 200 ? 'text-red-600' : 'text-green-600'}`}>
+                <div className="text-3xl font-bold text-gray-900">
                   {record.pfRatio}
-                </div>
-                <div className="text-sm mt-1 text-gray-700">
-                  {record.pfRatio < 100 && 'SDRA Severo'}
-                  {record.pfRatio >= 100 && record.pfRatio < 200 && 'SDRA Moderado'}
-                  {record.pfRatio >= 200 && record.pfRatio < 300 && 'SDRA Leve'}
-                  {record.pfRatio >= 300 && 'Normal'}
                 </div>
               </div>}
 
@@ -357,20 +351,6 @@ export function VMIRecordDetailPage() {
                 </div>
               </div>
             </div>
-
-            {/* Acid-Base Interpretation */}
-            {record.ph && record.hco3 && <div className={`p-4 rounded-xl ${record.ph < 7.35 || record.ph > 7.45 ? 'bg-yellow-50 border border-yellow-200' : 'bg-green-50 border border-green-200'}`}>
-                <div className="text-sm font-medium text-gray-900 mb-1">
-                  Equilibrio Ácido-Base
-                </div>
-                <div className="text-sm text-gray-700">
-                  {record.ph >= 7.35 && record.ph <= 7.45 && 'Balance normal'}
-                  {record.ph < 7.35 && record.hco3 < 22 && 'Acidosis metabólica'}
-                  {record.ph < 7.35 && record.hco3 >= 22 && 'Acidosis respiratoria'}
-                  {record.ph > 7.45 && record.hco3 > 26 && 'Alcalosis metabólica'}
-                  {record.ph > 7.45 && record.hco3 <= 26 && 'Alcalosis respiratoria'}
-                </div>
-              </div>}
           </div>
         </Card>
 

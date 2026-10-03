@@ -65,6 +65,7 @@ export function observationToVMIRecord(obs: IMVObservation): VMIRecord {
   return {
     id: obs.id,
     patientId: obs.patientId,
+    performedByUserId: obs.performedByUserId,
     episodeId: obs.episodeId,
     timestamp: obs.timestamp,
     ventMode: obs.ventMode,
@@ -154,6 +155,7 @@ export function observationToNIVRecord(obs: NIVObservation): NIVRecord {
   return {
     id: obs.id,
     patientId: obs.patientId,
+    performedByUserId: obs.performedByUserId,
     episodeId: obs.episodeId,
     timestamp: obs.timestamp,
     interfaceType: obs.interfaceType,
@@ -218,6 +220,7 @@ export function observationToHFNCRecord(obs: HFNCObservation): HFNCRecord {
   return {
     id: obs.id,
     patientId: obs.patientId,
+    performedByUserId: obs.performedByUserId,
     episodeId: obs.episodeId,
     timestamp: obs.timestamp,
     flow: obs.flow,

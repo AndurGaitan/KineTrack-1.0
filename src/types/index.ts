@@ -88,6 +88,7 @@ export interface VMIRecord {
   id: string;
   patientId: string;
   episodeId?: string;
+  performedByUserId?: string;
   timestamp: string;
 
   // A) Ventilator Settings (NEW: Mode first)
@@ -152,6 +153,7 @@ export interface NIVRecord {
   id: string;
   patientId: string;
   episodeId?: string;
+  performedByUserId?: string;
   timestamp: string;
 
   // Interface
@@ -203,6 +205,7 @@ export interface NIVSession {
   id: string;
   patientId: string;
   episodeId?: string;
+  performedByUserId?: string;
   startAt: string;
   endAt?: string;
   notes?: string;
@@ -214,6 +217,7 @@ export interface HFNCRecord {
   id: string;
   patientId: string;
   episodeId?: string;
+  performedByUserId?: string;
   timestamp: string;
 
   // HFNC Parameters

@@ -31,7 +31,7 @@ export function PaseGeneralPage() {
   } = useApp();
 
   const [prestacionesHoy, setPrestacionesHoy] = useState<Prestacion[]>([]);
-  const [mrcByPatient, setMrcByPatient] = useState<Record<string, MrcAssessment | undefined>>({});
+  const [mrcHoy, setMrcHoy] = useState<MrcAssessment[]>([]);
   const [trachByPatient, setTrachByPatient] = useState<Record<string, TrachOverview>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -41,33 +41,33 @@ export function PaseGeneralPage() {
     if (!user) return;
     setLoading(true);
     setError(null);
-    prestacionesApi
-      .listPrestaciones({ performedByUserId: user.id, from: startOfToday() })
-      .then(async (result) => {
-        setPrestacionesHoy(result);
-        const patientIds = [...new Set(result.map((p) => p.patientId))];
-        const trachIds = patientIds.filter((id) => patients.find((p) => p.id === id)?.supportType === 'traqueostomia');
-        const [mrcResults, trachResult] = await Promise.all([
-          Promise.all(patientIds.map((id) => mrcApi.listMrcAssessments(id))),
-          trachIds.length > 0 ? trachApi.getTrachOverview(trachIds) : Promise.resolve({} as Record<string, TrachOverview>),
-        ]);
+    const todayMs = new Date(startOfToday()).getTime();
+    const trachIds = patients.filter((p) => p.status === 'active' && p.supportType === 'traqueostomia').map((p) => p.id);
+    Promise.all([
+      prestacionesApi.listPrestaciones({ performedByUserId: user.id, from: startOfToday() }),
+      mrcApi.listMrcAssessments(),
+      trachIds.length > 0 ? trachApi.getTrachOverview(trachIds) : Promise.resolve({} as Record<string, TrachOverview>),
+    ])
+      .then(([prestaciones, mrcAll, trachResult]) => {
+        setPrestacionesHoy(prestaciones);
+        setMrcHoy(mrcAll.filter((m) => m.evaluatedByUserId === user.id && new Date(m.assessedAt).getTime() >= todayMs));
         setTrachByPatient(trachResult);
-        const byPatient: Record<string, MrcAssessment | undefined> = {};
-        patientIds.forEach((id, i) => {
-          byPatient[id] = [...mrcResults[i]].sort((a, b) => new Date(b.assessedAt).getTime() - new Date(a.assessedAt).getTime())[0];
-        });
-        setMrcByPatient(byPatient);
       })
       .catch((err) => setError(err instanceof Error ? err.message : 'No se pudo cargar la información del día'))
       .finally(() => setLoading(false));
   }, [user?.id]);
 
   const patientInputs: GeneralHandoffPatientInput[] = useMemo(() => {
-    const byPatient = new Map<string, Prestacion[]>();
+    if (!user) return [];
+    const todayMs = new Date(startOfToday()).getTime();
+    const isToday = (iso: string | undefined) => !!iso && new Date(iso).getTime() >= todayMs;
+    const isMine = (userId: string | undefined) => userId === user.id;
+
+    const prestacionesByPatient = new Map<string, Prestacion[]>();
     for (const p of prestacionesHoy) {
-      const list = byPatient.get(p.patientId) ?? [];
+      const list = prestacionesByPatient.get(p.patientId) ?? [];
       list.push(p);
-      byPatient.set(p.patientId, list);
+      prestacionesByPatient.set(p.patientId, list);
     }
 
     const bedSortOrder = (patient: (typeof patients)[number], sectorName: string | undefined) => {
@@ -75,36 +75,59 @@ export function PaseGeneralPage() {
       return sector?.beds.find((b) => b.id === patient.bedId)?.sortOrder ?? 0;
     };
 
-    const inputs = [...byPatient.entries()]
-      .map(([patientId, prestaciones]) => {
-        const patient = patients.find((p) => p.id === patientId);
-        if (!patient) return undefined;
-        const sector = sectors.find((s) => s.id === patient.sectorId);
-        const activeEpisode = getActiveEpisode(patient.id);
-        const latestSupportRecord = pickLatestSupportRecord(
-          patient,
-          getPatientVMIRecords(patient.id),
-          getPatientNIVRecords(patient.id),
-          getPatientHFNCRecords(patient.id),
-          getPatientTrachRecords(patient.id)
-        );
-        const nivSessions = patient.supportType === 'niv' ? getPatientNIVSessions(patient.id, activeEpisode?.id) : undefined;
-        const input: GeneralHandoffPatientInput = {
-          patient,
-          sector,
-          activeEpisode,
-          latestSupportRecord,
-          prestaciones: [...prestaciones].sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()),
-          mrcAssessment: mrcByPatient[patientId],
-          nivSessions,
-          trach:
-            patient.supportType === 'traqueostomia'
-              ? { records: getPatientTrachRecords(patient.id), overview: trachByPatient[patientId] ?? null, episode: activeEpisode }
-              : undefined,
-        };
-        return input;
-      })
-      .filter((x): x is GeneralHandoffPatientInput => !!x);
+    const inputs: GeneralHandoffPatientInput[] = [];
+    for (const patient of patients) {
+      const activeEpisode = getActiveEpisode(patient.id);
+      const prestaciones = prestacionesByPatient.get(patient.id) ?? [];
+      const mrcAssessment = [...mrcHoy]
+        .filter((m) => m.patientId === patient.id)
+        .sort((a, b) => new Date(b.assessedAt).getTime() - new Date(a.assessedAt).getTime())[0];
+
+      // Solo lo que este kinesiólogo cargó hoy (las listas ya vienen de la más nueva a la más vieja).
+      const vmiHoy = getPatientVMIRecords(patient.id).filter((r) => isToday(r.timestamp) && isMine(r.performedByUserId));
+      const nivHoy = getPatientNIVRecords(patient.id).filter((r) => isToday(r.timestamp) && isMine(r.performedByUserId));
+      const hfncHoy = getPatientHFNCRecords(patient.id).filter((r) => isToday(r.timestamp) && isMine(r.performedByUserId));
+      const trachHoy = getPatientTrachRecords(patient.id).filter((r) => isToday(r.timestamp) && isMine(r.performedByUserId));
+      const latestSupportRecord = pickLatestSupportRecord(patient, vmiHoy, nivHoy, hfncHoy, trachHoy);
+
+      const sessionsAll = patient.supportType === 'niv' ? getPatientNIVSessions(patient.id, activeEpisode?.id) : [];
+      const hasSessionToday = sessionsAll.some((s) => (isToday(s.startAt) && isMine(s.performedByUserId)) || isToday(s.endAt));
+
+      let trach: GeneralHandoffPatientInput['trach'];
+      if (patient.supportType === 'traqueostomia') {
+        const overview = trachByPatient[patient.id];
+        const aspirationsHoy = (overview?.aspirations ?? []).filter((a) => isToday(a.timestamp) && isMine(a.performedByUserId));
+        const process = overview?.activeProcess;
+        const processActiveToday =
+          !!process &&
+          ((isToday(process.startedAt) && isMine(process.startedByUserId)) ||
+            process.assessments.some((a) => isToday(a.assessedAt) && isMine(a.assessedByUserId)) ||
+            process.occlusionTrials.some(
+              (t) => (isToday(t.startedAt) && isMine(t.startedByUserId)) || t.entries.some((e) => isToday(e.at) && isMine(e.recordedByUserId))
+            ));
+        if (trachHoy.length > 0 || aspirationsHoy.length > 0 || processActiveToday) {
+          trach = {
+            records: trachHoy,
+            overview: overview ? { ...overview, aspirations: aspirationsHoy, activeProcess: processActiveToday ? process! : null } : null,
+            episode: activeEpisode,
+            omitEmptyNotice: true,
+          };
+        }
+      }
+
+      if (prestaciones.length === 0 && !mrcAssessment && !latestSupportRecord && !hasSessionToday && !trach) continue;
+
+      inputs.push({
+        patient,
+        sector: sectors.find((s) => s.id === patient.sectorId),
+        activeEpisode,
+        latestSupportRecord,
+        prestaciones: [...prestaciones].sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()),
+        mrcAssessment,
+        nivSessions: hasSessionToday ? sessionsAll : undefined,
+        trach,
+      });
+    }
 
     return inputs.sort((a, b) => {
       const sectorCmp = (a.sector?.name ?? '').localeCompare(b.sector?.name ?? '');
@@ -112,7 +135,7 @@ export function PaseGeneralPage() {
       return bedSortOrder(a.patient, a.sector?.name) - bedSortOrder(b.patient, b.sector?.name);
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [prestacionesHoy, mrcByPatient, trachByPatient, patients, sectors]);
+  }, [user, prestacionesHoy, mrcHoy, trachByPatient, patients, sectors]);
 
   const handoffText = useMemo(() => {
     if (!user || patientInputs.length === 0) return '';
@@ -161,8 +184,9 @@ export function PaseGeneralPage() {
       <main className="max-w-2xl mx-auto p-4 pb-24 space-y-6">
         <div className="bg-purple-50 border-2 border-purple-200 rounded-2xl p-4">
           <p className="text-sm text-purple-900">
-            <strong>Pacientes atendidos hoy:</strong> se arma solo con los pacientes donde cargaste al menos una
-            prestación hoy — texto libre listo para pegar en la HCE.
+            <strong>Pase del día:</strong> se arma solo con lo que cargaste hoy (monitorizaciones, prestaciones,
+            sesiones, seguimiento de traqueostomía, MRC) — lo que no cargaste no aparece. Texto libre listo para
+            pegar en la HCE.
           </p>
         </div>
 
@@ -172,9 +196,9 @@ export function PaseGeneralPage() {
         {!loading && patientInputs.length === 0 && (
           <Card className="text-center py-12">
             <UsersIcon className="w-10 h-10 text-gray-300 mx-auto mb-3" />
-            <p className="text-gray-500 text-lg">Todavía no registraste prestaciones hoy</p>
+            <p className="text-gray-500 text-lg">Todavía no cargaste datos hoy</p>
             <p className="text-gray-400 mt-2">
-              Cargá al menos una prestación en algún paciente para poder generar el pase general.
+              Cargá una monitorización, prestación u otro dato en algún paciente para poder generar el pase general.
             </p>
           </Card>
         )}

@@ -54,6 +54,7 @@ export interface ClinicalObservation {
   id: string;
   patientId: string;
   episodeId?: string;
+  performedByUserId?: string;
   timestamp: string;
 }
 

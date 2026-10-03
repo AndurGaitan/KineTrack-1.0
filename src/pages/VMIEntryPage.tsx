@@ -646,16 +646,10 @@ export function VMIEntryPage() {
               </div>
 
               {calculations.pfRatio && (
-                <div className={`p-4 rounded-xl ${calculations.pfRatio < 200 ? 'bg-red-50' : 'bg-green-50'}`}>
+                <div className="p-4 rounded-xl bg-gray-50">
                   <div className="text-sm text-gray-600 mb-1">Relación P/F</div>
-                  <div className={`text-3xl font-bold ${calculations.pfRatio < 200 ? 'text-red-600' : 'text-green-600'}`}>
+                  <div className="text-3xl font-bold text-gray-900">
                     {calculations.pfRatio}
-                  </div>
-                  <div className="text-sm mt-1 text-gray-700">
-                    {calculations.pfRatio < 100 && 'SDRA Severo'}
-                    {calculations.pfRatio >= 100 && calculations.pfRatio < 200 && 'SDRA Moderado'}
-                    {calculations.pfRatio >= 200 && calculations.pfRatio < 300 && 'SDRA Leve'}
-                    {calculations.pfRatio >= 300 && 'Normal'}
                   </div>
                 </div>
               )}

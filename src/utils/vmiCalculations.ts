@@ -214,38 +214,6 @@ export function generateVMIAlerts(record: Partial<VMIRecord>, calculations: VMIC
     }
   }
 
-  // Oxygenation
-  if (calculations.pfRatio) {
-    if (calculations.pfRatio < 100) {
-      alerts.push(`⚠️ SDRA severo (P/F: ${calculations.pfRatio}) - Considerar estrategias de rescate`);
-    } else if (calculations.pfRatio < 200) {
-      alerts.push(`⚠️ SDRA moderado (P/F: ${calculations.pfRatio}) - Optimizar PEEP`);
-    } else if (calculations.pfRatio < 300) {
-      alerts.push(`⚡ SDRA leve (P/F: ${calculations.pfRatio})`);
-    } else {
-      alerts.push(`✓ Oxigenación adecuada (P/F: ${calculations.pfRatio})`);
-    }
-  }
-
-  // Acid-base balance
-  if (record.ph && record.hco3) {
-    if (record.ph < 7.35) {
-      if (record.hco3 < 22) {
-        alerts.push(`⚠️ Acidosis metabólica (pH: ${record.ph}, HCO₃: ${record.hco3}) - Evaluar causa y corrección`);
-      } else {
-        alerts.push(`⚠️ Acidosis respiratoria (pH: ${record.ph}) - Considerar ajuste ventilatorio`);
-      }
-    } else if (record.ph > 7.45) {
-      if (record.hco3 > 26) {
-        alerts.push(`⚡ Alcalosis metabólica (pH: ${record.ph}, HCO₃: ${record.hco3})`);
-      } else {
-        alerts.push(`⚡ Alcalosis respiratoria (pH: ${record.ph}) - Evaluar hiperventilación`);
-      }
-    } else {
-      alerts.push(`✓ Equilibrio ácido-base normal (pH: ${record.ph})`);
-    }
-  }
-
   // Compliance
   if (calculations.compliance) {
     if (calculations.compliance < 30) {
