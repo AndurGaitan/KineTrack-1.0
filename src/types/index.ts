@@ -151,6 +151,9 @@ export interface VMIRecord {
   mobilizationLevel: MobilizationLevel;
   mobilizationBarrier?: string;
 
+  // F) Sedation / agitation — RASS, -5..+4
+  rass?: number;
+
   // Calculated fields
   vtPerKg: number;
   drivingPressure: number;

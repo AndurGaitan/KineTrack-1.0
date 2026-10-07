@@ -46,6 +46,7 @@ export function vmiRecordToObservation(record: VMIRecord): IMVObservation {
     sbtFailureReason: record.sbtFailureReason,
     mobilizationLevel: record.mobilizationLevel,
     mobilizationBarrier: record.mobilizationBarrier,
+    rass: record.rass,
     calculated: {
       vtPerKg: record.vtPerKg,
       drivingPressure: record.drivingPressure,
@@ -98,6 +99,7 @@ export function observationToVMIRecord(obs: IMVObservation): VMIRecord {
     sbtFailureReason: obs.sbtFailureReason,
     mobilizationLevel: obs.mobilizationLevel,
     mobilizationBarrier: obs.mobilizationBarrier,
+    rass: obs.rass,
     vtPerKg: obs.calculated.vtPerKg,
     drivingPressure: obs.calculated.drivingPressure,
     pfRatio: obs.calculated.pfRatio,

@@ -19,6 +19,7 @@ import {
   calculateMechanicalPower
 } from '../utils/vmiCalculations';
 import { ventModes, mobilizationLevels } from '../utils/vmiEducation';
+import { RassSelector } from '../components/RassSelector';
 import { ZapIcon, EditIcon } from 'lucide-react';
 import { EducationalTooltip } from '../components/ui/Tooltip';
 import { vmiEducation } from '../utils/vmiEducation';
@@ -100,7 +101,10 @@ export function VMIEntryPage() {
 
     // E) Mobilization
     mobilizationLevel: 0 as MobilizationLevel,
-    mobilizationBarrier: ''
+    mobilizationBarrier: '',
+
+    // F) Sedation / agitation (RASS, opcional)
+    rass: undefined as number | undefined
   }));
 
   const [calculations, setCalculations] = useState(() => calculateVMI(formData));
@@ -225,6 +229,8 @@ export function VMIEntryPage() {
 
       mobilizationLevel: formData.mobilizationLevel,
       mobilizationBarrier: formData.mobilizationBarrier || undefined,
+
+      rass: formData.rass ?? undefined,
 
       // Derived metrics become OPTIONAL-friendly (if missing inputs, they will be 0/undefined)
       vtPerKg: calculations.vtPerKg || undefined,
@@ -598,10 +604,15 @@ export function VMIEntryPage() {
             </div>
           </CollapsibleSection>
 
+          {/* B2) Sedation / agitation (RASS) — opcional */}
+          <CollapsibleSection title="6) Sedación y Agitación (RASS)" subtitle="Nivel de sedación del paciente (opcional)">
+            <RassSelector value={formData.rass} onChange={rass => setFormData({ ...formData, rass })} />
+          </CollapsibleSection>
+
           {/* C) Oxygenation & Acid-Base — orden de reporte de gasometría:
               pH, PaCO₂, PaO₂, HCO₃, SatO₂, Exceso de Bases (FiO₂ ya se
               carga en Configuración del Ventilador, arriba). */}
-          <CollapsibleSection title="6) Oxigenación y Equilibrio Ácido-Base" subtitle="Gasometría y parámetros de intercambio">
+          <CollapsibleSection title="7) Oxigenación y Equilibrio Ácido-Base" subtitle="Gasometría y parámetros de intercambio">
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 {/* pH bug fix: same clamp-on-blur pattern. */}
@@ -681,7 +692,7 @@ export function VMIEntryPage() {
           </CollapsibleSection>
 
           {/* D) Weaning */}
-          <CollapsibleSection title="7) Destete de la Ventilación" subtitle="Evaluación y pruebas de destete">
+          <CollapsibleSection title="8) Destete de la Ventilación" subtitle="Evaluación y pruebas de destete">
             <div className="space-y-4">
               <VMISelect
                 label="Estado de Destete"
@@ -749,7 +760,7 @@ export function VMIEntryPage() {
           </CollapsibleSection>
 
           {/* E) Mobilization */}
-          <CollapsibleSection title="8) Movilización y Rehabilitación" subtitle="Nivel de actividad física">
+          <CollapsibleSection title="9) Movilización y Rehabilitación" subtitle="Nivel de actividad física">
             <div className="space-y-4">
               <div>
                 <label className="text-sm font-medium text-gray-700 mb-2 block">Nivel máximo de movilización</label>

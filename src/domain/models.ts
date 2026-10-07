@@ -103,6 +103,7 @@ export interface IMVObservation extends ClinicalObservation {
   // Mobilization
   mobilizationLevel: MobilizationLevel;
   mobilizationBarrier?: string;
+  rass?: number;
 
   // Derived/calculated fields
   calculated: {

@@ -1,4 +1,11 @@
 export const vmiEducation = {
+  rass: {
+    title: 'RASS (Richmond Agitation-Sedation Scale)',
+    definition: 'Escala de 10 puntos que describe el nivel de agitación (+1 a +4) o sedación (-1 a -5) del paciente; 0 es alerta y calmo.',
+    importance: 'Permite titular la sedación, y condiciona el destete (SBT) y la movilización: una sedación profunda suele ser una barrera. Escala validada en UCI (Sessler et al., Am J Respir Crit Care Med 2002).',
+    target: 'Referencia habitual en pacientes ventilados: sedación liviana (RASS 0 a -2), a individualizar según la indicación médica.',
+    example: 'Se evalúa observando al paciente y luego estimulando por voz y, si no responde, físicamente. -3: se mueve o abre los ojos a la voz pero sin contacto visual.'
+  },
   ventMode: {
     title: 'Modo Ventilatorio',
     definition: 'Determina cómo el ventilador entrega la ventilación al paciente.',
@@ -196,6 +203,25 @@ export const weaningStatuses = [{
   label: 'Extubado',
   description: 'SBT exitoso y extubado'
 }];
+// RASS — de más agitado (+4) a menos despertable (-5).
+export const rassLevels = [
+  { value: 4, label: 'Combativo', description: 'Abiertamente combativo o violento, peligro inmediato para el personal' },
+  { value: 3, label: 'Muy agitado', description: 'Tira o retira tubos y catéteres, agresivo' },
+  { value: 2, label: 'Agitado', description: 'Movimientos frecuentes sin propósito, lucha con el ventilador' },
+  { value: 1, label: 'Inquieto', description: 'Ansioso o aprensivo, sin movimientos agresivos' },
+  { value: 0, label: 'Alerta y calmo', description: 'Despierto, atento y tranquilo' },
+  { value: -1, label: 'Somnoliento', description: 'No completamente alerta; se mantiene despierto (>10 s) con contacto visual a la voz' },
+  { value: -2, label: 'Sedación leve', description: 'Despierta brevemente (<10 s) con contacto visual a la voz' },
+  { value: -3, label: 'Sedación moderada', description: 'Movimiento o apertura ocular a la voz, sin contacto visual' },
+  { value: -4, label: 'Sedación profunda', description: 'Sin respuesta a la voz; movimiento o apertura ocular al estímulo físico' },
+  { value: -5, label: 'No despertable', description: 'Sin respuesta a la voz ni al estímulo físico' }
+];
+
+/** "+2" / "0" / "-3" */
+export function formatRass(value: number): string {
+  return value > 0 ? `+${value}` : String(value);
+}
+
 export const mobilizationLevels = [{
   value: 0,
   label: 'Nivel 0',

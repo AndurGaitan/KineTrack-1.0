@@ -6,7 +6,7 @@ import { Card } from '../components/ui/Card';
 import { Badge } from '../components/ui/Badge';
 import { AlertPanel } from '../components/AlertPanel';
 import { CheckCircleIcon, AlertCircleIcon, ZapIcon, CalendarIcon } from 'lucide-react';
-import { ventModes, mobilizationLevels } from '../utils/vmiEducation';
+import { ventModes, mobilizationLevels, rassLevels, formatRass } from '../utils/vmiEducation';
 const asynchronyTypes = [{
   value: 'ineffective-effort',
   label: 'Esfuerzo inefectivo'
@@ -353,6 +353,20 @@ export function VMIRecordDetailPage() {
             </div>
           </div>
         </Card>}
+
+        {/* Sedation / agitation — solo si se cargó */}
+        {record.rass != null && <Card>
+            <h3 className="text-lg font-bold text-gray-900 mb-4">
+              Sedación y Agitación
+            </h3>
+            <div className="text-sm text-gray-600 mb-1">RASS</div>
+            <div className="text-3xl font-bold text-gray-900">
+              {formatRass(record.rass)}
+            </div>
+            <div className="text-sm text-gray-700 mt-1">
+              {rassLevels.find(l => l.value === record.rass)?.label}
+            </div>
+          </Card>}
 
         {/* Weaning */}
         <Card>

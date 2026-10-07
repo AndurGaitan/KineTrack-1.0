@@ -29,7 +29,7 @@ import { cannulaFitOptions } from '../../utils/hfncEducation';
 import { oxygenDeviceLabels } from '../../utils/prestacionLabels';
 import { interfaceTypes, nivModes, skinIntegrityOptions } from '../../utils/nivEducation';
 import { computeNIVUsageSummary } from '../../utils/nivCalculations';
-import { mobilizationLevels, ventModes, weaningStatuses } from '../../utils/vmiEducation';
+import { formatRass, mobilizationLevels, rassLevels, ventModes, weaningStatuses } from '../../utils/vmiEducation';
 import {
   aspirationBlocks,
   cuffStatusLabels,
@@ -183,6 +183,11 @@ function narrateImv(record: VMIRecord): string {
     let gasSentence = `Gasometría: ${gasBits.join(', ')}, FiO₂ ${record.fio2}%`;
     if (record.pfRatio != null) gasSentence += ` (P/F ${record.pfRatio})`;
     parts.push(`${gasSentence}.`);
+  }
+
+  if (record.rass != null) {
+    const rassLabel = rassLevels.find((l) => l.value === record.rass)?.label;
+    parts.push(`RASS ${formatRass(record.rass)}${rassLabel ? ` (${rassLabel.toLowerCase()})` : ''}.`);
   }
 
   const weaningLabel = weaningStatuses.find((w) => w.value === record.weaningStatus)?.label || record.weaningStatus;
