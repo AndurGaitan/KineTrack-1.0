@@ -10,6 +10,7 @@
  * counts (a duration isn't a "horario").
  */
 import {
+  AirwayEvent,
   HFNCRecord,
   MrcAssessment,
   NIVRecord,
@@ -25,6 +26,7 @@ import {
 } from '../../types';
 import { calculateEpisodeDuration } from './episodeService';
 import { cannulaFitOptions } from '../../utils/hfncEducation';
+import { oxygenDeviceLabels } from '../../utils/prestacionLabels';
 import { interfaceTypes, nivModes, skinIntegrityOptions } from '../../utils/nivEducation';
 import { computeNIVUsageSummary } from '../../utils/nivCalculations';
 import { mobilizationLevels, ventModes, weaningStatuses } from '../../utils/vmiEducation';
@@ -372,6 +374,69 @@ export function narrateSupport(
   }
 }
 
+/** "a, b y c" */
+function joinEs(items: string[]): string {
+  if (items.length <= 1) return items.join('');
+  return `${items.slice(0, -1).join(', ')} y ${items[items.length - 1]}`;
+}
+
+/**
+ * Una línea por tipo de prestación con lo que se cargó: sesiones, nivel de
+ * movilización (KTM), dispositivo y flujo de O₂ (KTR) y minutos si hay.
+ */
+function describePrestacionGroup(type: PrestacionType, list: Prestacion[]): string {
+  const details: string[] = [];
+  if (list.length > 1) details.push(`${list.length} sesiones`);
+
+  if (type === 'kinesioterapia-motora') {
+    const levels = [...new Set(list.map((p) => p.mobilizationLevel).filter((l): l is NonNullable<typeof l> => l != null))].sort();
+    if (levels.length === 1) {
+      const description = mobilizationLevels.find((m) => m.value === levels[0])?.description;
+      details.push(`nivel ${levels[0]}${description ? `, ${description.toLowerCase()}` : ''}`);
+    } else if (levels.length > 1) {
+      details.push(`niveles ${joinEs(levels.map(String))}`);
+    }
+  }
+
+  if (type === 'kinesioterapia-respiratoria') {
+    const oxygen = [
+      ...new Set(
+        list
+          .filter((p) => p.oxygenDevice)
+          .map((p) => `con ${oxygenDeviceLabels[p.oxygenDevice!].toLowerCase()}${p.oxygenLiters != null ? ` a ${p.oxygenLiters} l/min` : ''}`)
+      ),
+    ];
+    if (oxygen.length > 0) details.push(oxygen.join(' / '));
+  }
+
+  const minutes = list.reduce((sum, p) => sum + (p.durationMinutes ?? 0), 0);
+  if (minutes > 0) details.push(`${minutes} min`);
+
+  return details.length > 0 ? `${prestacionTypeLabels[type]} (${details.join(', ')})` : prestacionTypeLabels[type];
+}
+
+/**
+ * Eventos de vía aérea (extubación / destete) y cambios de soporte del período,
+ * en orden cronológico. Los cambios de soporte no llevan autor, así que se
+ * muestran sin importar el alcance elegido.
+ */
+export function narrateEvents(airwayEvents: AirwayEvent[], episodeChanges: SupportEpisode[]): string | undefined {
+  const sentences: string[] = [];
+  const events = [...airwayEvents].sort((a, b) => new Date(a.occurredAt).getTime() - new Date(b.occurredAt).getTime());
+  const eventLabels = events.map((e) => {
+    if (e.type === 'extubacion') return `Extubación${e.classification ? ` ${e.classification}` : ''}`;
+    if (e.type === 'destete-vni') return 'Destete de VNI';
+    return 'Destete de cánula nasal de alto flujo';
+  });
+  if (eventLabels.length > 0) sentences.push(`${joinEs(eventLabels)}.`);
+
+  const changes = [...episodeChanges].sort((a, b) => new Date(a.startAt).getTime() - new Date(b.startAt).getTime());
+  for (const ep of changes) {
+    sentences.push(`Cambio de soporte a ${supportTypeLabel(ep.supportType)}${ep.reason ? ` (${ep.reason})` : ''}.`);
+  }
+  return sentences.length > 0 ? sentences.join(' ') : undefined;
+}
+
 /**
  * Prestaciones + MRC como una o dos oraciones. `periodPhrase` encabeza la
  * primera ("Durante el día recibió..." para el pase general que siempre
@@ -396,7 +461,7 @@ export function narratePrestaciones(
   for (const type of order) {
     const list = byType.get(type);
     if (!list || list.length === 0) continue;
-    typeLabelsUsed.push(`${prestacionTypeLabels[type]}${list.length > 1 ? ` (${list.length} sesiones)` : ''}`);
+    typeLabelsUsed.push(describePrestacionGroup(type, list));
     for (const p of list) if (p.notes) notes.push(p.notes);
   }
   if (typeLabelsUsed.length > 0) parts.push(`${periodPhrase} recibió ${typeLabelsUsed.join(', ')}.`);

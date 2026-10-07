@@ -7,19 +7,13 @@ import { Select, Input } from '../components/ui/Input';
 import * as prestacionesApi from '../api/prestacionesApi';
 import { MobilizationLevel, OxygenDeviceType, PrestacionType } from '../types';
 import { mobilizationLevels } from '../utils/vmiEducation';
+import { oxygenDeviceOptions } from '../utils/prestacionLabels';
 
 const typeOptions: { value: PrestacionType; label: string }[] = [
   { value: 'kinesioterapia-respiratoria', label: 'Kinesioterapia respiratoria' },
   { value: 'kinesioterapia-motora', label: 'Kinesioterapia motora' },
   { value: 'evaluacion', label: 'Evaluación' },
   { value: 'progresion', label: 'Progresión' },
-];
-
-const oxygenDeviceOptions: { value: OxygenDeviceType; label: string }[] = [
-  { value: 'canula-nasal-simple', label: 'Cánula nasal simple' },
-  { value: 'mascara-simple', label: 'Máscara simple' },
-  { value: 'mascara-venturi', label: 'Máscara Venturi' },
-  { value: 'mascara-no-reinhalacion', label: 'Máscara de no reinhalación' },
 ];
 
 // Misma escala 0-4 que ya usa Monitorización VMI — reutilizada acá para que

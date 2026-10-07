@@ -4,19 +4,22 @@
  * The kinesiólogo evolves one patient, then generates this and pastes it
  * straight into the electronic clinical record (HCE) before moving to the
  * next patient — flowing sentences, no clock timestamps (only day counts,
- * which aren't a "horario"). Was previously branded "Pase de Guardia" with
- * label:value lines and timestamps; kept that shape for the *general*,
- * multi-patient shift handoff (see generalHandoffText.ts), which is still
- * literally a pase de guardia between kinesiólogos.
+ * which aren't a "horario"). Uses the same period/scope criterion as the
+ * general handoff (see handoffData.ts): only what was loaded in the chosen
+ * period. Was previously branded "Pase de Guardia" with label:value lines and
+ * timestamps; kept that shape for the *general*, multi-patient shift handoff
+ * (see generalHandoffText.ts), which is still literally a pase de guardia
+ * between kinesiólogos.
  *
  * Both this file and generalHandoffText.ts build on the shared prose
  * generators in clinicalNarrative.ts so they describe the same facts.
  */
-import { MrcAssessment, NIVSession, Patient, Prestacion, Sector, SupportEpisode } from '../../types';
+import { AirwayEvent, MrcAssessment, NIVSession, Patient, Prestacion, Sector, SupportEpisode } from '../../types';
 import {
   LatestSupportRecord,
   fmtDate,
   narrateContext,
+  narrateEvents,
   narratePrestaciones,
   narrateSupport,
   pickLatestSupportRecord,
@@ -30,16 +33,19 @@ export interface HandoffInput {
   patient: Patient;
   sector?: Sector;
   activeEpisode?: SupportEpisode;
+  /** Último registro de soporte cargado en el período (undefined si no hubo). */
   latestSupportRecord: LatestSupportRecord;
-  /** Prestaciones ya filtradas a la ventana del turno elegida. */
+  /** Prestaciones ya filtradas al período. */
   prestaciones: Prestacion[];
-  /** Ventana usada para filtrar `prestaciones` — encabeza la oración de kinesioterapia. */
-  shiftHours: number;
+  /** Encabezado de la oración de kinesioterapia ("En las últimas 12 horas"...). */
+  periodPhrase: string;
   mrcAssessment?: MrcAssessment;
-  /** Sesiones de VNI del episodio activo, si el soporte actual es VNI — para la oración de uso/destete. */
+  /** Sesiones de VNI del episodio activo, si en el período hubo sesiones — para la oración de uso/destete. */
   nivSessions?: NIVSession[];
-  /** Estado + aspiraciones + proceso de decanulación, si el soporte actual es traqueostomía. */
+  /** Estado + aspiraciones + proceso de decanulación del período, si el soporte actual es traqueostomía. */
   trach?: TrachNarrativeInput;
+  airwayEvents?: AirwayEvent[];
+  episodeChanges?: SupportEpisode[];
 }
 
 function buildHeader(patient: Patient, sector: Sector | undefined): string {
@@ -51,10 +57,13 @@ function buildHeader(patient: Patient, sector: Sector | undefined): string {
 
 export function buildHandoffText(input: HandoffInput): string {
   const header = buildHeader(input.patient, input.sector);
+  const hasSupportInPeriod =
+    input.latestSupportRecord !== undefined || (input.patient.supportType === 'traqueostomia' && input.trach !== undefined);
   const body = [
     narrateContext(input.patient, input.activeEpisode),
-    narrateSupport(input.latestSupportRecord, input.patient, input.nivSessions, input.trach),
-    narratePrestaciones(input.prestaciones, input.mrcAssessment, `En las últimas ${input.shiftHours} horas`),
+    hasSupportInPeriod ? narrateSupport(input.latestSupportRecord, input.patient, input.nivSessions, input.trach) : undefined,
+    narrateEvents(input.airwayEvents ?? [], input.episodeChanges ?? []),
+    narratePrestaciones(input.prestaciones, input.mrcAssessment, input.periodPhrase),
   ]
     .filter(Boolean)
     .join(' ');

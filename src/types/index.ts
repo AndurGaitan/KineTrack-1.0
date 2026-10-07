@@ -44,6 +44,24 @@ export type AirwayEventInput =
   | { type: 'extubacion'; classification: 'programada' | 'accidental' }
   | { type: 'destete-vni' }
   | { type: 'destete-hfnc' };
+export interface AirwayEvent {
+  id: string;
+  patientId: string;
+  episodeId: string;
+  performedByUserId: string;
+  type: AirwayEventType;
+  classification?: 'programada' | 'accidental';
+  occurredAt: string;
+}
+export interface HandoffNote {
+  id: string;
+  kind: 'general' | 'evolucion';
+  patientId?: string;
+  periodFrom: string;
+  periodTo: string;
+  text: string;
+  createdAt: string;
+}
 export interface Patient {
   id: string;
   alias: string;
