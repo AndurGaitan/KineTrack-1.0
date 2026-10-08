@@ -21,8 +21,10 @@ import {
   narrateContext,
   narrateEvents,
   narratePrestaciones,
+  narrateSpontaneousVentilation,
   narrateSupport,
   pickLatestSupportRecord,
+  SpontaneousVentilationNarrativeInput,
   TrachNarrativeInput,
 } from './clinicalNarrative';
 
@@ -46,6 +48,7 @@ export interface HandoffInput {
   trach?: TrachNarrativeInput;
   airwayEvents?: AirwayEvent[];
   episodeChanges?: SupportEpisode[];
+  spontaneousVentilation?: SpontaneousVentilationNarrativeInput;
 }
 
 function buildHeader(patient: Patient, sector: Sector | undefined): string {
@@ -63,6 +66,7 @@ export function buildHandoffText(input: HandoffInput): string {
     narrateContext(input.patient, input.activeEpisode),
     hasSupportInPeriod ? narrateSupport(input.latestSupportRecord, input.patient, input.nivSessions, input.trach) : undefined,
     narrateEvents(input.airwayEvents ?? [], input.episodeChanges ?? []),
+    narrateSpontaneousVentilation(input.spontaneousVentilation, input.periodPhrase),
     narratePrestaciones(input.prestaciones, input.mrcAssessment, input.periodPhrase),
   ]
     .filter(Boolean)

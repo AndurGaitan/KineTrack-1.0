@@ -29,6 +29,7 @@ export function PaseGeneralPage() {
     getPatientHFNCRecords,
     getPatientTrachRecords,
     getPatientNIVSessions,
+    getPatientSVPeriods,
   } = useApp();
 
   const periodState = useHandoffPeriod();
@@ -93,6 +94,7 @@ export function PaseGeneralPage() {
           mrc: mrc.filter((m) => m.patientId === patient.id),
           trachOverview: trachByPatient[patient.id] ?? null,
           airwayEvents: airwayEvents.filter((e) => e.patientId === patient.id),
+          svPeriods: getPatientSVPeriods(patient.id),
         },
         { period, userId: user.id, mineOnly }
       );

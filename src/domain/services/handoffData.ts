@@ -15,12 +15,20 @@ import {
   NIVSession,
   Patient,
   Prestacion,
+  SpontaneousVentilationPeriod,
   SupportEpisode,
   TrachOverview,
   TrachRecord,
   VMIRecord,
 } from '../../types';
-import { LatestSupportRecord, TrachNarrativeInput, fmtDate, pickLatestSupportRecord } from './clinicalNarrative';
+import {
+  LatestSupportRecord,
+  SpontaneousVentilationNarrativeInput,
+  TrachNarrativeInput,
+  fmtDate,
+  pickLatestSupportRecord,
+} from './clinicalNarrative';
+import { svHoursInRange } from '../../utils/spontaneousVentilation';
 
 /** Agrega el plan / pendientes del kinesiólogo al final del texto (al copiar y al guardar). */
 export function appendPlan(text: string, plan: string): string {
@@ -115,6 +123,8 @@ export interface ActivitySources {
   mrc: MrcAssessment[];
   trachOverview?: TrachOverview | null;
   airwayEvents: AirwayEvent[];
+  /** Todos los períodos de ventilación espontánea del paciente (se filtran al rango). */
+  svPeriods: SpontaneousVentilationPeriod[];
 }
 
 export interface ActivityScope {
@@ -132,6 +142,8 @@ export interface PatientActivity {
   trach?: TrachNarrativeInput;
   airwayEvents: AirwayEvent[];
   episodeChanges: SupportEpisode[];
+  /** Ventilación espontánea (traqueostomía en VMI) dentro del período. */
+  spontaneousVentilation?: SpontaneousVentilationNarrativeInput;
 }
 
 /**
@@ -209,6 +221,14 @@ export function collectPatientActivity(
 
   const airwayEvents = src.airwayEvents.filter((e) => inPeriod(e.occurredAt) && isMine(e.performedByUserId));
 
+  // Ventilación espontánea: períodos que se solapan con el rango (los cargó esta persona o todo el equipo).
+  const svInRange =
+    patient.airwayType === 'traqueostomia'
+      ? src.svPeriods.filter((p) => isMine(p.performedByUserId) && svHoursInRange([p], scope.period.from, scope.period.to) > 0)
+      : [];
+  const spontaneousVentilation =
+    svInRange.length > 0 ? { periods: svInRange, hours: svHoursInRange(svInRange, scope.period.from, scope.period.to) } : undefined;
+
   // El primer episodio es el ingreso, no un cambio de soporte.
   const episodeChanges = [...patient.episodes]
     .sort((a, b) => new Date(a.startAt).getTime() - new Date(b.startAt).getTime())
@@ -222,6 +242,7 @@ export function collectPatientActivity(
     hasSessionInPeriod ||
     !!trach ||
     airwayEvents.length > 0 ||
+    !!spontaneousVentilation ||
     (!scope.mineOnly && episodeChanges.length > 0);
   if (!hasActivity) return undefined;
 
@@ -233,5 +254,6 @@ export function collectPatientActivity(
     trach,
     airwayEvents,
     episodeChanges,
+    spontaneousVentilation,
   };
 }

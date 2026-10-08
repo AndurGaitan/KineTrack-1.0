@@ -19,6 +19,7 @@ import {
   Prestacion,
   PrestacionType,
   RiskLevel,
+  SpontaneousVentilationPeriod,
   SupportEpisode,
   TrachOverview,
   TrachRecord,
@@ -27,6 +28,7 @@ import {
 import { calculateEpisodeDuration } from './episodeService';
 import { cannulaFitOptions } from '../../utils/hfncEducation';
 import { ktrTechniqueLabels, oxygenDeviceLabels } from '../../utils/prestacionLabels';
+import { formatSVHours, svInterruptionReasonLabels, svModalityShortLabels } from '../../utils/spontaneousVentilation';
 import { interfaceTypes, nivModes, skinIntegrityOptions } from '../../utils/nivEducation';
 import { computeNIVUsageSummary } from '../../utils/nivCalculations';
 import { formatRass, mobilizationLevels, rassLevels, ventModes, weaningStatuses } from '../../utils/vmiEducation';
@@ -474,6 +476,39 @@ export function narrateEvents(airwayEvents: AirwayEvent[], episodeChanges: Suppo
     sentences.push(`Cambio de soporte a ${supportTypeLabel(ep.supportType)}${ep.reason ? ` (${ep.reason})` : ''}.`);
   }
   return sentences.length > 0 ? sentences.join(' ') : undefined;
+}
+
+/** Períodos de ventilación espontánea (traqueostomía en VMI) ya filtrados al rango + sus horas dentro del rango. */
+export interface SpontaneousVentilationNarrativeInput {
+  hours: number;
+  periods: SpontaneousVentilationPeriod[];
+}
+
+/**
+ * "Durante el día realizó 6 h de ventilación espontánea por traqueostomía
+ * (3 períodos: aire ambiente y oxígeno). Un período no se toleró (taquipnea)."
+ */
+export function narrateSpontaneousVentilation(input: SpontaneousVentilationNarrativeInput | undefined, periodPhrase: string): string | undefined {
+  if (!input || input.periods.length === 0) return undefined;
+  const { hours, periods } = input;
+  const modalities = [...new Set(periods.map((p) => svModalityShortLabels[p.modality]))];
+  const count = periods.length;
+  const parts = [
+    `${periodPhrase} realizó ${formatSVHours(hours)} h de ventilación espontánea por traqueostomía (${count} ${count === 1 ? 'período' : 'períodos'}: ${joinEs(modalities)}).`,
+  ];
+
+  const notTolerated = periods.filter((p) => p.tolerated === false);
+  if (notTolerated.length > 0) {
+    const reasons = [...new Set(notTolerated.map((p) => p.interruptionReason).filter((r): r is NonNullable<typeof r> => !!r))];
+    const reasonText = reasons.length > 0 ? ` (${joinEs(reasons.map((r) => svInterruptionReasonLabels[r].toLowerCase()))})` : '';
+    parts.push(
+      notTolerated.length === 1 ? `Un período no se toleró${reasonText}.` : `${notTolerated.length} períodos no se toleraron${reasonText}.`
+    );
+  } else if (periods.every((p) => p.tolerated === true)) {
+    parts.push(count === 1 ? 'Lo toleró.' : 'Los toleró.');
+  }
+  if (periods.some((p) => !p.endAt)) parts.push('Hay un período en curso.');
+  return parts.join(' ');
 }
 
 /**

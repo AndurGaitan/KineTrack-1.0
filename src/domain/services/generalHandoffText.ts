@@ -12,10 +12,12 @@
 import { AirwayEvent, MrcAssessment, NIVSession, Patient, Prestacion, Sector, SupportEpisode } from '../../types';
 import {
   LatestSupportRecord,
+  SpontaneousVentilationNarrativeInput,
   TrachNarrativeInput,
   narrateContext,
   narrateEvents,
   narratePrestaciones,
+  narrateSpontaneousVentilation,
   narrateSupport,
 } from './clinicalNarrative';
 
@@ -32,6 +34,7 @@ export interface GeneralHandoffPatientInput {
   trach?: TrachNarrativeInput;
   airwayEvents?: AirwayEvent[];
   episodeChanges?: SupportEpisode[];
+  spontaneousVentilation?: SpontaneousVentilationNarrativeInput;
 }
 
 export interface GeneralHandoffInput {
@@ -44,7 +47,7 @@ export interface GeneralHandoffInput {
 }
 
 function buildPatientBlock(input: GeneralHandoffPatientInput, periodPhrase: string): string {
-  const { patient, sector, activeEpisode, latestSupportRecord, prestaciones, mrcAssessment, nivSessions, trach, airwayEvents, episodeChanges } = input;
+  const { patient, sector, activeEpisode, latestSupportRecord, prestaciones, mrcAssessment, nivSessions, trach, airwayEvents, episodeChanges, spontaneousVentilation } = input;
   // Primero la cama, después el nombre: "Cama 2 (UCI) - ALIAS, 50 años".
   const bed = patient.bedLabel ? `Cama ${patient.bedLabel}${sector?.name ? ` (${sector.name})` : ''}` : sector?.name;
   const header = `${bed ? `${bed} - ` : ''}${patient.alias}${patient.age != null ? `, ${patient.age} años` : ''}`;
@@ -58,6 +61,7 @@ function buildPatientBlock(input: GeneralHandoffPatientInput, periodPhrase: stri
     narrateContext(patient, activeEpisode),
     supportText,
     narrateEvents(airwayEvents ?? [], episodeChanges ?? []),
+    narrateSpontaneousVentilation(spontaneousVentilation, periodPhrase),
     narratePrestaciones(prestaciones, mrcAssessment, periodPhrase),
   ]
     .filter(Boolean)

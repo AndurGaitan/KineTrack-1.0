@@ -1,5 +1,5 @@
 import { ReactNode, useEffect, useState, createContext, useContext } from 'react';
-import { AppState, User, Patient, ScoreRecord, VMIRecord, NIVRecord, NIVSession, HFNCRecord, TrachRecord, SupportType, AirwayEventInput, Prestacion } from '../types';
+import { AppState, User, Patient, ScoreRecord, VMIRecord, NIVRecord, NIVSession, HFNCRecord, TrachRecord, SupportType, AirwayEventInput, Prestacion, SpontaneousVentilationPeriod, SVModality, SVInterruptionReason } from '../types';
 import { PatientClosure, ClinicalObservationType } from '../domain/models';
 import {
   observationToVMIRecord,
@@ -13,6 +13,7 @@ import * as patientsApi from '../api/patientsApi';
 import * as observationsApi from '../api/observationsApi';
 import * as scoresApi from '../api/scoresApi';
 import * as nivSessionsApi from '../api/nivSessionsApi';
+import * as spontaneousVentilationApi from '../api/spontaneousVentilationApi';
 import * as prestacionesApi from '../api/prestacionesApi';
 import type { CreatePrestacionInput } from '../api/prestacionesApi';
 
@@ -61,6 +62,11 @@ interface AppContextType extends AppState {
   getTrachRecord: (id: string) => TrachRecord | undefined;
   addPrestacion: (input: CreatePrestacionInput) => Promise<void>;
   getPatientPrestaciones: (patientId: string) => Prestacion[];
+  startSVPeriod: (patientId: string, modality: SVModality, episodeId?: string) => Promise<void>;
+  closeSVPeriod: (id: string, result: { tolerated: boolean; interruptionReason?: SVInterruptionReason; endAt?: string }) => Promise<void>;
+  addManualSVPeriod: (period: Omit<SpontaneousVentilationPeriod, 'id'>) => Promise<void>;
+  deleteSVPeriod: (id: string) => Promise<void>;
+  getPatientSVPeriods: (patientId: string) => SpontaneousVentilationPeriod[];
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -76,6 +82,7 @@ const initialState: AppState = {
   hfncRecords: [],
   trachRecords: [],
   prestaciones: [],
+  spontaneousVentilation: [],
 };
 
 /** Splits the flat observations list returned by the API into the legacy per-type record shapes the UI expects. */
@@ -118,14 +125,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
     ]);
 
     const patientIds = patients.map((p) => p.id);
-    const [observations, scores, nivSessions, prestaciones] =
+    const [observations, scores, nivSessions, prestaciones, spontaneousVentilation] =
       patientIds.length === 0
-        ? [[], [], [], []]
+        ? [[], [], [], [], []]
         : await Promise.all([
             observationsApi.listObservations({ patientIds }),
             scoresApi.listScores({ patientIds }),
             nivSessionsApi.listNivSessions({ patientIds }),
             prestacionesApi.listPrestaciones({ patientIds }),
+            spontaneousVentilationApi.listSVPeriods({ patientIds }),
           ]);
 
     const { vmiRecords, nivRecords, hfncRecords, trachRecords } = splitObservationsIntoLegacyRecords(observations);
@@ -141,6 +149,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       hfncRecords,
       trachRecords,
       prestaciones,
+      spontaneousVentilation,
     });
   };
 
@@ -230,6 +239,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
         antecedentes: updates.antecedentes,
         sex: updates.sex,
         heightCm: updates.heightCm,
+        airwayType: updates.airwayType,
+        tracheostomyDate: updates.tracheostomyDate,
       });
       setState((prev) => ({ ...prev, patients: prev.patients.map((p) => (p.id === id ? patient : p)) }));
     } catch (error) {
@@ -250,6 +261,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         hfncRecords: prev.hfncRecords.filter((h) => h.patientId !== id),
         trachRecords: prev.trachRecords.filter((t) => t.patientId !== id),
         prestaciones: prev.prestaciones.filter((p) => p.patientId !== id),
+        spontaneousVentilation: prev.spontaneousVentilation.filter((s) => s.patientId !== id),
       }));
     } catch (error) {
       reportError('eliminar paciente', error);
@@ -462,6 +474,56 @@ export function AppProvider({ children }: { children: ReactNode }) {
       .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
   };
 
+  // Ventilación espontánea (traqueostomía en VMI). Mismo patrón que las sesiones de VNI.
+  const startSVPeriod = async (patientId: string, modality: SVModality, episodeId?: string) => {
+    try {
+      const period = await spontaneousVentilationApi.createSVPeriod({ patientId, modality, episodeId });
+      setState((prev) => ({ ...prev, spontaneousVentilation: [...prev.spontaneousVentilation, period] }));
+    } catch (error) {
+      reportError('iniciar período de ventilación espontánea', error);
+    }
+  };
+
+  const closeSVPeriod = async (
+    id: string,
+    result: { tolerated: boolean; interruptionReason?: SVInterruptionReason; endAt?: string }
+  ) => {
+    try {
+      const period = await spontaneousVentilationApi.updateSVPeriod(id, {
+        endAt: result.endAt ?? new Date().toISOString(),
+        tolerated: result.tolerated,
+        interruptionReason: result.tolerated ? undefined : result.interruptionReason,
+      });
+      setState((prev) => ({ ...prev, spontaneousVentilation: prev.spontaneousVentilation.map((s) => (s.id === id ? period : s)) }));
+    } catch (error) {
+      reportError('finalizar período de ventilación espontánea', error);
+    }
+  };
+
+  const addManualSVPeriod = async (input: Omit<SpontaneousVentilationPeriod, 'id'>) => {
+    try {
+      const period = await spontaneousVentilationApi.createSVPeriod(input);
+      setState((prev) => ({ ...prev, spontaneousVentilation: [...prev.spontaneousVentilation, period] }));
+    } catch (error) {
+      reportError('cargar período de ventilación espontánea', error);
+    }
+  };
+
+  const deleteSVPeriod = async (id: string) => {
+    try {
+      await spontaneousVentilationApi.deleteSVPeriod(id);
+      setState((prev) => ({ ...prev, spontaneousVentilation: prev.spontaneousVentilation.filter((s) => s.id !== id) }));
+    } catch (error) {
+      reportError('eliminar período de ventilación espontánea', error);
+    }
+  };
+
+  const getPatientSVPeriods = (patientId: string) => {
+    return state.spontaneousVentilation
+      .filter((s) => s.patientId === patientId)
+      .sort((a, b) => new Date(b.startAt).getTime() - new Date(a.startAt).getTime());
+  };
+
   return (
     <AppContext.Provider
       value={{
@@ -501,6 +563,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
         getTrachRecord,
         addPrestacion,
         getPatientPrestaciones,
+        startSVPeriod,
+        closeSVPeriod,
+        addManualSVPeriod,
+        deleteSVPeriod,
+        getPatientSVPeriods,
       }}
     >
       {children}

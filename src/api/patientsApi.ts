@@ -26,6 +26,8 @@ export type UpdatePatientInput = Partial<{
   antecedentes: string[];
   sex: 'male' | 'female' | null;
   heightCm: number | null;
+  airwayType: 'tot' | 'traqueostomia' | null;
+  tracheostomyDate: string | null;
 }>;
 
 export type ClosePatientInput = {

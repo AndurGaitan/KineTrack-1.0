@@ -31,6 +31,7 @@ export function PaseDeGuardiaPage() {
     getPatientHFNCRecords,
     getPatientTrachRecords,
     getPatientNIVSessions,
+    getPatientSVPeriods,
   } = useApp();
 
   const patient = patients.find((p) => p.id === patientId);
@@ -88,6 +89,7 @@ export function PaseDeGuardiaPage() {
         mrc,
         trachOverview,
         airwayEvents,
+        svPeriods: getPatientSVPeriods(patient.id),
       },
       { period, userId: user.id, mineOnly }
     );
@@ -108,6 +110,7 @@ export function PaseDeGuardiaPage() {
       trach: activity?.trach,
       airwayEvents: activity?.airwayEvents,
       episodeChanges: activity?.episodeChanges,
+      spontaneousVentilation: activity?.spontaneousVentilation,
     });
   }, [patient, sector, activeEpisode, activity, period]);
 

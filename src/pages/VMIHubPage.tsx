@@ -6,6 +6,8 @@ import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
 import { VMIRecordCard } from '../components/VMIRecordCard';
 import { ActivityCard } from '../components/ActivityCard';
+import { AirwayCard } from '../components/AirwayCard';
+import { SpontaneousVentilationCard } from '../components/SpontaneousVentilationCard';
 import { ActivityIcon, TrendingUpIcon } from 'lucide-react';
 export function VMIHubPage() {
   const {
@@ -18,6 +20,7 @@ export function VMIHubPage() {
     patients,
     getPatientVMIRecords,
     getPatientPrestaciones,
+    getActiveEpisode,
     sectors,
     user
   } = useApp();
@@ -75,6 +78,10 @@ export function VMIHubPage() {
               </div>
             </div>}
         </div>
+
+        <AirwayCard patient={patient} />
+
+        {patient.airwayType === 'traqueostomia' && <SpontaneousVentilationCard patientId={patient.id} episodeId={getActiveEpisode(patient.id)?.id} />}
 
         <ActivityCard patientId={patient.id} prestaciones={prestaciones} now={now} />
 

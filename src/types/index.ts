@@ -44,6 +44,30 @@ export type AirwayEventInput =
   | { type: 'extubacion'; classification: 'programada' | 'accidental' }
   | { type: 'destete-vni' }
   | { type: 'destete-hfnc' };
+export type AirwayType = 'tot' | 'traqueostomia';
+export type SVModality = 'aire-ambiente' | 'oxigeno' | 'ventilador';
+export type SVInterruptionReason =
+  | 'taquipnea'
+  | 'desaturacion'
+  | 'fatiga'
+  | 'secreciones'
+  | 'agitacion'
+  | 'inestabilidad-hemodinamica'
+  | 'otro';
+/// Período de ventilación espontánea de un paciente traqueostomizado en VMI.
+/// `endAt` undefined = todavía en curso.
+export interface SpontaneousVentilationPeriod {
+  id: string;
+  patientId: string;
+  episodeId?: string;
+  performedByUserId?: string;
+  startAt: string;
+  endAt?: string;
+  modality: SVModality;
+  tolerated?: boolean;
+  interruptionReason?: SVInterruptionReason;
+  notes?: string;
+}
 export interface AirwayEvent {
   id: string;
   patientId: string;
@@ -80,6 +104,10 @@ export interface Patient {
   // VMI lo hereda automáticamente sin volver a pedirlo.
   sex?: 'male' | 'female';
   heightCm?: number;
+  // Vía aérea: un paciente en VMI con traqueostomía registra períodos de
+  // ventilación espontánea. Sin indicar = undefined.
+  airwayType?: AirwayType;
+  tracheostomyDate?: string;
   status: PatientStatus;
   closure?: PatientClosure;
   episodes: SupportEpisode[];
@@ -400,6 +428,7 @@ export interface AppState {
   hfncRecords: HFNCRecord[];
   trachRecords: TrachRecord[];
   prestaciones: Prestacion[];
+  spontaneousVentilation: SpontaneousVentilationPeriod[];
 }
 
 // ---------------------------------------------------------------------------
