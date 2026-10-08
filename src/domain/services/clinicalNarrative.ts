@@ -26,7 +26,7 @@ import {
 } from '../../types';
 import { calculateEpisodeDuration } from './episodeService';
 import { cannulaFitOptions } from '../../utils/hfncEducation';
-import { oxygenDeviceLabels } from '../../utils/prestacionLabels';
+import { ktrTechniqueLabels, oxygenDeviceLabels } from '../../utils/prestacionLabels';
 import { interfaceTypes, nivModes, skinIntegrityOptions } from '../../utils/nivEducation';
 import { computeNIVUsageSummary } from '../../utils/nivCalculations';
 import { formatRass, mobilizationLevels, rassLevels, ventModes, weaningStatuses } from '../../utils/vmiEducation';
@@ -385,6 +385,31 @@ function joinEs(items: string[]): string {
   return `${items.slice(0, -1).join(', ')} y ${items[items.length - 1]}`;
 }
 
+/** "con aspiración" / "sin aspiración" / "aspiración en 1 de 2 sesiones" — solo de las sesiones donde se indicó. */
+export function describeAspiration(list: Prestacion[]): string | undefined {
+  const indicated = list.filter((p) => p.aspirated !== undefined);
+  if (indicated.length === 0) return undefined;
+  const withAspiration = indicated.filter((p) => p.aspirated).length;
+  // Si en alguna sesión no se indicó, se cuenta sobre el total para no dar a entender que fueron todas.
+  if (withAspiration === list.length) return 'con aspiración de secreciones';
+  if (withAspiration === 0 && indicated.length === list.length) return 'sin aspiración de secreciones';
+  if (withAspiration === 0) return `sin aspiración en ${indicated.length} de ${list.length} sesiones`;
+  return `aspiración en ${withAspiration} de ${list.length} sesiones`;
+}
+
+/** "secreciones moderadas mucopurulentas" — cantidad y calidad distintas, sin repetir. */
+export function describeSecretions(list: Prestacion[]): string | undefined {
+  const amounts = [...new Set(list.map((p) => p.secretionAmount).filter((a): a is NonNullable<typeof a> => !!a))];
+  const characters = [...new Set(list.map((p) => p.secretionCharacter).filter((c): c is NonNullable<typeof c> => !!c))];
+  if (amounts.length === 0 && characters.length === 0) return undefined;
+  const parts: string[] = [];
+  if (amounts.length > 0) {
+    parts.push(amounts.length === 1 && amounts[0] === 'ausente' ? 'sin secreciones' : `secreciones ${joinEs(amounts.map((a) => secretionAmountLabels[a].toLowerCase()))}`);
+  }
+  if (characters.length > 0) parts.push(joinEs(characters.map((c) => secretionCharacterLabels[c])));
+  return parts.join(' ');
+}
+
 /**
  * Una línea por tipo de prestación con lo que se cargó: sesiones, nivel de
  * movilización (KTM), dispositivo y flujo de O₂ (KTR) y minutos si hay.
@@ -404,6 +429,15 @@ function describePrestacionGroup(type: PrestacionType, list: Prestacion[]): stri
   }
 
   if (type === 'kinesioterapia-respiratoria') {
+    const techniques = [...new Set(list.flatMap((p) => p.techniques ?? []))];
+    if (techniques.length > 0) details.push(joinEs(techniques.map((t) => ktrTechniqueLabels[t].toLowerCase())));
+
+    const aspirationText = describeAspiration(list);
+    if (aspirationText) details.push(aspirationText);
+
+    const secretionText = describeSecretions(list);
+    if (secretionText) details.push(secretionText);
+
     const oxygen = [
       ...new Set(
         list

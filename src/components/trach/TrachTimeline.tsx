@@ -10,6 +10,8 @@ import {
   ventilatorySupportLabels,
 } from '../../domain/services/trachDecannulation';
 import type { Prestacion, TrachOverview, TrachRecord } from '../../types';
+import { describeAspiration, describeSecretions } from '../../domain/services/clinicalNarrative';
+import { ktrTechniqueLabels } from '../../utils/prestacionLabels';
 import { ActivityIcon, DumbbellIcon, DropletsIcon, FlagIcon, PencilIcon, StethoscopeIcon, TimerIcon, ClipboardCheckIcon } from 'lucide-react';
 
 interface TimelineItem {
@@ -75,7 +77,16 @@ export function TrachTimeline({
         icon: ktr ? StethoscopeIcon : DumbbellIcon,
         tone: ktr ? 'bg-blue-100 text-blue-700' : 'bg-emerald-100 text-emerald-700',
         title: ktr ? 'Kinesioterapia respiratoria' : 'Kinesioterapia motora',
-        detail: [p.mobilizationLevel !== undefined ? `Movilización nivel ${p.mobilizationLevel}` : undefined, p.notes].filter(Boolean).join(' · ') || undefined,
+        detail:
+          [
+            p.mobilizationLevel !== undefined ? `Movilización nivel ${p.mobilizationLevel}` : undefined,
+            p.techniques && p.techniques.length > 0 ? p.techniques.map((t) => ktrTechniqueLabels[t]).join(', ') : undefined,
+            describeAspiration([p]),
+            describeSecretions([p]),
+            p.notes,
+          ]
+            .filter(Boolean)
+            .join(' · ') || undefined,
       });
     }
     for (const a of overview?.aspirations ?? []) {

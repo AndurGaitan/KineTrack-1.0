@@ -423,7 +423,22 @@ export interface Prestacion {
   // Only meaningful for type: 'kinesioterapia-motora' — same 0-4 scale as
   // VMIRecord.mobilizationLevel. Backs QI-05 (movilización precoz).
   mobilizationLevel?: MobilizationLevel;
+  // Solo para kinesioterapia respiratoria (KTR). `aspirated` undefined = no
+  // indicado; cantidad/calidad de secreciones usan los mismos valores que el
+  // seguimiento de traqueostomía.
+  aspirated?: boolean;
+  secretionAmount?: TrachSecretionAmount;
+  secretionCharacter?: TrachSecretionCharacter;
+  techniques?: KtrTechnique[];
 }
+
+export type KtrTechnique =
+  | 'higiene-bronquial'
+  | 'ejercicios-respiratorios'
+  | 'tos-asistida'
+  | 'drenaje-postural'
+  | 'vibracion-percusion'
+  | 'nebulizacion';
 
 export type MrcStatus = 'evaluable' | 'no-evaluable' | 'parcial' | 'desconocido';
 export interface MrcScores {

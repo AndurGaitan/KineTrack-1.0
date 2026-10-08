@@ -76,7 +76,7 @@ export function TrachHubPage() {
 
         <TrachStatusCard patientId={patient.id} ctx={ctx} onUpdateState={goToUpdateState} onChanged={reload} />
 
-        <ActivityCard patientId={patient.id} prestaciones={prestaciones} now={now} />
+        <ActivityCard patientId={patient.id} prestaciones={prestaciones} now={now} onChanged={reload} />
 
         {loading && !overview ? (
           <div className="bg-white rounded-2xl border border-gray-100 p-5 text-sm text-gray-500">Cargando proceso de decanulación...</div>

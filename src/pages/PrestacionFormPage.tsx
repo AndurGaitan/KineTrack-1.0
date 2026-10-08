@@ -8,6 +8,7 @@ import * as prestacionesApi from '../api/prestacionesApi';
 import { MobilizationLevel, OxygenDeviceType, PrestacionType } from '../types';
 import { mobilizationLevels } from '../utils/vmiEducation';
 import { oxygenDeviceOptions } from '../utils/prestacionLabels';
+import { KtrDetail, KtrDetailFields, emptyKtrDetail, ktrDetailPayload } from '../components/KtrDetailFields';
 
 const typeOptions: { value: PrestacionType; label: string }[] = [
   { value: 'kinesioterapia-respiratoria', label: 'Kinesioterapia respiratoria' },
@@ -42,6 +43,7 @@ export function PrestacionFormPage() {
   const [oxygenDevice, setOxygenDevice] = useState<OxygenDeviceType | ''>('');
   const [oxygenLiters, setOxygenLiters] = useState('');
   const [mobilizationLevel, setMobilizationLevel] = useState('');
+  const [ktrDetail, setKtrDetail] = useState<KtrDetail>(emptyKtrDetail);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -72,6 +74,7 @@ export function PrestacionFormPage() {
         oxygenLiters: showOxygenFields && oxygenLiters ? Number(oxygenLiters) : undefined,
         mobilizationLevel:
           showMobilization && mobilizationLevel !== '' ? (Number(mobilizationLevel) as MobilizationLevel) : undefined,
+        ...(type === 'kinesioterapia-respiratoria' ? ktrDetailPayload(ktrDetail) : {}),
       });
       navigate(`/patient/${patient.id}`);
     } catch (err) {
@@ -119,6 +122,12 @@ export function PrestacionFormPage() {
                 onChange={(e) => setOxygenLiters(e.target.value)}
                 placeholder="Ej: 3"
               />
+            </div>
+          )}
+
+          {type === 'kinesioterapia-respiratoria' && (
+            <div className="bg-white border border-gray-200 rounded-xl p-4">
+              <KtrDetailFields value={ktrDetail} onChange={setKtrDetail} />
             </div>
           )}
 

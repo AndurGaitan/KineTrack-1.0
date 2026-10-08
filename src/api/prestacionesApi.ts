@@ -1,7 +1,15 @@
 import { apiFetch } from './client';
-import type { MobilizationLevel, OxygenDeviceType, Prestacion, PrestacionType } from '../types';
+import type {
+  KtrTechnique,
+  MobilizationLevel,
+  OxygenDeviceType,
+  Prestacion,
+  PrestacionType,
+  TrachSecretionAmount,
+  TrachSecretionCharacter,
+} from '../types';
 
-export function createPrestacion(input: {
+export type CreatePrestacionInput = {
   patientId: string;
   type: PrestacionType;
   timestamp?: string;
@@ -10,7 +18,13 @@ export function createPrestacion(input: {
   oxygenDevice?: OxygenDeviceType;
   oxygenLiters?: number;
   mobilizationLevel?: MobilizationLevel;
-}) {
+  aspirated?: boolean;
+  secretionAmount?: TrachSecretionAmount;
+  secretionCharacter?: TrachSecretionCharacter;
+  techniques?: KtrTechnique[];
+};
+
+export function createPrestacion(input: CreatePrestacionInput) {
   return apiFetch<Prestacion>('/api/prestaciones', { method: 'POST', body: JSON.stringify(input) });
 }
 

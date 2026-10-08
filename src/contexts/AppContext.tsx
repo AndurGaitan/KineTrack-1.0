@@ -1,5 +1,5 @@
 import { ReactNode, useEffect, useState, createContext, useContext } from 'react';
-import { AppState, User, Patient, ScoreRecord, VMIRecord, NIVRecord, NIVSession, HFNCRecord, TrachRecord, SupportType, AirwayEventInput, Prestacion, PrestacionType, OxygenDeviceType, MobilizationLevel } from '../types';
+import { AppState, User, Patient, ScoreRecord, VMIRecord, NIVRecord, NIVSession, HFNCRecord, TrachRecord, SupportType, AirwayEventInput, Prestacion } from '../types';
 import { PatientClosure, ClinicalObservationType } from '../domain/models';
 import {
   observationToVMIRecord,
@@ -14,6 +14,7 @@ import * as observationsApi from '../api/observationsApi';
 import * as scoresApi from '../api/scoresApi';
 import * as nivSessionsApi from '../api/nivSessionsApi';
 import * as prestacionesApi from '../api/prestacionesApi';
+import type { CreatePrestacionInput } from '../api/prestacionesApi';
 
 interface AppContextType extends AppState {
   isLoading: boolean;
@@ -58,15 +59,7 @@ interface AppContextType extends AppState {
   addTrachRecord: (record: Omit<TrachRecord, 'id' | 'timestamp' | 'performedByUserId' | 'type' | 'alerts'>) => Promise<void>;
   getPatientTrachRecords: (patientId: string, episodeId?: string) => TrachRecord[];
   getTrachRecord: (id: string) => TrachRecord | undefined;
-  addPrestacion: (input: {
-    patientId: string;
-    type: PrestacionType;
-    durationMinutes?: number;
-    notes?: string;
-    oxygenDevice?: OxygenDeviceType;
-    oxygenLiters?: number;
-    mobilizationLevel?: MobilizationLevel;
-  }) => Promise<void>;
+  addPrestacion: (input: CreatePrestacionInput) => Promise<void>;
   getPatientPrestaciones: (patientId: string) => Prestacion[];
 }
 
@@ -455,15 +448,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const getTrachRecord = (id: string) => state.trachRecords.find((t) => t.id === id);
 
-  const addPrestacion = async (input: {
-    patientId: string;
-    type: PrestacionType;
-    durationMinutes?: number;
-    notes?: string;
-    oxygenDevice?: OxygenDeviceType;
-    oxygenLiters?: number;
-    mobilizationLevel?: MobilizationLevel;
-  }) => {
+  const addPrestacion = async (input: CreatePrestacionInput) => {
     // No reportError here (unlike the other add* methods): ActivityCard
     // awaits this call and shows its own inline error message, so a global
     // alert on top would just duplicate it.
