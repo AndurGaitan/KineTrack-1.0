@@ -68,6 +68,22 @@ export interface SpontaneousVentilationPeriod {
   interruptionReason?: SVInterruptionReason;
   notes?: string;
 }
+/** Vía aérea de un paciente en el momento de una prueba (para agrupar en el panel). */
+export type AirwayGroup = 'traqueostomia' | 'tot' | 'sin-indicar';
+export interface PveRow {
+  id: string;
+  patientId: string;
+  timestamp: string;
+  sbtType?: 'psv' | 'cpap' | 't-piece';
+  sbtResult?: 'success' | 'failure';
+  airway: AirwayGroup;
+}
+/** Filas livianas del panel de coordinación; se agrupan por día/semana en el cliente. */
+export interface WeaningTests {
+  period: { from: string; to: string };
+  pve: PveRow[];
+  ventilacionEspontanea: SpontaneousVentilationPeriod[];
+}
 export interface AirwayEvent {
   id: string;
   patientId: string;

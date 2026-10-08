@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Header } from '../../components/ui/Header';
 import { Card } from '../../components/ui/Card';
 import { CoordinatorNav } from '../../components/CoordinatorNav';
+import { WeaningTrendsSection } from '../../components/coordinator/WeaningTrendsSection';
 import * as dashboardApi from '../../api/dashboardApi';
 import { DashboardSummary } from '../../types';
 
@@ -209,6 +210,8 @@ export function CoordinatorDashboardPage() {
                 </div>
               </Card>
             </div>
+
+            <WeaningTrendsSection range={range} />
 
             <div>
               <h2 className="text-lg font-bold text-gray-900 mb-1">Bundle de prevención de NAVM</h2>
