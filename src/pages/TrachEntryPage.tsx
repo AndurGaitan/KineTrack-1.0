@@ -5,6 +5,8 @@ import { Header } from '../components/ui/Header';
 import { Button } from '../components/ui/Button';
 import { Input, Select } from '../components/ui/Input';
 import { ChipGroup } from '../components/trach/ChipGroup';
+import { RecordDateField } from '../components/RecordDateField';
+import { useRecordTimestamp } from '../hooks/useRecordTimestamp';
 import {
   ago,
   cuffStatusLabels,
@@ -35,6 +37,7 @@ export function TrachEntryPage() {
   const { patientId } = useParams<{ patientId: string }>();
   const navigate = useNavigate();
   const { patients, addTrachRecord, getActiveEpisode, getPatientTrachRecords, sectors } = useApp();
+  const recordedAt = useRecordTimestamp();
   const patient = patients.find((p) => p.id === patientId);
   const sector = patient ? sectors.find((s) => s.id === patient.sectorId) : null;
   const activeEpisode = patient ? getActiveEpisode(patient.id) : undefined;
@@ -73,12 +76,13 @@ export function TrachEntryPage() {
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    if (!hasAnything) return;
+    if (!hasAnything || recordedAt.isFuture) return;
     setSubmitting(true);
     try {
       await addTrachRecord({
         patientId: patient.id,
         episodeId: activeEpisode?.id,
+        timestamp: recordedAt.timestamp,
         cuffStatus,
         ventilatorySupport: support,
         secretionAmount,
@@ -109,6 +113,7 @@ export function TrachEntryPage() {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          <RecordDateField state={recordedAt} label="Fecha y hora del registro" />
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 space-y-5">
             <div>
               <h3 className="text-sm font-bold text-gray-900 mb-2">

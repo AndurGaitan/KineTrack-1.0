@@ -43,10 +43,10 @@ interface AppContextType extends AppState {
   addScore: (score: Omit<ScoreRecord, 'id' | 'timestamp'>) => Promise<void>;
   getPatientScores: (patientId: string) => ScoreRecord[];
   getSectorPatients: (sectorId: string, includeInactive?: boolean) => Patient[];
-  addVMIRecord: (record: Omit<VMIRecord, 'id' | 'timestamp'>) => Promise<void>;
+  addVMIRecord: (record: Omit<VMIRecord, 'id' | 'timestamp'> & { timestamp?: string }) => Promise<void>;
   getPatientVMIRecords: (patientId: string, episodeId?: string) => VMIRecord[];
   getVMIRecord: (id: string) => VMIRecord | undefined;
-  addNIVRecord: (record: Omit<NIVRecord, 'id' | 'timestamp'>) => Promise<void>;
+  addNIVRecord: (record: Omit<NIVRecord, 'id' | 'timestamp'> & { timestamp?: string }) => Promise<void>;
   getPatientNIVRecords: (patientId: string, episodeId?: string) => NIVRecord[];
   getNIVRecord: (id: string) => NIVRecord | undefined;
   startNIVSession: (patientId: string, episodeId?: string) => Promise<void>;
@@ -54,10 +54,12 @@ interface AppContextType extends AppState {
   addManualNIVSession: (session: Omit<NIVSession, 'id'>) => Promise<void>;
   deleteNIVSession: (id: string) => Promise<void>;
   getPatientNIVSessions: (patientId: string, episodeId?: string) => NIVSession[];
-  addHFNCRecord: (record: Omit<HFNCRecord, 'id' | 'timestamp'>) => Promise<void>;
+  addHFNCRecord: (record: Omit<HFNCRecord, 'id' | 'timestamp'> & { timestamp?: string }) => Promise<void>;
   getPatientHFNCRecords: (patientId: string, episodeId?: string) => HFNCRecord[];
   getHFNCRecord: (id: string) => HFNCRecord | undefined;
-  addTrachRecord: (record: Omit<TrachRecord, 'id' | 'timestamp' | 'performedByUserId' | 'type' | 'alerts'>) => Promise<void>;
+  addTrachRecord: (
+    record: Omit<TrachRecord, 'id' | 'timestamp' | 'performedByUserId' | 'type' | 'alerts'> & { timestamp?: string }
+  ) => Promise<void>;
   getPatientTrachRecords: (patientId: string, episodeId?: string) => TrachRecord[];
   getTrachRecord: (id: string) => TrachRecord | undefined;
   addPrestacion: (input: CreatePrestacionInput) => Promise<void>;
@@ -344,7 +346,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     return state.patients.filter((p) => p.sectorId === sectorId && (includeInactive || p.status === 'active'));
   };
 
-  const addVMIRecord = async (record: Omit<VMIRecord, 'id' | 'timestamp'>) => {
+  const addVMIRecord = async (record: Omit<VMIRecord, 'id' | 'timestamp'> & { timestamp?: string }) => {
     try {
       // Measured fields only — the server recomputes `calculated`/`alerts`.
       const obs = await observationsApi.createObservation({ ...record, type: 'imv' });
@@ -363,7 +365,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const getVMIRecord = (id: string) => state.vmiRecords.find((v) => v.id === id);
 
-  const addNIVRecord = async (record: Omit<NIVRecord, 'id' | 'timestamp'>) => {
+  const addNIVRecord = async (record: Omit<NIVRecord, 'id' | 'timestamp'> & { timestamp?: string }) => {
     try {
       const obs = await observationsApi.createObservation({ ...record, type: 'niv' });
       const newRecord = observationToNIVRecord(obs as Extract<ClinicalObservationType, { type: 'niv' }>);
@@ -423,7 +425,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       .sort((a, b) => new Date(b.startAt).getTime() - new Date(a.startAt).getTime());
   };
 
-  const addHFNCRecord = async (record: Omit<HFNCRecord, 'id' | 'timestamp'>) => {
+  const addHFNCRecord = async (record: Omit<HFNCRecord, 'id' | 'timestamp'> & { timestamp?: string }) => {
     try {
       const obs = await observationsApi.createObservation({ ...record, type: 'hfnc' });
       const newRecord = observationToHFNCRecord(obs as Extract<ClinicalObservationType, { type: 'hfnc' }>);
@@ -442,7 +444,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const getHFNCRecord = (id: string) => state.hfncRecords.find((h) => h.id === id);
 
   const addTrachRecord = async (
-    record: Omit<TrachRecord, 'id' | 'timestamp' | 'performedByUserId' | 'type' | 'alerts'>
+    record: Omit<TrachRecord, 'id' | 'timestamp' | 'performedByUserId' | 'type' | 'alerts'> & { timestamp?: string }
   ) => {
     try {
       const obs = await observationsApi.createObservation({ ...record, type: 'traqueostomia' });

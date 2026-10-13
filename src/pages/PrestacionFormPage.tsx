@@ -4,7 +4,8 @@ import { useApp } from '../contexts/AppContext';
 import { Header } from '../components/ui/Header';
 import { Button } from '../components/ui/Button';
 import { Select, Input } from '../components/ui/Input';
-import * as prestacionesApi from '../api/prestacionesApi';
+import { useRecordTimestamp } from '../hooks/useRecordTimestamp';
+import { RecordDateField } from '../components/RecordDateField';
 import { MobilizationLevel, OxygenDeviceType, PrestacionType } from '../types';
 import { mobilizationLevels } from '../utils/vmiEducation';
 import { oxygenDeviceOptions } from '../utils/prestacionLabels';
@@ -31,7 +32,8 @@ export function PrestacionFormPage() {
   const { patientId } = useParams<{ patientId: string }>();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { patients } = useApp();
+  const { patients, addPrestacion } = useApp();
+  const recordedAt = useRecordTimestamp();
   const patient = patients.find((p) => p.id === patientId);
 
   const prefilledType = searchParams.get('type');
@@ -61,13 +63,14 @@ export function PrestacionFormPage() {
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    if (!type) return;
+    if (!type || recordedAt.isFuture) return;
     setSubmitting(true);
     setError(null);
     try {
-      await prestacionesApi.createPrestacion({
+      await addPrestacion({
         patientId: patient.id,
         type,
+        timestamp: recordedAt.timestamp,
         durationMinutes: showDuration && durationMinutes ? Number(durationMinutes) : undefined,
         notes: notes || undefined,
         oxygenDevice: showOxygenFields && oxygenDevice ? oxygenDevice : undefined,
@@ -94,6 +97,8 @@ export function PrestacionFormPage() {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
+          <RecordDateField state={recordedAt} label="Fecha y hora de la prestación" />
+
           <Select
             label="Tipo de prestación"
             value={type}

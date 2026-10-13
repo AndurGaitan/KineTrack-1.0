@@ -6,6 +6,8 @@ import { Button } from '../components/ui/Button';
 import { CollapsibleSection } from '../components/ui/Tooltip';
 import { NIVField, NIVSelect } from '../components/NIVField';
 import { AlertPanel } from '../components/AlertPanel';
+import { RecordDateField } from '../components/RecordDateField';
+import { useRecordTimestamp } from '../hooks/useRecordTimestamp';
 import { NIVInterfaceType, SkinIntegrityStatus, NIVMode } from '../types';
 import { calculateHACORForNIV, generateNIVAlerts } from '../utils/nivCalculations';
 import { interfaceTypes, skinIntegrityOptions, lesionLocations, nivModes } from '../utils/nivEducation';
@@ -31,6 +33,7 @@ export function NIVEntryPage() {
     sectors,
     getActiveEpisode
   } = useApp();
+  const recordedAt = useRecordTimestamp();
   const patient = patients.find(p => p.id === patientId);
   const sector = patient ? sectors.find(s => s.id === patient.sectorId) : null;
   const activeEpisode = patient ? getActiveEpisode(patient.id) : undefined;
@@ -92,9 +95,11 @@ export function NIVEntryPage() {
   }, [formData]);
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
+    if (recordedAt.isFuture) return;
     addNIVRecord({
       patientId: patient!.id,
       episodeId: activeEpisode?.id,
+      timestamp: recordedAt.timestamp,
       interfaceType: formData.interfaceType as NIVInterfaceType,
       interfaceOther: formData.interfaceOther || undefined,
       skinIntegrity: formData.skinIntegrity as SkinIntegrityStatus,
@@ -154,6 +159,7 @@ export function NIVEntryPage() {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
+          <RecordDateField state={recordedAt} label="Fecha y hora de la monitorización" />
           {/* Interface Section */}
           <CollapsibleSection title="Interfaz de VNI" subtitle="Tipo de máscara o dispositivo">
             <div className="space-y-4">

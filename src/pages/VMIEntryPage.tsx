@@ -20,6 +20,8 @@ import {
 } from '../utils/vmiCalculations';
 import { ventModes, mobilizationLevels } from '../utils/vmiEducation';
 import { RassSelector } from '../components/RassSelector';
+import { RecordDateField } from '../components/RecordDateField';
+import { useRecordTimestamp } from '../hooks/useRecordTimestamp';
 import { ZapIcon, EditIcon } from 'lucide-react';
 import { EducationalTooltip } from '../components/ui/Tooltip';
 import { vmiEducation } from '../utils/vmiEducation';
@@ -52,6 +54,7 @@ export function VMIEntryPage() {
   const { patientId } = useParams<{ patientId: string }>();
   const navigate = useNavigate();
   const { patients, addVMIRecord, sectors, getActiveEpisode } = useApp();
+  const recordedAt = useRecordTimestamp();
 
   const patient = patients.find(p => p.id === patientId);
   const sector = patient ? sectors.find(s => s.id === patient.sectorId) : null;
@@ -188,9 +191,12 @@ export function VMIEntryPage() {
       return;
     }
 
+    if (recordedAt.isFuture) return;
+
     addVMIRecord({
       patientId: patient!.id,
       episodeId: activeEpisode?.id,
+      timestamp: recordedAt.timestamp,
 
       ventMode: formData.ventMode as VentMode,
       ventModeOther: formData.ventModeOther || undefined,
@@ -284,6 +290,7 @@ export function VMIEntryPage() {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
+          <RecordDateField state={recordedAt} label="Fecha y hora de la monitorización" />
           {/* STEP 1: Ventilator Mode (FIRST) */}
           <CollapsibleSection title="1) Modo Ventilatorio" subtitle="VCV, PCV o PSV">
             <div className="space-y-4">

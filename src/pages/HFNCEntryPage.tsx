@@ -6,6 +6,8 @@ import { Button } from '../components/ui/Button';
 import { CollapsibleSection } from '../components/ui/Tooltip';
 import { VMIField, VMISelect } from '../components/VMIField';
 import { AlertPanel } from '../components/AlertPanel';
+import { RecordDateField } from '../components/RecordDateField';
+import { useRecordTimestamp } from '../hooks/useRecordTimestamp';
 import { CannulaFit } from '../types';
 import { calculateROXForHFNC, generateHFNCAlerts } from '../utils/hfncCalculations';
 import { cannulaFitOptions } from '../utils/hfncEducation';
@@ -22,6 +24,7 @@ export function HFNCEntryPage() {
     sectors,
     getActiveEpisode
   } = useApp();
+  const recordedAt = useRecordTimestamp();
   const patient = patients.find(p => p.id === patientId);
   const sector = patient ? sectors.find(s => s.id === patient.sectorId) : null;
   const activeEpisode = patient ? getActiveEpisode(patient.id) : undefined;
@@ -62,9 +65,11 @@ export function HFNCEntryPage() {
   }, [formData]);
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
+    if (recordedAt.isFuture) return;
     addHFNCRecord({
       patientId: patient!.id,
       episodeId: activeEpisode?.id,
+      timestamp: recordedAt.timestamp,
       flow: formData.flow,
       fio2: formData.fio2,
       temperature: formData.temperature || undefined,
@@ -105,6 +110,7 @@ export function HFNCEntryPage() {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
+          <RecordDateField state={recordedAt} label="Fecha y hora de la monitorización" />
           {/* HFNC Parameters Section */}
           <CollapsibleSection title="Parámetros de HFNC" subtitle="Configuración del sistema de alto flujo">
             <div className="space-y-4">
