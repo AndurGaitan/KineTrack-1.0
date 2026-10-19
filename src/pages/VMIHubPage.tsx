@@ -8,6 +8,8 @@ import { VMIRecordCard } from '../components/VMIRecordCard';
 import { ActivityCard } from '../components/ActivityCard';
 import { AirwayCard } from '../components/AirwayCard';
 import { SpontaneousVentilationCard } from '../components/SpontaneousVentilationCard';
+import { MobilizationCard } from '../components/MobilizationCard';
+import { PveTodayCard } from '../components/PveTodayCard';
 import { ActivityIcon, TrendingUpIcon } from 'lucide-react';
 export function VMIHubPage() {
   const {
@@ -22,7 +24,8 @@ export function VMIHubPage() {
     getPatientPrestaciones,
     getActiveEpisode,
     sectors,
-    user
+    user,
+    features
   } = useApp();
   const patient = patients.find(p => p.id === patientId);
   const sector = patient ? sectors.find(s => s.id === patient.sectorId) : null;
@@ -70,20 +73,24 @@ export function VMIHubPage() {
                     {lastRecord.pfRatio}
                   </div>
                 </div> : null}
-              <div>
+              {lastRecord.mobilizationLevel != null && <div>
                 <div className="text-xs text-gray-600 mb-1">Movilización</div>
                 <div className="text-xl font-bold text-gray-900">
                   Nivel {lastRecord.mobilizationLevel}
                 </div>
-              </div>
+              </div>}
             </div>}
         </div>
 
-        <AirwayCard patient={patient} />
+        {features.tracheostomy && <AirwayCard patient={patient} />}
 
-        {patient.airwayType === 'traqueostomia' && <SpontaneousVentilationCard patientId={patient.id} episodeId={getActiveEpisode(patient.id)?.id} />}
+        {features.tracheostomy && patient.airwayType === 'traqueostomia' && <SpontaneousVentilationCard patientId={patient.id} episodeId={getActiveEpisode(patient.id)?.id} />}
 
         <ActivityCard patientId={patient.id} prestaciones={prestaciones} now={now} />
+
+        <MobilizationCard patientId={patient.id} now={now} />
+
+        <PveTodayCard patientId={patient.id} now={now} />
 
         <Button onClick={() => navigate(`/patient/${patient.id}/vmi/new`)} fullWidth className="min-h-[64px] text-xl">
           + Nueva Monitorización

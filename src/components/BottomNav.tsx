@@ -10,7 +10,7 @@ const baseTabs = [
 const coordinadorOnlyTabs = [{ path: '/coordinator/dashboard', label: 'Dashboard', icon: LayoutDashboardIcon }];
 
 /**
- * Fixed bottom tab bar. Every logged-in user gets Pacientes + Cronograma —
+ * Fixed bottom tab bar. Every logged-in user gets Pacientes + Cronograma (this last one only from stage 2) —
  * team productivity/QI Dashboard is a coordinador-only management view, so
  * it's only added to the bar for that role (CoordinatorNav still covers the
  * Sectores/Protocolos/Usuarios admin cluster, reached from Dashboard).
@@ -18,8 +18,10 @@ const coordinadorOnlyTabs = [{ path: '/coordinator/dashboard', label: 'Dashboard
 export function BottomNav() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user } = useApp();
-  const tabs = user?.role === 'coordinador' ? [...baseTabs, ...coordinadorOnlyTabs] : baseTabs;
+  const { user, features } = useApp();
+  // Etapa 1: sin Cronograma.
+  const visibleBase = features.schedule ? baseTabs : baseTabs.filter((t) => t.path !== '/coordinator/schedule');
+  const tabs = user?.role === 'coordinador' ? [...visibleBase, ...coordinadorOnlyTabs] : visibleBase;
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-20 bg-white border-t border-gray-200 pb-[env(safe-area-inset-bottom)]">

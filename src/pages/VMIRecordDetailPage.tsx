@@ -406,15 +406,15 @@ export function VMIRecordDetailPage() {
         </Card>
 
         {/* Mobilization */}
-        <Card>
+        {(record.mobilizationLevel != null || record.mobilizationBarrier) && <Card>
           <h3 className="text-lg font-bold text-gray-900 mb-4">Movilización</h3>
           <div className="space-y-3">
-            <div>
+            {record.mobilizationLevel != null && <div>
               <div className="text-sm text-gray-600 mb-1">Nivel Máximo</div>
               <div className="text-2xl font-bold text-gray-900">
                 Nivel {record.mobilizationLevel}: {mobilizationLabel}
               </div>
-            </div>
+            </div>}
             {record.mobilizationBarrier && <div>
                 <div className="text-sm text-gray-600 mb-1">Barrera</div>
                 <div className="text-gray-900">
@@ -422,7 +422,7 @@ export function VMIRecordDetailPage() {
                 </div>
               </div>}
           </div>
-        </Card>
+        </Card>}
 
         {/* Alerts */}
         {record.alerts.length > 0 && <div>

@@ -21,6 +21,7 @@ import {
 import { ventModes, mobilizationLevels } from '../utils/vmiEducation';
 import { RassSelector } from '../components/RassSelector';
 import { RecordDateField } from '../components/RecordDateField';
+import { PveDecisionForm, PveDraft, emptyPveDraft, pveDraftError, pveDraftToInput } from '../components/PveDecisionForm';
 import { useRecordTimestamp } from '../hooks/useRecordTimestamp';
 import { ZapIcon, EditIcon } from 'lucide-react';
 import { EducationalTooltip } from '../components/ui/Tooltip';
@@ -53,7 +54,7 @@ const clamp = (n: number, min: number, max: number) => Math.min(max, Math.max(mi
 export function VMIEntryPage() {
   const { patientId } = useParams<{ patientId: string }>();
   const navigate = useNavigate();
-  const { patients, addVMIRecord, sectors, getActiveEpisode } = useApp();
+  const { patients, addVMIRecord, addPveDecision, sectors, getActiveEpisode, features } = useApp();
   const recordedAt = useRecordTimestamp();
 
   const patient = patients.find(p => p.id === patientId);
@@ -109,6 +110,10 @@ export function VMIEntryPage() {
     // F) Sedation / agitation (RASS, opcional)
     rass: undefined as number | undefined
   }));
+
+  // Etapa 1: la PVE se registra como decisión (realizada / contraindicada / no realizada).
+  const [pveDraft, setPveDraft] = useState<PveDraft>(emptyPveDraft);
+  const pveError = !features.gasometry ? pveDraftError(pveDraft) : null;
 
   const [calculations, setCalculations] = useState(() => calculateVMI(formData));
   const [alerts, setAlerts] = useState<string[]>([]);
@@ -180,7 +185,7 @@ export function VMIEntryPage() {
 
   const pbwOk = formData.predictedBodyWeight > 0;
 
-  const handleSubmit = (e: FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
 
     if (!canSave) {
@@ -192,8 +197,12 @@ export function VMIEntryPage() {
     }
 
     if (recordedAt.isFuture) return;
+    if (pveError) {
+      setAlerts(prev => [`⚠️ ${pveError}.`, ...prev]);
+      return;
+    }
 
-    addVMIRecord({
+    await addVMIRecord({
       patientId: patient!.id,
       episodeId: activeEpisode?.id,
       timestamp: recordedAt.timestamp,
@@ -221,20 +230,23 @@ export function VMIEntryPage() {
       asynchronyFrequency: formData.asynchronyFrequency || undefined,
 
       spo2: formData.spo2 ?? undefined,
-      pao2: formData.pao2 ?? undefined,
-      paco2: formData.paco2 ?? undefined,
-      ph: formData.ph ?? undefined,
-      hco3: formData.hco3 ?? undefined,
-      baseExcess: formData.baseExcess ?? undefined,
+      // Etapa 1: sin gasometría arterial.
+      pao2: features.gasometry ? formData.pao2 ?? undefined : undefined,
+      paco2: features.gasometry ? formData.paco2 ?? undefined : undefined,
+      ph: features.gasometry ? formData.ph ?? undefined : undefined,
+      hco3: features.gasometry ? formData.hco3 ?? undefined : undefined,
+      baseExcess: features.gasometry ? formData.baseExcess ?? undefined : undefined,
 
       weaningStatus: formData.weaningStatus,
-      sbtPerformed: formData.sbtPerformed || undefined,
-      sbtType: formData.sbtType || undefined,
-      sbtResult: formData.sbtResult || undefined,
-      sbtFailureReason: formData.sbtFailureReason || undefined,
+      // Etapa 1: la PVE va como decisión aparte (no se duplica en la monitorización).
+      sbtPerformed: features.gasometry ? formData.sbtPerformed || undefined : undefined,
+      sbtType: features.gasometry ? formData.sbtType || undefined : undefined,
+      sbtResult: features.gasometry ? formData.sbtResult || undefined : undefined,
+      sbtFailureReason: features.gasometry ? formData.sbtFailureReason || undefined : undefined,
 
-      mobilizationLevel: formData.mobilizationLevel,
-      mobilizationBarrier: formData.mobilizationBarrier || undefined,
+      // Etapa 1: sin nivel de movilización (el inicio de la movilización se registra aparte).
+      mobilizationLevel: features.mobilizationLevel ? formData.mobilizationLevel : undefined,
+      mobilizationBarrier: features.mobilizationLevel ? formData.mobilizationBarrier || undefined : undefined,
 
       rass: formData.rass ?? undefined,
 
@@ -250,6 +262,11 @@ export function VMIEntryPage() {
       protectiveVentilation: calculations.protectiveVentilation,
       alerts
     });
+
+    if (!features.gasometry) {
+      const input = pveDraftToInput(pveDraft, patient!.id, recordedAt.timestamp);
+      if (input) await addPveDecision(input);
+    }
 
     navigate(`/patient/${patient!.id}/vmi`);
   };
@@ -619,7 +636,22 @@ export function VMIEntryPage() {
           {/* C) Oxygenation & Acid-Base — orden de reporte de gasometría:
               pH, PaCO₂, PaO₂, HCO₃, SatO₂, Exceso de Bases (FiO₂ ya se
               carga en Configuración del Ventilador, arriba). */}
-          <CollapsibleSection title="7) Oxigenación y Equilibrio Ácido-Base" subtitle="Gasometría y parámetros de intercambio">
+          {!features.gasometry && (
+            <CollapsibleSection title="7) Oxigenación" subtitle="SpO₂ al momento de la monitorización">
+              <VMIField
+                label="SpO₂"
+                unit="%"
+                type="number"
+                value={formData.spo2 ?? ''}
+                onChange={e => setFormData({ ...formData, spo2: toNumberOrUndefined(e.target.value) })}
+                onBlur={e => {
+                  const n = toNumberOrUndefined(e.target.value);
+                  if (n != null) setFormData(prev => ({ ...prev, spo2: clamp(n, 0, 100) }));
+                }}
+              />
+            </CollapsibleSection>
+          )}
+          {features.gasometry && <CollapsibleSection title="7) Oxigenación y Equilibrio Ácido-Base" subtitle="Gasometría y parámetros de intercambio">
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 {/* pH bug fix: same clamp-on-blur pattern. */}
@@ -696,7 +728,7 @@ export function VMIEntryPage() {
                 />
               </div>
             </div>
-          </CollapsibleSection>
+          </CollapsibleSection>}
 
           {/* D) Weaning */}
           <CollapsibleSection title="8) Destete de la Ventilación" subtitle="Evaluación y pruebas de destete">
@@ -714,7 +746,14 @@ export function VMIEntryPage() {
                 required
               />
 
-              {(formData.weaningStatus === 'candidate' || formData.weaningStatus === 'sbt-trial') && (
+              {!features.gasometry && formData.weaningStatus !== 'extubated' && (
+                <div>
+                  <div className="text-sm font-medium text-gray-700 mb-2">Decisión sobre la PVE de hoy (opcional)</div>
+                  <PveDecisionForm value={pveDraft} onChange={setPveDraft} />
+                </div>
+              )}
+
+              {features.gasometry && (formData.weaningStatus === 'candidate' || formData.weaningStatus === 'sbt-trial') && (
                 <>
                   <div>
                     <label className="flex items-center gap-3 p-4 border-2 border-gray-300 rounded-xl cursor-pointer hover:bg-gray-50">
@@ -766,8 +805,8 @@ export function VMIEntryPage() {
             </div>
           </CollapsibleSection>
 
-          {/* E) Mobilization */}
-          <CollapsibleSection title="9) Movilización y Rehabilitación" subtitle="Nivel de actividad física">
+          {/* E) Mobilization — etapa 1: se registra aparte (inicio de movilización activa) */}
+          {features.mobilizationLevel && <CollapsibleSection title="9) Movilización y Rehabilitación" subtitle="Nivel de actividad física">
             <div className="space-y-4">
               <div>
                 <label className="text-sm font-medium text-gray-700 mb-2 block">Nivel máximo de movilización</label>
@@ -804,7 +843,7 @@ export function VMIEntryPage() {
                 />
               )}
             </div>
-          </CollapsibleSection>
+          </CollapsibleSection>}
 
           {/* Alerts */}
           {alerts.length > 0 && (

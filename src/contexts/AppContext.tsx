@@ -1,5 +1,5 @@
 import { ReactNode, useEffect, useState, createContext, useContext } from 'react';
-import { AppState, User, Patient, ScoreRecord, VMIRecord, NIVRecord, NIVSession, HFNCRecord, TrachRecord, SupportType, AirwayEventInput, Prestacion, SpontaneousVentilationPeriod, SVModality, SVInterruptionReason } from '../types';
+import { AppState, User, Patient, ScoreRecord, VMIRecord, NIVRecord, NIVSession, HFNCRecord, TrachRecord, SupportType, AirwayEventInput, Prestacion, SpontaneousVentilationPeriod, SVModality, SVInterruptionReason, AppStage, PveDecision, MobilizationStart, MobilizationContraindication } from '../types';
 import { PatientClosure, ClinicalObservationType } from '../domain/models';
 import {
   observationToVMIRecord,
@@ -15,9 +15,37 @@ import * as scoresApi from '../api/scoresApi';
 import * as nivSessionsApi from '../api/nivSessionsApi';
 import * as spontaneousVentilationApi from '../api/spontaneousVentilationApi';
 import * as prestacionesApi from '../api/prestacionesApi';
+import * as settingsApi from '../api/settingsApi';
+import * as pveDecisionsApi from '../api/pveDecisionsApi';
+import type { CreatePveDecisionInput } from '../api/pveDecisionsApi';
+import * as mobilizationApi from '../api/mobilizationApi';
 import type { CreatePrestacionInput } from '../api/prestacionesApi';
 
+/** Qué partes de la app están visibles según la etapa de uso. */
+export interface AppFeatures {
+  /** Gasometría arterial / HACOR en VNI y VMI. */
+  gasometry: boolean;
+  /** Escala de nivel de movilización en monitorización VMI y KTM. */
+  mobilizationLevel: boolean;
+  /** Módulo de traqueostomía y ventilación espontánea. */
+  tracheostomy: boolean;
+  /** Cronograma de personal. */
+  schedule: boolean;
+}
+
 interface AppContextType extends AppState {
+  features: AppFeatures;
+  setStage: (stage: AppStage) => Promise<void>;
+  addPveDecision: (input: CreatePveDecisionInput) => Promise<boolean>;
+  deletePveDecision: (id: string) => Promise<void>;
+  getPatientPveDecisions: (patientId: string) => PveDecision[];
+  startMobilization: (patientId: string, startedAt?: string, notes?: string) => Promise<boolean>;
+  deleteMobilizationStart: (id: string) => Promise<void>;
+  getEpisodeMobilizationStart: (episodeId: string | undefined) => MobilizationStart | undefined;
+  addMobilizationContraindication: (input: mobilizationApi.CreateContraindicationInput) => Promise<boolean>;
+  liftMobilizationContraindication: (id: string, endAt?: string) => Promise<void>;
+  deleteMobilizationContraindication: (id: string) => Promise<void>;
+  getPatientMobilizationContraindications: (patientId: string) => MobilizationContraindication[];
   isLoading: boolean;
   authError: string | null;
   login: (email: string, password: string) => Promise<void>;
@@ -75,6 +103,11 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 
 const initialState: AppState = {
   user: null,
+  // Etapa 1 por defecto: coincide con el default del servidor.
+  stage: 1,
+  pveDecisions: [],
+  mobilizationStarts: [],
+  mobilizationContraindications: [],
   sectors: [],
   patients: [],
   scores: [],
@@ -127,21 +160,29 @@ export function AppProvider({ children }: { children: ReactNode }) {
     ]);
 
     const patientIds = patients.map((p) => p.id);
-    const [observations, scores, nivSessions, prestaciones, spontaneousVentilation] =
+    const settings = await settingsApi.getSettings().catch(() => ({ stage: 1 as AppStage }));
+    const emptyMobilization: mobilizationApi.MobilizationData = { starts: [], contraindications: [] };
+    const [observations, scores, nivSessions, prestaciones, spontaneousVentilation, pveDecisions, mobilization] =
       patientIds.length === 0
-        ? [[], [], [], [], []]
+        ? [[], [], [], [], [], [], emptyMobilization]
         : await Promise.all([
             observationsApi.listObservations({ patientIds }),
             scoresApi.listScores({ patientIds }),
             nivSessionsApi.listNivSessions({ patientIds }),
             prestacionesApi.listPrestaciones({ patientIds }),
             spontaneousVentilationApi.listSVPeriods({ patientIds }),
+            pveDecisionsApi.listPveDecisions({ patientIds }),
+            mobilizationApi.listMobilization({ patientIds }),
           ]);
 
     const { vmiRecords, nivRecords, hfncRecords, trachRecords } = splitObservationsIntoLegacyRecords(observations);
 
     setState({
       user,
+      stage: settings.stage,
+      pveDecisions: pveDecisions as PveDecision[],
+      mobilizationStarts: (mobilization as mobilizationApi.MobilizationData).starts,
+      mobilizationContraindications: (mobilization as mobilizationApi.MobilizationData).contraindications,
       sectors,
       patients,
       scores,
@@ -264,6 +305,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
         trachRecords: prev.trachRecords.filter((t) => t.patientId !== id),
         prestaciones: prev.prestaciones.filter((p) => p.patientId !== id),
         spontaneousVentilation: prev.spontaneousVentilation.filter((s) => s.patientId !== id),
+        pveDecisions: prev.pveDecisions.filter((d) => d.patientId !== id),
+        mobilizationStarts: prev.mobilizationStarts.filter((m) => m.patientId !== id),
+        mobilizationContraindications: prev.mobilizationContraindications.filter((m) => m.patientId !== id),
       }));
     } catch (error) {
       reportError('eliminar paciente', error);
@@ -526,10 +570,131 @@ export function AppProvider({ children }: { children: ReactNode }) {
       .sort((a, b) => new Date(b.startAt).getTime() - new Date(a.startAt).getTime());
   };
 
+  // Etapa de uso (la cambia el coordinador). Las pantallas leen `features`.
+  const setStage = async (stage: AppStage) => {
+    try {
+      const result = await settingsApi.updateStage(stage);
+      setState((prev) => ({ ...prev, stage: result.stage }));
+    } catch (error) {
+      reportError('cambiar la etapa', error);
+    }
+  };
+
+  const features: AppFeatures =
+    state.stage === 1
+      ? { gasometry: false, mobilizationLevel: false, tracheostomy: false, schedule: false }
+      : { gasometry: true, mobilizationLevel: true, tracheostomy: true, schedule: true };
+
+  // Decisiones de PVE (realizada / contraindicada / no realizada).
+  const addPveDecision = async (input: CreatePveDecisionInput) => {
+    try {
+      const created = await pveDecisionsApi.createPveDecision(input);
+      setState((prev) => ({ ...prev, pveDecisions: [...prev.pveDecisions, created] }));
+      return true;
+    } catch (error) {
+      reportError('guardar decisión de PVE', error);
+      return false;
+    }
+  };
+
+  const deletePveDecision = async (id: string) => {
+    try {
+      await pveDecisionsApi.deletePveDecision(id);
+      setState((prev) => ({ ...prev, pveDecisions: prev.pveDecisions.filter((d) => d.id !== id) }));
+    } catch (error) {
+      reportError('eliminar decisión de PVE', error);
+    }
+  };
+
+  const getPatientPveDecisions = (patientId: string) => {
+    return state.pveDecisions
+      .filter((d) => d.patientId === patientId)
+      .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+  };
+
+  // Movilización precoz: inicio (uno por episodio de VMI) y contraindicaciones que pausan la ventana de 72 h.
+  const startMobilization = async (patientId: string, startedAt?: string, notes?: string) => {
+    try {
+      const created = await mobilizationApi.startMobilization({ patientId, startedAt, notes });
+      setState((prev) => ({ ...prev, mobilizationStarts: [...prev.mobilizationStarts, created] }));
+      return true;
+    } catch (error) {
+      reportError('registrar inicio de movilización', error);
+      return false;
+    }
+  };
+
+  const deleteMobilizationStart = async (id: string) => {
+    try {
+      await mobilizationApi.deleteMobilizationStart(id);
+      setState((prev) => ({ ...prev, mobilizationStarts: prev.mobilizationStarts.filter((m) => m.id !== id) }));
+    } catch (error) {
+      reportError('eliminar inicio de movilización', error);
+    }
+  };
+
+  const getEpisodeMobilizationStart = (episodeId: string | undefined) => {
+    if (!episodeId) return undefined;
+    return state.mobilizationStarts.find((m) => m.episodeId === episodeId);
+  };
+
+  const addMobilizationContraindication = async (input: mobilizationApi.CreateContraindicationInput) => {
+    try {
+      const created = await mobilizationApi.createContraindication(input);
+      setState((prev) => ({ ...prev, mobilizationContraindications: [...prev.mobilizationContraindications, created] }));
+      return true;
+    } catch (error) {
+      reportError('registrar contraindicación de movilización', error);
+      return false;
+    }
+  };
+
+  const liftMobilizationContraindication = async (id: string, endAt?: string) => {
+    try {
+      const updated = await mobilizationApi.updateContraindication(id, { endAt: endAt ?? new Date().toISOString() });
+      setState((prev) => ({
+        ...prev,
+        mobilizationContraindications: prev.mobilizationContraindications.map((c) => (c.id === id ? updated : c)),
+      }));
+    } catch (error) {
+      reportError('levantar contraindicación de movilización', error);
+    }
+  };
+
+  const deleteMobilizationContraindication = async (id: string) => {
+    try {
+      await mobilizationApi.deleteContraindication(id);
+      setState((prev) => ({
+        ...prev,
+        mobilizationContraindications: prev.mobilizationContraindications.filter((c) => c.id !== id),
+      }));
+    } catch (error) {
+      reportError('eliminar contraindicación de movilización', error);
+    }
+  };
+
+  const getPatientMobilizationContraindications = (patientId: string) => {
+    return state.mobilizationContraindications
+      .filter((c) => c.patientId === patientId)
+      .sort((a, b) => new Date(b.startAt).getTime() - new Date(a.startAt).getTime());
+  };
+
   return (
     <AppContext.Provider
       value={{
         ...state,
+        features,
+        setStage,
+        addPveDecision,
+        deletePveDecision,
+        getPatientPveDecisions,
+        startMobilization,
+        deleteMobilizationStart,
+        getEpisodeMobilizationStart,
+        addMobilizationContraindication,
+        liftMobilizationContraindication,
+        deleteMobilizationContraindication,
+        getPatientMobilizationContraindications,
         isLoading,
         authError,
         login,

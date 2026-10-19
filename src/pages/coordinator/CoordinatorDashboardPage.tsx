@@ -219,12 +219,12 @@ export function CoordinatorDashboardPage() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <QICard
                   title="QI-01 · PVE en días elegibles"
-                  formula="días-paciente elegibles con ≥1 PVE / total días-paciente elegibles"
+                  formula="días-paciente elegibles con ≥1 PVE / total días-paciente elegibles (los días con PVE contraindicada no cuentan)"
                   result={summary.qualityIndicators.qi01PveDiasElegibles}
                 />
                 <QICard
                   title="QI-05 · Movilización precoz"
-                  formula="episodios VMI con 1ª movilización ≤48h / episodios con ventana de 48h ya cumplida"
+                  formula="episodios VMI con movilización activa iniciada ≤72 h desde el inicio de la VMI (pausada por contraindicaciones) / episodios con ventana de 72 h ya cumplida"
                   result={summary.qualityIndicators.qi05MovilizacionPrecoz}
                 />
               </div>

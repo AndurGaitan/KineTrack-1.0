@@ -31,7 +31,8 @@ export function NIVEntryPage() {
     patients,
     addNIVRecord,
     sectors,
-    getActiveEpisode
+    getActiveEpisode,
+    features
   } = useApp();
   const recordedAt = useRecordTimestamp();
   const patient = patients.find(p => p.id === patientId);
@@ -88,11 +89,11 @@ export function NIVEntryPage() {
     setCalculations(calc);
     const newAlerts = generateNIVAlerts({
       ...formData,
-      hacorScore: calc.hacorScore,
-      hacorRisk: calc.hacorRisk
+      hacorScore: features.gasometry ? calc.hacorScore : undefined,
+      hacorRisk: features.gasometry ? calc.hacorRisk : undefined
     });
     setAlerts(newAlerts);
-  }, [formData]);
+  }, [formData, features.gasometry]);
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
     if (recordedAt.isFuture) return;
@@ -112,17 +113,20 @@ export function NIVEntryPage() {
       expiratorySensitivity: formData.expiratorySensitivity,
       fio2: formData.fio2,
       leak: formData.leak || undefined,
-      heartRate: formData.heartRate,
-      ph: formData.ph,
-      consciousness: formData.consciousness,
-      pao2: formData.pao2,
-      paco2: formData.paco2,
-      hco3: formData.hco3,
+      // Etapa 1: sin gasometría ni HACOR (solo SpO₂ y FR).
+      ...(features.gasometry ? {
+        heartRate: formData.heartRate,
+        ph: formData.ph,
+        consciousness: formData.consciousness,
+        pao2: formData.pao2,
+        paco2: formData.paco2,
+        hco3: formData.hco3,
+        baseExcess: formData.baseExcess,
+        hacorScore: calculations.hacorScore,
+        hacorRisk: calculations.hacorRisk
+      } : {}),
       spo2: formData.spo2,
-      baseExcess: formData.baseExcess,
       respiratoryRate: formData.respiratoryRate,
-      hacorScore: calculations.hacorScore,
-      hacorRisk: calculations.hacorRisk,
       previousIMVDays: formData.previousIMVDays || undefined,
       alerts
     });
@@ -148,7 +152,7 @@ export function NIVEntryPage() {
         <div className="bg-purple-50 border-2 border-purple-200 rounded-2xl p-4 mb-6">
           <p className="text-sm text-purple-900">
             <strong>Evaluación específica de VNI:</strong> Interfaz, integridad
-            de piel, HACOR y parámetros ventilatorios para optimizar el soporte
+            de piel, {features.gasometry ? 'HACOR y ' : ''}parámetros ventilatorios para optimizar el soporte
             no invasivo.
           </p>
         </div>
@@ -286,8 +290,22 @@ export function NIVEntryPage() {
             </div>
           </CollapsibleSection>
 
+          {/* Etapa 1: solo SpO₂ y FR, sin gasometría ni HACOR */}
+          {!features.gasometry && <CollapsibleSection title="Oxigenación y frecuencia respiratoria" subtitle="SpO₂ y FR al momento de la monitorización">
+            <div className="grid grid-cols-2 gap-4">
+              <NIVField label="SatO₂ (SpO₂)" unit="%" type="number" value={formData.spo2 ?? ''} onChange={e => setFormData({
+              ...formData,
+              spo2: toNumberOrUndefined(e.target.value)
+            })} />
+              <NIVField label="Frecuencia Respiratoria" unit="rpm" type="number" value={formData.respiratoryRate} onChange={e => setFormData({
+              ...formData,
+              respiratoryRate: Number(e.target.value)
+            })} required />
+            </div>
+          </CollapsibleSection>}
+
           {/* Gasometry + HACOR Score Section */}
-          <CollapsibleSection title="Gasometría Arterial y Score HACOR" subtitle="Panel de ABG completo y predicción de fracaso de VNI">
+          {features.gasometry && <CollapsibleSection title="Gasometría Arterial y Score HACOR" subtitle="Panel de ABG completo y predicción de fracaso de VNI">
             <div className="space-y-4">
               {/* Orden de reporte de gasometría: pH, PaCO₂, PaO₂, HCO₃, SatO₂,
                   Exceso de Bases (FiO₂ ya se carga arriba, en Parámetros de VNI). */}
@@ -352,7 +370,7 @@ export function NIVEntryPage() {
                 </div>
               </div>
             </div>
-          </CollapsibleSection>
+          </CollapsibleSection>}
 
           {/* Previous IMV Section */}
           <CollapsibleSection title="Ventilación Mecánica Invasiva Previa" subtitle="Contexto de destete" defaultOpen={false}>

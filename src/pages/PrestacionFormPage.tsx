@@ -32,7 +32,7 @@ export function PrestacionFormPage() {
   const { patientId } = useParams<{ patientId: string }>();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { patients, addPrestacion } = useApp();
+  const { patients, addPrestacion, features, getActiveEpisode, getEpisodeMobilizationStart, startMobilization } = useApp();
   const recordedAt = useRecordTimestamp();
   const patient = patients.find((p) => p.id === patientId);
 
@@ -46,12 +46,22 @@ export function PrestacionFormPage() {
   const [oxygenLiters, setOxygenLiters] = useState('');
   const [mobilizationLevel, setMobilizationLevel] = useState('');
   const [ktrDetail, setKtrDetail] = useState<KtrDetail>(emptyKtrDetail);
+  const [startsMobilization, setStartsMobilization] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const showOxygenFields = type === 'kinesioterapia-respiratoria' && patient?.supportType === 'conventional-oxygen';
   const showDuration = type !== 'kinesioterapia-respiratoria' && type !== 'kinesioterapia-motora';
-  const showMobilization = type === 'kinesioterapia-motora';
+  const showMobilization = type === 'kinesioterapia-motora' && features.mobilizationLevel;
+  // Etapa 1: el KTM no pide nivel; en VMI se puede marcar como inicio de la movilización activa.
+  const activeEpisode = patient ? getActiveEpisode(patient.id) : undefined;
+  const canStartMobilization =
+    type === 'kinesioterapia-motora' &&
+    !!patient &&
+    patient.status === 'active' &&
+    patient.supportType === 'imv' &&
+    !!activeEpisode &&
+    !getEpisodeMobilizationStart(activeEpisode.id);
 
   if (!patient) {
     return (
@@ -79,6 +89,7 @@ export function PrestacionFormPage() {
           showMobilization && mobilizationLevel !== '' ? (Number(mobilizationLevel) as MobilizationLevel) : undefined,
         ...(type === 'kinesioterapia-respiratoria' ? ktrDetailPayload(ktrDetail) : {}),
       });
+      if (canStartMobilization && startsMobilization) await startMobilization(patient.id, recordedAt.timestamp);
       navigate(`/patient/${patient.id}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'No se pudo guardar la prestación');
@@ -153,6 +164,23 @@ export function PrestacionFormPage() {
                 options={mobilizationOptions}
               />
             </div>
+          )}
+
+          {canStartMobilization && !features.mobilizationLevel && (
+            <label className="flex items-start gap-3 p-4 border-2 border-emerald-200 bg-emerald-50 rounded-xl cursor-pointer">
+              <input
+                type="checkbox"
+                checked={startsMobilization}
+                onChange={(e) => setStartsMobilization(e.target.checked)}
+                className="w-6 h-6 mt-0.5"
+              />
+              <span>
+                <span className="font-bold text-gray-900 block">Es el inicio de la movilización activa</span>
+                <span className="text-sm text-gray-700">
+                  Paciente en VMI sin inicio registrado: esta fecha cuenta para la movilización precoz (ventana de 72 h).
+                </span>
+              </span>
+            </label>
           )}
 
           {showDuration && (

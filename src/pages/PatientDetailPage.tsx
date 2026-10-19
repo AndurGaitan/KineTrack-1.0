@@ -86,7 +86,8 @@ export function PatientDetailPage() {
     getPatientPrestaciones,
     changeSupportType,
     updatePatient,
-    closePatient
+    closePatient,
+    features
   } = useApp();
   const patient = patients.find(p => p.id === id);
   const sector = patient ? sectors.find(s => s.id === patient.sectorId) : null;
@@ -335,7 +336,7 @@ export function PatientDetailPage() {
                 </Button>
               </Card>}
 
-            {supportType === 'traqueostomia' && <Card className="bg-gradient-to-br from-indigo-50 to-blue-50 border-indigo-200">
+            {supportType === 'traqueostomia' && features.tracheostomy && <Card className="bg-gradient-to-br from-indigo-50 to-blue-50 border-indigo-200">
                 <div className="flex items-start justify-between mb-4">
                   <div>
                     <div className="flex items-center gap-2 mb-2">
@@ -355,7 +356,7 @@ export function PatientDetailPage() {
                 </Button>
               </Card>}
 
-            {(supportType === 'conventional-oxygen' || supportType === 'room-air') && (
+            {(supportType === 'conventional-oxygen' || supportType === 'room-air' || (supportType === 'traqueostomia' && !features.tracheostomy)) && (
               <ActivityCard patientId={patient.id} prestaciones={prestaciones} now={now} />
             )}
 
@@ -459,7 +460,7 @@ export function PatientDetailPage() {
                                       {episode.supportType === 'imv' && 'protectiveVentilation' in record && <Badge variant="risk" type={record.protectiveVentilation ? 'low' : 'medium'}>
                                             {record.protectiveVentilation ? 'Protectiva' : 'Revisar'}
                                           </Badge>}
-                                      {episode.supportType === 'niv' && 'hacorScore' in record && <Badge variant="risk" type={record.hacorScore > 5 ? 'high' : record.hacorScore >= 3 ? 'medium' : 'low'}>
+                                      {episode.supportType === 'niv' && 'hacorScore' in record && record.hacorScore != null && <Badge variant="risk" type={record.hacorScore > 5 ? 'high' : record.hacorScore >= 3 ? 'medium' : 'low'}>
                                             HACOR {record.hacorScore}
                                           </Badge>}
                                       {episode.supportType === 'hfnc' && 'roxIndex' in record && <Badge variant="risk" type={record.roxIndex >= 4.88 ? 'low' : record.roxIndex >= 3.85 ? 'medium' : 'high'}>

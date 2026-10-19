@@ -238,20 +238,24 @@ function narrateNiv(record: NIVRecord, nivSessions: NIVSession[] | undefined): s
   parts.push(
     `En ventilación no invasiva (${modeLabel}), interfaz ${interfaceLabel}. Parámetros: PS ${record.supportPressure}, PEEP ${record.peep}, sensibilidad espiratoria ${record.expiratorySensitivity}%, FiO₂ ${record.fio2}%${record.leak != null ? `, fuga ${record.leak} l/min` : ''}.`
   );
-  parts.push(`HACOR ${record.hacorScore}, riesgo ${riskLabels[record.hacorRisk]}.`);
+  if (record.hacorScore != null && record.hacorRisk) {
+    parts.push(`HACOR ${record.hacorScore}, riesgo ${riskLabels[record.hacorRisk]}.`);
+  }
 
   // Orden de reporte de gasometría: pH, PaCO₂, PaO₂, HCO₃, SatO₂, Exceso de
   // Bases, FiO₂.
   const gasBits = [
-    `pH ${record.ph}`,
+    record.ph != null ? `pH ${record.ph}` : undefined,
     record.paco2 != null ? `PaCO₂ ${record.paco2}` : undefined,
-    `PaO₂ ${record.pao2}`,
+    record.pao2 != null ? `PaO₂ ${record.pao2}` : undefined,
     record.hco3 != null ? `HCO₃ ${record.hco3}` : undefined,
     record.spo2 != null ? `SatO₂ ${record.spo2}%` : undefined,
     record.baseExcess != null ? `exceso de bases ${record.baseExcess}` : undefined,
     `FiO₂ ${record.fio2}%`,
   ].filter(Boolean);
-  parts.push(`Gasometría: ${gasBits.join(', ')}.`);
+  if (record.ph != null || record.pao2 != null || record.paco2 != null) {
+    parts.push(`Gasometría: ${gasBits.join(', ')}.`);
+  }
 
   parts.push(`Piel: ${skinLabel}${record.skinNotes ? ` (${record.skinNotes})` : ''}.`);
 

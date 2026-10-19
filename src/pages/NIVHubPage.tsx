@@ -56,12 +56,17 @@ export function NIVHubPage() {
           </div>
 
           {lastRecord && <div className="grid grid-cols-3 gap-4 pt-4 border-t border-gray-200">
-              <div>
+              {lastRecord.hacorScore != null ? <div>
                 <div className="text-xs text-gray-600 mb-1">Último HACOR</div>
                 <div className={`text-xl font-bold ${lastRecord.hacorScore > 5 ? 'text-red-600' : lastRecord.hacorScore >= 3 ? 'text-yellow-600' : 'text-green-600'}`}>
                   {lastRecord.hacorScore}
                 </div>
-              </div>
+              </div> : <div>
+                <div className="text-xs text-gray-600 mb-1">FiO₂ / FR</div>
+                <div className="text-xl font-bold text-gray-900">
+                  {lastRecord.fio2}% / {lastRecord.respiratoryRate}
+                </div>
+              </div>}
               <div>
                 <div className="text-xs text-gray-600 mb-1">PS/PEEP</div>
                 <div className="text-xl font-bold text-gray-900">
@@ -114,9 +119,9 @@ export function NIVHubPage() {
                         <div className="text-sm text-gray-600">
                           {formattedDate} - {formattedTime}
                         </div>
-                        <div className={`text-3xl font-bold ${record.hacorScore > 5 ? 'text-red-600' : record.hacorScore >= 3 ? 'text-yellow-600' : 'text-green-600'}`}>
+                        {record.hacorScore != null && <div className={`text-3xl font-bold ${record.hacorScore > 5 ? 'text-red-600' : record.hacorScore >= 3 ? 'text-yellow-600' : 'text-green-600'}`}>
                           {record.hacorScore}
-                        </div>
+                        </div>}
                       </div>
 
                       <div className="grid grid-cols-3 gap-4">

@@ -34,6 +34,7 @@ import { UsersAdminPage } from './pages/coordinator/UsersAdminPage';
 import { SchedulePage } from './pages/coordinator/SchedulePage';
 import { VMIPatientsListPage } from './pages/coordinator/VMIPatientsListPage';
 import { BulkPrestacionPage } from './pages/coordinator/BulkPrestacionPage';
+import { StagePage } from './pages/coordinator/StagePage';
 
 // Recharts (and the Recharts-only VMITrendsPage) is code-split out of the
 // main bundle — it roughly doubles the app's gzip size and only
@@ -74,6 +75,13 @@ function ProtectedRoute({
       <BottomNav />
     </>;
 }
+/** Etapa 1: el Cronograma está oculto; quien entre por un link viejo vuelve a Pacientes. */
+function ScheduleRoute() {
+  const { features } = useApp();
+  if (!features.schedule) return <Navigate to="/dashboard" replace />;
+  return <SchedulePage />;
+}
+
 function AppRoutes() {
   return <Routes>
       <Route path="/" element={<LoginPage />} />
@@ -172,7 +180,10 @@ function AppRoutes() {
             <CoordinatorDashboardPage />
           </ProtectedRoute>} />
       <Route path="/coordinator/schedule" element={<ProtectedRoute>
-            <SchedulePage />
+            <ScheduleRoute />
+          </ProtectedRoute>} />
+      <Route path="/coordinator/etapa" element={<ProtectedRoute requireCoordinador>
+            <StagePage />
           </ProtectedRoute>} />
       <Route path="/coordinator/sectors" element={<ProtectedRoute requireCoordinador>
             <SectorsAdminPage />

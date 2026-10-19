@@ -27,7 +27,11 @@ function startOfToday(now: Date): number {
  * read, so logging here is the *only* entry for that work.
  */
 export function ActivityCard({ patientId, prestaciones, now, onChanged }: ActivityCardProps) {
-  const { addPrestacion } = useApp();
+  const { addPrestacion, features, patients, getActiveEpisode, getEpisodeMobilizationStart, startMobilization } = useApp();
+  const patient = patients.find((p) => p.id === patientId);
+  // Paciente en VMI cuyo episodio todavía no tiene registrado el inicio de la movilización activa.
+  const canStartMobilization =
+    patient?.status === 'active' && patient.supportType === 'imv' && !!getActiveEpisode(patientId) && !getEpisodeMobilizationStart(getActiveEpisode(patientId)?.id);
   const [busy, setBusy] = useState<'ktr' | 'ktm' | null>(null);
   const [pickingLevel, setPickingLevel] = useState(false);
   const [ktrOpen, setKtrOpen] = useState(false);
@@ -42,7 +46,7 @@ export function ActivityCard({ patientId, prestaciones, now, onChanged }: Activi
   const lastKtr = prestaciones.find((p) => p.type === 'kinesioterapia-respiratoria');
   const lastKtm = prestaciones.find((p) => p.type === 'kinesioterapia-motora');
 
-  const log = async (kind: 'ktr' | 'ktm', options?: { mobilizationLevel?: MobilizationLevel; ktrDetail?: KtrDetail }) => {
+  const log = async (kind: 'ktr' | 'ktm', options?: { mobilizationLevel?: MobilizationLevel; ktrDetail?: KtrDetail; startsMobilization?: boolean }) => {
     setBusy(kind);
     setError(null);
     setMessage(null);
@@ -53,7 +57,15 @@ export function ActivityCard({ patientId, prestaciones, now, onChanged }: Activi
         mobilizationLevel: options?.mobilizationLevel,
         ...(options?.ktrDetail ? ktrDetailPayload(options.ktrDetail) : {}),
       });
-      setMessage(kind === 'ktr' ? '✓ Kinesioterapia respiratoria registrada' : '✓ Kinesioterapia motora registrada');
+      let started = false;
+      if (options?.startsMobilization) started = await startMobilization(patientId);
+      setMessage(
+        kind === 'ktr'
+          ? '✓ Kinesioterapia respiratoria registrada'
+          : started
+            ? '✓ Kinesioterapia motora registrada · inicio de movilización activa anotado'
+            : '✓ Kinesioterapia motora registrada'
+      );
       setPickingLevel(false);
       setKtrOpen(false);
       setKtrDetail(emptyKtrDetail);
@@ -94,8 +106,13 @@ export function ActivityCard({ patientId, prestaciones, now, onChanged }: Activi
 
         <button
           onClick={() => {
-            setPickingLevel((v) => !v);
             setKtrOpen(false);
+            // Etapa 1: un toque registra el KTM, salvo que haya que marcar el inicio de la movilización activa.
+            if (!features.mobilizationLevel && !canStartMobilization) {
+              void log('ktm');
+              return;
+            }
+            setPickingLevel((v) => !v);
           }}
           disabled={busy !== null}
           className={`rounded-2xl border-2 p-4 text-left disabled:opacity-50 ${
@@ -135,7 +152,27 @@ export function ActivityCard({ patientId, prestaciones, now, onChanged }: Activi
         </div>
       )}
 
-      {pickingLevel && (
+      {pickingLevel && !features.mobilizationLevel && (
+        <div className="mt-3 rounded-2xl border border-emerald-200 bg-white p-3 space-y-2">
+          <div className="text-sm font-semibold text-gray-900">Este paciente en VMI todavía no tiene inicio de movilización activa</div>
+          <button
+            onClick={() => log('ktm', { startsMobilization: true })}
+            disabled={busy !== null}
+            className="w-full rounded-xl bg-emerald-600 text-white font-bold px-4 py-3 active:bg-emerald-700 disabled:opacity-50"
+          >
+            Registrar KTM — inicio de movilización activa
+          </button>
+          <button
+            onClick={() => log('ktm')}
+            disabled={busy !== null}
+            className="w-full rounded-xl border border-dashed border-gray-300 px-4 py-3 text-sm text-gray-600 active:bg-gray-50 disabled:opacity-50"
+          >
+            Registrar KTM (no es el inicio)
+          </button>
+        </div>
+      )}
+
+      {pickingLevel && features.mobilizationLevel && (
         <div className="mt-3 rounded-2xl border border-emerald-200 bg-white p-3">
           <div className="text-sm font-semibold text-gray-900 mb-2">¿Qué nivel de movilización se realizó?</div>
           <div className="space-y-2">

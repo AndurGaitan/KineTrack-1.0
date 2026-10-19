@@ -4,6 +4,7 @@ import { Button } from './ui/Button';
 import { SectorBedPicker } from './SectorBedPicker';
 import { AirwayEventInput, AirwayEventType, Patient, Sector, SupportType } from '../types';
 import { toLocalDateTimeInputValue } from '../utils/dateInput';
+import { useApp } from '../contexts/AppContext';
 interface ChangeSupportModalProps {
   currentSupport: SupportType;
   patient: Patient;
@@ -64,6 +65,9 @@ export function ChangeSupportModal({
   onClose,
   onConfirm
 }: ChangeSupportModalProps) {
+  const { features } = useApp();
+  // Etapa 1: sin traqueostomía como destino (si ya está en ella, igual puede cambiar).
+  const selectableOptions = supportOptions.filter(opt => features.tracheostomy || opt.value !== 'traqueostomia' || currentSupport === 'traqueostomia');
   const [newSupport, setNewSupport] = useState<SupportType | ''>('');
   const [reason, setReason] = useState('');
   const [customReason, setCustomReason] = useState('');
@@ -141,7 +145,7 @@ export function ChangeSupportModal({
             </label>
             <select value={newSupport} onChange={e => setNewSupport(e.target.value as SupportType)} className="w-full min-h-[56px] px-4 text-lg border-2 border-gray-300 rounded-xl focus:border-blue-600 focus:outline-none bg-white" required>
               <option value="">Seleccionar...</option>
-              {supportOptions.filter(opt => opt.value !== currentSupport).map(opt => <option key={opt.value} value={opt.value}>
+              {selectableOptions.filter(opt => opt.value !== currentSupport).map(opt => <option key={opt.value} value={opt.value}>
                     {opt.label}
                   </option>)}
             </select>

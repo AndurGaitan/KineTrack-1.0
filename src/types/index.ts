@@ -192,7 +192,7 @@ export interface VMIRecord {
   sbtFailureReason?: string;
 
   // E) Mobilization
-  mobilizationLevel: MobilizationLevel;
+  mobilizationLevel?: MobilizationLevel;
   mobilizationBarrier?: string;
 
   // F) Sedation / agitation — RASS, -5..+4
@@ -242,13 +242,13 @@ export interface NIVRecord {
   leak?: number;
 
   // HACOR Score
-  heartRate: number;
-  ph: number;
-  consciousness: number;
-  pao2: number;
+  heartRate?: number;
+  ph?: number;
+  consciousness?: number;
+  pao2?: number;
   respiratoryRate: number;
-  hacorScore: number;
-  hacorRisk: RiskLevel;
+  hacorScore?: number;
+  hacorRisk?: RiskLevel;
 
   // Rest of the ABG panel (pao2/ph above are the HACOR-required pair)
   paco2?: number;
@@ -433,8 +433,54 @@ export interface TrachOverview {
   aspirations: TrachAspiration[];
 }
 
+// ---------------------------------------------------------------------------
+// Etapa 1: decisiones de PVE y movilización precoz (72 h).
+// ---------------------------------------------------------------------------
+export type PveDecisionKind = 'realizada' | 'contraindicada' | 'no-realizada';
+export type PveSbtType = 'psv' | 'cpap' | 't-piece';
+
+export interface PveDecision {
+  id: string;
+  patientId: string;
+  episodeId?: string;
+  performedByUserId: string;
+  timestamp: string;
+  decision: PveDecisionKind;
+  reason?: string;
+  sbtType?: PveSbtType;
+  sbtResult?: 'success' | 'failure';
+  failureReason?: string;
+  notes?: string;
+}
+
+export interface MobilizationStart {
+  id: string;
+  patientId: string;
+  episodeId: string;
+  performedByUserId: string;
+  startedAt: string;
+  notes?: string;
+}
+
+export interface MobilizationContraindication {
+  id: string;
+  patientId: string;
+  episodeId?: string;
+  performedByUserId: string;
+  reason: string;
+  startAt: string;
+  endAt?: string;
+  notes?: string;
+}
+
+export type AppStage = 1 | 2;
+
 export interface AppState {
   user: User | null;
+  stage: AppStage;
+  pveDecisions: PveDecision[];
+  mobilizationStarts: MobilizationStart[];
+  mobilizationContraindications: MobilizationContraindication[];
   sectors: Sector[];
   patients: Patient[];
   scores: ScoreRecord[];

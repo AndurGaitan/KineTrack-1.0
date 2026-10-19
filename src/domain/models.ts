@@ -101,7 +101,7 @@ export interface IMVObservation extends ClinicalObservation {
   sbtFailureReason?: string;
 
   // Mobilization
-  mobilizationLevel: MobilizationLevel;
+  mobilizationLevel?: MobilizationLevel;
   mobilizationBarrier?: string;
   rass?: number;
 
@@ -134,10 +134,10 @@ export interface NIVObservation extends ClinicalObservation {
   expiratorySensitivity: number;
   fio2: number;
   leak?: number;
-  heartRate: number;
-  ph: number;
-  consciousness: number;
-  pao2: number;
+  heartRate?: number;
+  ph?: number;
+  consciousness?: number;
+  pao2?: number;
   paco2?: number;
   hco3?: number;
   spo2?: number;
@@ -145,8 +145,8 @@ export interface NIVObservation extends ClinicalObservation {
   respiratoryRate: number;
   previousIMVDays?: number;
   calculated: {
-    hacorScore: number;
-    hacorRisk: RiskLevel;
+    hacorScore?: number;
+    hacorRisk?: RiskLevel;
   };
   alerts: string[];
 }

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Bar, BarChart, CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { Card } from '../ui/Card';
+import { useApp } from '../../contexts/AppContext';
 import * as dashboardApi from '../../api/dashboardApi';
 import type { AirwayGroup, WeaningTests } from '../../types';
 import { svInterruptionReasonLabels, formatSVHours } from '../../utils/spontaneousVentilation';
@@ -40,6 +41,7 @@ function ChartCard({ title, subtitle, children }: { title: string; subtitle?: st
  * traqueostomizados. Usa el rango de fechas del Panel de Coordinación.
  */
 export function WeaningTrendsSection({ range }: { range: { from: string; to: string } }) {
+  const { features } = useApp();
   const rangeFrom = useMemo(() => startOfLocalDay(parseLocalDate(range.from) ?? new Date()), [range.from]);
   const rangeTo = useMemo(() => endOfLocalDay(parseLocalDate(range.to) ?? new Date()), [range.to]);
   const validRange = rangeTo.getTime() >= rangeFrom.getTime();
@@ -200,7 +202,7 @@ export function WeaningTrendsSection({ range }: { range: { from: string; to: str
             </div>
           )}
 
-          <Card>
+          {features.tracheostomy && <Card>
             <div className="text-sm font-bold text-gray-900">Traqueostomía · ventilación espontánea</div>
             <div className="text-xs text-gray-500 mb-3">Períodos fuera del ventilador o con asistencia mínima registrados en pacientes traqueostomizados en VMI.</div>
 
@@ -259,7 +261,7 @@ export function WeaningTrendsSection({ range }: { range: { from: string; to: str
                 )}
               </>
             )}
-          </Card>
+          </Card>}
         </>
       )}
     </div>

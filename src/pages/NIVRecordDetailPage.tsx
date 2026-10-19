@@ -160,8 +160,8 @@ export function NIVRecordDetailPage() {
           </div>
         </Card>
 
-        {/* Gasometría Arterial */}
-        <Card>
+        {/* Gasometría Arterial (solo si se cargó) */}
+        {(record.ph != null || record.pao2 != null || record.paco2 != null) && <Card>
           <h3 className="text-lg font-bold text-gray-900 mb-4">
             Gasometría Arterial
           </h3>
@@ -217,10 +217,10 @@ export function NIVRecordDetailPage() {
               </div>
             </div>
           </div>
-        </Card>
+        </Card>}
 
-        {/* HACOR Score */}
-        <Card>
+        {/* HACOR Score (solo si se calculó) */}
+        {record.hacorScore != null && <Card>
           <h3 className="text-lg font-bold text-gray-900 mb-4">Score HACOR</h3>
           <div className="space-y-4">
             <div className={`p-6 rounded-xl text-center ${record.hacorScore > 5 ? 'bg-red-50' : record.hacorScore >= 3 ? 'bg-yellow-50' : 'bg-green-50'}`}>
@@ -268,7 +268,22 @@ export function NIVRecordDetailPage() {
               </div>
             </div>
           </div>
-        </Card>
+        </Card>}
+
+        {/* SpO₂ y FR cuando no hay HACOR (que los muestra) */}
+        {record.hacorScore == null && <Card>
+          <h3 className="text-lg font-bold text-gray-900 mb-4">Oxigenación y frecuencia respiratoria</h3>
+          <div className="grid grid-cols-2 gap-4">
+            {record.spo2 != null && <div>
+              <div className="text-sm text-gray-600 mb-1">SpO₂</div>
+              <div className="text-xl font-bold text-gray-900">{record.spo2}%</div>
+            </div>}
+            <div>
+              <div className="text-sm text-gray-600 mb-1">FR</div>
+              <div className="text-xl font-bold text-gray-900">{record.respiratoryRate} rpm</div>
+            </div>
+          </div>
+        </Card>}
 
         {/* Previous IMV */}
         {record.previousIMVDays !== undefined && record.previousIMVDays > 0 && <Card>

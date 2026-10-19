@@ -4,6 +4,7 @@ import { Button } from './ui/Button';
 import { Patient, Sector, SupportType } from '../types';
 import { calculatePBWKg, Sex } from '../utils/vmiCalculations';
 import { toLocalDateTimeInputValue } from '../utils/dateInput';
+import { useApp } from '../contexts/AppContext';
 
 const clamp = (n: number, min: number, max: number) => Math.min(max, Math.max(min, n));
 
@@ -23,6 +24,7 @@ export function PatientForm({
   onSubmit,
   onCancel
 }: PatientFormProps) {
+  const { features } = useApp();
   const isEdit = !!initialData;
   const now = new Date();
   const [formData, setFormData] = useState({
@@ -138,10 +140,10 @@ export function PatientForm({
     }, {
       value: 'hfnc',
       label: 'HFNC - Cánula Nasal de Alto Flujo'
-    }, {
+    }, ...(features.tracheostomy || initialData?.supportType === 'traqueostomia' ? [{
       value: 'traqueostomia',
       label: 'Traqueostomía - Respiración Espontánea'
-    }, {
+    }] : []), {
       value: 'conventional-oxygen',
       label: 'Oxígeno Convencional'
     }, {
