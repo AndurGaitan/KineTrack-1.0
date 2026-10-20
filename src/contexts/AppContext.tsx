@@ -31,6 +31,8 @@ export interface AppFeatures {
   tracheostomy: boolean;
   /** Cronograma de personal. */
   schedule: boolean;
+  /** Destete por decisión de PVE (etapa 1) en vez de los campos de SBT de la monitorización. */
+  simplifiedWeaning: boolean;
 }
 
 interface AppContextType extends AppState {
@@ -606,10 +608,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  // La gasometría se oculta en la etapa 1, salvo para el coordinador, que puede cargarla siempre.
   const features: AppFeatures =
     state.stage === 1
-      ? { gasometry: false, mobilizationLevel: false, tracheostomy: false, schedule: false }
-      : { gasometry: true, mobilizationLevel: true, tracheostomy: true, schedule: true };
+      ? { gasometry: state.user?.role === 'coordinador', mobilizationLevel: false, tracheostomy: false, schedule: false, simplifiedWeaning: true }
+      : { gasometry: true, mobilizationLevel: true, tracheostomy: true, schedule: true, simplifiedWeaning: false };
 
   // Decisiones de PVE (realizada / contraindicada / no realizada).
   const addPveDecision = async (input: CreatePveDecisionInput) => {

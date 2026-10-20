@@ -77,6 +77,7 @@ export function PveTodayCard({ patientId, now }: { patientId: string; now: Date 
           {describe(d) && <div className="mt-0.5">{describe(d)}</div>}
         </div>
         <button
+            type="button"
           onClick={() => {
             if (window.confirm('¿Eliminar esta decisión de PVE?')) void deletePveDecision(d.id);
           }}
@@ -103,6 +104,7 @@ export function PveTodayCard({ patientId, now }: { patientId: string; now: Date 
 
       {!open && (
         <button
+            type="button"
           onClick={() => setOpen(true)}
           className="mt-3 w-full rounded-xl bg-blue-600 text-white font-bold px-4 py-3 active:bg-blue-700"
         >
@@ -116,6 +118,7 @@ export function PveTodayCard({ patientId, now }: { patientId: string; now: Date 
           <RecordDateField state={recordedAt} label="Fecha y hora de la decisión" />
           <div className="grid grid-cols-2 gap-2">
             <button
+            type="button"
               onClick={() => {
                 setOpen(false);
                 setDraft(emptyPveDraft);
@@ -126,6 +129,7 @@ export function PveTodayCard({ patientId, now }: { patientId: string; now: Date 
               Cancelar
             </button>
             <button
+            type="button"
               onClick={() => void save()}
               disabled={!canSave || busy}
               className="rounded-xl bg-blue-600 text-white font-bold px-4 py-3 disabled:opacity-50"

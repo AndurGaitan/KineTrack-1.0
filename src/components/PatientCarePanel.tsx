@@ -105,7 +105,12 @@ export function PatientCarePanel({ patient, onChangeSupport }: { patient: Patien
             <h2 className="text-lg font-bold text-gray-900">{monitoringTitle[current]}</h2>
             {saved && <span className="text-sm font-semibold text-green-700">✓ Guardado</span>}
           </div>
-          {current === 'imv' && <VMIEntryForm key={formKey} patient={patient} onDone={done} />}
+          {current === 'imv' && (
+            <VMIEntryForm key={formKey} patient={patient} onDone={done}>
+              <MobilizationCard patientId={patient.id} now={now} />
+              <PveTodayCard patientId={patient.id} now={now} />
+            </VMIEntryForm>
+          )}
           {current === 'niv' && <NIVEntryForm key={formKey} patient={patient} onDone={done} />}
           {current === 'hfnc' && <HFNCEntryForm key={formKey} patient={patient} onDone={done} />}
           {current === 'conventional-oxygen' && <OxygenForm key={formKey} patient={patient} onDone={done} />}
@@ -120,8 +125,6 @@ export function PatientCarePanel({ patient, onChangeSupport }: { patient: Patien
 
       {current === 'imv' && (
         <>
-          <MobilizationCard patientId={patient.id} now={now} />
-          <PveTodayCard patientId={patient.id} now={now} />
           {features.tracheostomy && <AirwayCard patient={patient} />}
           {features.tracheostomy && patient.airwayType === 'traqueostomia' && <SpontaneousVentilationCard patientId={patient.id} episodeId={episode?.id} />}
         </>

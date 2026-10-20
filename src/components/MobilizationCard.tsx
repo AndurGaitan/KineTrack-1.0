@@ -111,6 +111,7 @@ export function MobilizationCard({ patientId, now }: { patientId: string; now: D
             {start.notes ? ` · ${start.notes}` : ''}
           </div>
           <button
+            type="button"
             onClick={() => {
               if (window.confirm('¿Eliminar el registro de inicio de movilización? Podés volver a cargarlo después.')) void deleteMobilizationStart(start.id);
             }}
@@ -124,6 +125,7 @@ export function MobilizationCard({ patientId, now }: { patientId: string; now: D
           <div className="font-semibold">Contraindicada desde el {fmt(open.startAt)}</div>
           <div className="mt-0.5">{mobilizationReasonLabel(open.reason)} · la ventana de {MOBILIZATION_WINDOW_HOURS} h está en pausa.</div>
           <button
+            type="button"
             onClick={() => void liftMobilizationContraindication(open.id)}
             className="mt-2 rounded-lg bg-amber-600 text-white text-sm font-semibold px-3 py-2 active:bg-amber-700"
           >
@@ -156,6 +158,7 @@ export function MobilizationCard({ patientId, now }: { patientId: string; now: D
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-3">
           {!start && (
             <button
+            type="button"
               onClick={() => {
                 setStartValue(toLocalDateTimeInputValue(new Date()));
                 setMode('start');
@@ -167,6 +170,7 @@ export function MobilizationCard({ patientId, now }: { patientId: string; now: D
           )}
           {!open && (
             <button
+            type="button"
               onClick={() => {
                 setFromValue(toLocalDateTimeInputValue(new Date()));
                 setMode('contra');
@@ -191,10 +195,10 @@ export function MobilizationCard({ patientId, now }: { patientId: string; now: D
           </div>
           {formError && <p className="text-sm text-red-600">{formError}</p>}
           <div className="grid grid-cols-2 gap-2">
-            <button onClick={closeForm} disabled={busy} className="rounded-xl border border-gray-300 px-4 py-3 text-gray-700 disabled:opacity-50">
+            <button type="button" onClick={closeForm} disabled={busy} className="rounded-xl border border-gray-300 px-4 py-3 text-gray-700 disabled:opacity-50">
               Cancelar
             </button>
-            <button onClick={() => void submitStart()} disabled={busy} className="rounded-xl bg-emerald-600 text-white font-bold px-4 py-3 disabled:opacity-50">
+            <button type="button" onClick={() => void submitStart()} disabled={busy} className="rounded-xl bg-emerald-600 text-white font-bold px-4 py-3 disabled:opacity-50">
               Guardar inicio
             </button>
           </div>
@@ -227,10 +231,10 @@ export function MobilizationCard({ patientId, now }: { patientId: string; now: D
           <p className="text-xs text-gray-500">Mientras dure la contraindicación, el reloj de las {MOBILIZATION_WINDOW_HOURS} h queda en pausa. Dejá "hasta" vacío si sigue vigente.</p>
           {formError && <p className="text-sm text-red-600">{formError}</p>}
           <div className="grid grid-cols-2 gap-2">
-            <button onClick={closeForm} disabled={busy} className="rounded-xl border border-gray-300 px-4 py-3 text-gray-700 disabled:opacity-50">
+            <button type="button" onClick={closeForm} disabled={busy} className="rounded-xl border border-gray-300 px-4 py-3 text-gray-700 disabled:opacity-50">
               Cancelar
             </button>
-            <button onClick={() => void submitContra()} disabled={busy} className="rounded-xl bg-amber-600 text-white font-bold px-4 py-3 disabled:opacity-50">
+            <button type="button" onClick={() => void submitContra()} disabled={busy} className="rounded-xl bg-amber-600 text-white font-bold px-4 py-3 disabled:opacity-50">
               Guardar contraindicación
             </button>
           </div>
@@ -247,6 +251,7 @@ export function MobilizationCard({ patientId, now }: { patientId: string; now: D
                   {mobilizationReasonLabel(c.reason)} · {fmt(c.startAt)} → {c.endAt ? fmt(c.endAt) : 'vigente'}
                 </span>
                 <button
+            type="button"
                   onClick={() => {
                     if (window.confirm('¿Eliminar esta contraindicación?')) void deleteMobilizationContraindication(c.id);
                   }}
