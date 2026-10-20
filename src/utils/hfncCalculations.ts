@@ -11,6 +11,10 @@ export function calculateROXForHFNC(data: {
   // ROX = (SpO2 / FiO2) / RR, where FiO2 must be a fraction (0.21-1.0).
   // FiO2 is entered/stored here as a percentage, so it must be converted.
   const fio2Fraction = data.fio2 / 100;
+  // Con un campo vacío (0) la división da Infinity/NaN: sin datos no hay índice.
+  if (!(fio2Fraction > 0) || !(data.respiratoryRate > 0) || !(data.spo2 >= 0)) {
+    return { roxIndex: 0, roxRisk: 'high' };
+  }
   const roxIndex = data.spo2 / fio2Fraction / data.respiratoryRate;
 
   // Risk interpretation

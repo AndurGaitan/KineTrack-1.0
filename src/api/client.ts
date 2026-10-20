@@ -49,6 +49,11 @@ export async function apiFetch<T>(path: string, options?: RequestInit): Promise<
     try {
       const parsed = JSON.parse(text);
       message = parsed.error || message;
+      // Errores de validación del servidor: decir qué campo falló en vez de un "Validation error" mudo.
+      const fields = parsed.details?.fieldErrors as Record<string, string[]> | undefined;
+      if (fields && Object.keys(fields).length > 0) {
+        message = 'Revisá los datos: ' + Object.entries(fields).map(([k, v]) => `${k} (${(v || []).join(', ')})`).join('; ');
+      }
     } catch {
       // response wasn't JSON, keep the raw text
     }

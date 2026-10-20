@@ -1,6 +1,16 @@
 import { ReactNode, useState } from 'react';
 import { InfoIcon, XIcon } from 'lucide-react';
-import { EducationalContent } from '../../utils/vmiEducation';
+/** Forma común de los textos educativos (vmiEducation / nivEducation / hfncEducation). */
+export interface EducationalContent {
+  title: string;
+  authorsKey?: string;
+  definition: string;
+  importance?: string;
+  target?: string;
+  example?: string;
+  assumptions?: string[];
+  references?: string[];
+}
 interface TooltipProps {
   content: EducationalContent;
 }
@@ -8,6 +18,8 @@ export function EducationalTooltip({
   content
 }: TooltipProps) {
   const [isOpen, setIsOpen] = useState(false);
+  // Sin texto cargado no hay nada que mostrar: mejor no dibujar el botón que romper la pantalla al tocarlo.
+  if (!content) return null;
   if (!isOpen) {
     return <button type="button" onClick={() => setIsOpen(true)} className="p-1 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" aria-label="Más información">
       <InfoIcon className="w-5 h-5" />
@@ -22,7 +34,7 @@ export function EducationalTooltip({
             Marco: {content.authorsKey}
           </div>
         )}
-        <button onClick={() => setIsOpen(false)} className="p-2 hover:bg-gray-100 rounded-lg transition-colors" aria-label="Cerrar">
+        <button type="button" onClick={() => setIsOpen(false)} className="p-2 hover:bg-gray-100 rounded-lg transition-colors" aria-label="Cerrar">
           <XIcon className="w-5 h-5" />
         </button>
       </div>
@@ -78,7 +90,7 @@ export function EducationalTooltip({
       </div>
 
       <div className="sticky bottom-0 bg-white border-t border-gray-200 px-6 py-4">
-        <button onClick={() => setIsOpen(false)} className="w-full bg-blue-600 text-white py-3 rounded-xl font-semibold active:bg-blue-700 transition-colors">
+        <button type="button" onClick={() => setIsOpen(false)} className="w-full bg-blue-600 text-white py-3 rounded-xl font-semibold active:bg-blue-700 transition-colors">
           Entendido
         </button>
       </div>
