@@ -12,7 +12,7 @@ import * as trachApi from '../api/trachApi';
 import * as airwayEventsApi from '../api/airwayEventsApi';
 import * as handoffNotesApi from '../api/handoffNotesApi';
 import { buildHandoffText } from '../domain/services/handoffText';
-import { appendPlan, collectPatientActivity } from '../domain/services/handoffData';
+import { collectPatientActivity } from '../domain/services/handoffData';
 import { useHandoffPeriod } from '../hooks/useHandoffPeriod';
 import { useEditableHandoff } from '../hooks/useEditableHandoff';
 import { copyText } from '../utils/clipboard';
@@ -32,6 +32,10 @@ export function PaseDeGuardiaPage() {
     getPatientTrachRecords,
     getPatientNIVSessions,
     getPatientSVPeriods,
+    getPatientOxygenRecords,
+    getPatientPveDecisions,
+    getEpisodeMobilizationStart,
+    getPatientMobilizationContraindications,
   } = useApp();
 
   const patient = patients.find((p) => p.id === patientId);
@@ -47,7 +51,6 @@ export function PaseDeGuardiaPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
-  const [plan, setPlan] = useState('');
   const [historyKey, setHistoryKey] = useState(0);
 
   useEffect(() => {
@@ -90,6 +93,10 @@ export function PaseDeGuardiaPage() {
         trachOverview,
         airwayEvents,
         svPeriods: getPatientSVPeriods(patient.id),
+        oxygen: patient.supportType === 'conventional-oxygen' ? getPatientOxygenRecords(patient.id) : [],
+        pveDecisions: getPatientPveDecisions(patient.id),
+        mobilizationStart: getEpisodeMobilizationStart(activeEpisode?.id),
+        mobilizationContraindications: getPatientMobilizationContraindications(patient.id),
       },
       { period, userId: user.id, mineOnly }
     );
@@ -111,6 +118,9 @@ export function PaseDeGuardiaPage() {
       airwayEvents: activity?.airwayEvents,
       episodeChanges: activity?.episodeChanges,
       spontaneousVentilation: activity?.spontaneousVentilation,
+      oxygenRecord: activity?.oxygenRecord,
+      pveDecisions: activity?.pveDecisions,
+      mobilization: activity?.mobilization,
     });
   }, [patient, sector, activeEpisode, activity, period]);
 
@@ -118,7 +128,7 @@ export function PaseDeGuardiaPage() {
 
   const handleCopy = async () => {
     if (!patient) return;
-    const finalText = appendPlan(editor.text, plan);
+    const finalText = editor.text;
     try {
       await copyText(finalText);
       setCopied(true);
@@ -184,19 +194,9 @@ export function PaseDeGuardiaPage() {
           <textarea
             value={editor.text}
             onChange={(e) => editor.onChange(e.target.value)}
-            rows={18}
-            className="w-full text-sm font-mono text-gray-900 bg-white border border-gray-200 rounded-xl p-4 resize-y mb-4"
+            rows={12}
+            className="w-full text-sm text-gray-900 bg-white border border-gray-200 rounded-xl p-4 resize-y mb-4 leading-relaxed"
           />
-
-          <label className="block text-sm font-semibold text-gray-900 mb-1">Plan / pendientes (opcional)</label>
-          <textarea
-            value={plan}
-            onChange={(e) => setPlan(e.target.value)}
-            rows={3}
-            placeholder="Ej: reevaluar destete mañana, control de interfaz..."
-            className="w-full text-sm text-gray-900 bg-white border border-gray-200 rounded-xl p-3 resize-y"
-          />
-          <p className="text-xs text-gray-500 mb-4">Se agrega al final del texto al copiar.</p>
 
           <Button type="button" onClick={handleCopy} fullWidth disabled={!editor.text.trim()} className="flex items-center justify-center gap-2">
             {copied ? <CheckIcon className="w-5 h-5" /> : <ClipboardCopyIcon className="w-5 h-5" />}
