@@ -136,10 +136,10 @@ export function PatientForm({
       label: 'VMI - Ventilación Mecánica Invasiva'
     }, {
       value: 'niv',
-      label: 'VNI - Ventilación No Invasiva'
+      label: 'VMNI - Ventilación Mecánica No Invasiva'
     }, {
       value: 'hfnc',
-      label: 'HFNC - Cánula Nasal de Alto Flujo'
+      label: 'CAFO - Cánula Nasal de Alto Flujo'
     }, ...(features.tracheostomy || initialData?.supportType === 'traqueostomia' ? [{
       value: 'traqueostomia',
       label: 'Traqueostomía - Respiración Espontánea'

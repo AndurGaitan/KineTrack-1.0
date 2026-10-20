@@ -311,6 +311,23 @@ export interface HFNCRecord {
 // episode's startAt on the frontend, not stored here.
 export type SwallowingTestResult = 'apta' | 'no-apta' | 'con-restricciones';
 export type BlueTestResult = 'positivo' | 'negativo';
+// Oxigenoterapia convencional (cánula, máscaras): dispositivo + flujo.
+export interface OxygenRecord {
+  id: string;
+  patientId: string;
+  episodeId?: string;
+  performedByUserId: string;
+  timestamp: string;
+  type: 'oxigeno';
+  device: OxygenDeviceType;
+  flow: number;
+  fio2?: number;
+  spo2?: number;
+  respiratoryRate?: number;
+  notes?: string;
+  alerts: string[];
+}
+
 export interface TrachRecord {
   id: string;
   patientId: string;
@@ -489,6 +506,7 @@ export interface AppState {
   nivSessions: NIVSession[];
   hfncRecords: HFNCRecord[];
   trachRecords: TrachRecord[];
+  oxygenRecords: OxygenRecord[];
   prestaciones: Prestacion[];
   spontaneousVentilation: SpontaneousVentilationPeriod[];
 }

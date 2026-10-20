@@ -1,9 +1,9 @@
 import { apiFetch } from './client';
 import type { ClinicalObservationType } from '../domain/models';
-import type { TrachRecord } from '../types';
+import type { OxygenRecord, TrachRecord } from '../types';
 
-type AnyObservation = ClinicalObservationType | TrachRecord;
-type ObservationType = 'imv' | 'niv' | 'hfnc' | 'traqueostomia';
+type AnyObservation = ClinicalObservationType | TrachRecord | OxygenRecord;
+type ObservationType = 'imv' | 'niv' | 'hfnc' | 'oxigeno' | 'traqueostomia';
 
 export type CreateObservationInput = { type: ObservationType; patientId: string; episodeId?: string } & Record<
   string,

@@ -15,8 +15,8 @@ const supportTypeColors = {
 };
 const supportTypeLabels = {
   imv: 'VMI',
-  niv: 'VNI',
-  hfnc: 'HFNC',
+  niv: 'VMNI',
+  hfnc: 'CAFO',
   traqueostomia: 'TQT',
   'conventional-oxygen': 'O₂',
   'room-air': 'Aire'

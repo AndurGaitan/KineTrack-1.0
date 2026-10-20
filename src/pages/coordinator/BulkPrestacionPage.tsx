@@ -11,8 +11,8 @@ import { CheckCircleIcon, AlertCircleIcon } from 'lucide-react';
 
 const supportTypeLabels: Record<string, string> = {
   imv: 'VMI',
-  niv: 'VNI',
-  hfnc: 'HFNC',
+  niv: 'VMNI',
+  hfnc: 'CAFO',
   traqueostomia: 'TQT',
   'conventional-oxygen': 'O₂',
   'room-air': 'Aire'

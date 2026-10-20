@@ -1,5 +1,5 @@
 import { ReactNode, useEffect, useState, createContext, useContext } from 'react';
-import { AppState, User, Patient, ScoreRecord, VMIRecord, NIVRecord, NIVSession, HFNCRecord, TrachRecord, SupportType, AirwayEventInput, Prestacion, SpontaneousVentilationPeriod, SVModality, SVInterruptionReason, AppStage, PveDecision, MobilizationStart, MobilizationContraindication } from '../types';
+import { AppState, User, Patient, ScoreRecord, VMIRecord, NIVRecord, NIVSession, HFNCRecord, TrachRecord, OxygenRecord, SupportType, AirwayEventInput, Prestacion, SpontaneousVentilationPeriod, SVModality, SVInterruptionReason, AppStage, PveDecision, MobilizationStart, MobilizationContraindication } from '../types';
 import { PatientClosure, ClinicalObservationType } from '../domain/models';
 import {
   observationToVMIRecord,
@@ -90,6 +90,8 @@ interface AppContextType extends AppState {
   ) => Promise<void>;
   getPatientTrachRecords: (patientId: string, episodeId?: string) => TrachRecord[];
   getTrachRecord: (id: string) => TrachRecord | undefined;
+  addOxygenRecord: (record: Omit<OxygenRecord, 'id' | 'timestamp' | 'performedByUserId' | 'type' | 'alerts'> & { timestamp?: string }) => Promise<boolean>;
+  getPatientOxygenRecords: (patientId: string, episodeId?: string) => OxygenRecord[];
   addPrestacion: (input: CreatePrestacionInput) => Promise<void>;
   getPatientPrestaciones: (patientId: string) => Prestacion[];
   startSVPeriod: (patientId: string, modality: SVModality, episodeId?: string) => Promise<void>;
@@ -116,23 +118,26 @@ const initialState: AppState = {
   nivSessions: [],
   hfncRecords: [],
   trachRecords: [],
+  oxygenRecords: [],
   prestaciones: [],
   spontaneousVentilation: [],
 };
 
 /** Splits the flat observations list returned by the API into the legacy per-type record shapes the UI expects. */
-function splitObservationsIntoLegacyRecords(observations: (ClinicalObservationType | TrachRecord)[]) {
+function splitObservationsIntoLegacyRecords(observations: (ClinicalObservationType | TrachRecord | OxygenRecord)[]) {
   const vmiRecords: VMIRecord[] = [];
   const nivRecords: NIVRecord[] = [];
   const hfncRecords: HFNCRecord[] = [];
   const trachRecords: TrachRecord[] = [];
+  const oxygenRecords: OxygenRecord[] = [];
   for (const obs of observations) {
     if (obs.type === 'imv') vmiRecords.push(observationToVMIRecord(obs));
     else if (obs.type === 'niv') nivRecords.push(observationToNIVRecord(obs));
     else if (obs.type === 'hfnc') hfncRecords.push(observationToHFNCRecord(obs));
+    else if (obs.type === 'oxigeno') oxygenRecords.push(obs);
     else trachRecords.push(obs);
   }
-  return { vmiRecords, nivRecords, hfncRecords, trachRecords };
+  return { vmiRecords, nivRecords, hfncRecords, trachRecords, oxygenRecords };
 }
 
 /** Reports a failed mutation without breaking the fire-and-forget call sites that don't await these methods. */
@@ -175,7 +180,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
             mobilizationApi.listMobilization({ patientIds }),
           ]);
 
-    const { vmiRecords, nivRecords, hfncRecords, trachRecords } = splitObservationsIntoLegacyRecords(observations);
+    const { vmiRecords, nivRecords, hfncRecords, trachRecords, oxygenRecords } = splitObservationsIntoLegacyRecords(observations);
 
     setState({
       user,
@@ -191,6 +196,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       nivSessions,
       hfncRecords,
       trachRecords,
+      oxygenRecords,
       prestaciones,
       spontaneousVentilation,
     });
@@ -303,6 +309,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         nivSessions: prev.nivSessions.filter((s) => s.patientId !== id),
         hfncRecords: prev.hfncRecords.filter((h) => h.patientId !== id),
         trachRecords: prev.trachRecords.filter((t) => t.patientId !== id),
+        oxygenRecords: prev.oxygenRecords.filter((o) => o.patientId !== id),
         prestaciones: prev.prestaciones.filter((p) => p.patientId !== id),
         spontaneousVentilation: prev.spontaneousVentilation.filter((s) => s.patientId !== id),
         pveDecisions: prev.pveDecisions.filter((d) => d.patientId !== id),
@@ -505,6 +512,25 @@ export function AppProvider({ children }: { children: ReactNode }) {
   };
 
   const getTrachRecord = (id: string) => state.trachRecords.find((t) => t.id === id);
+
+  const addOxygenRecord = async (
+    record: Omit<OxygenRecord, 'id' | 'timestamp' | 'performedByUserId' | 'type' | 'alerts'> & { timestamp?: string }
+  ) => {
+    try {
+      const obs = await observationsApi.createObservation({ ...record, type: 'oxigeno' });
+      setState((prev) => ({ ...prev, oxygenRecords: [...prev.oxygenRecords, obs as OxygenRecord] }));
+      return true;
+    } catch (error) {
+      reportError('guardar registro de oxigenoterapia', error);
+      return false;
+    }
+  };
+
+  const getPatientOxygenRecords = (patientId: string, episodeId?: string) => {
+    return state.oxygenRecords
+      .filter((o) => o.patientId === patientId && (!episodeId || o.episodeId === episodeId))
+      .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+  };
 
   const addPrestacion = async (input: CreatePrestacionInput) => {
     // No reportError here (unlike the other add* methods): ActivityCard
@@ -728,6 +754,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
         addTrachRecord,
         getPatientTrachRecords,
         getTrachRecord,
+        addOxygenRecord,
+        getPatientOxygenRecords,
         addPrestacion,
         getPatientPrestaciones,
         startSVPeriod,

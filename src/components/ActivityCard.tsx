@@ -1,11 +1,12 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Card } from './ui/Card';
 import { useApp } from '../contexts/AppContext';
 import { mobilizationLevels } from '../utils/vmiEducation';
 import { ago } from '../domain/services/trachDecannulation';
 import { KtrDetail, KtrDetailFields, emptyKtrDetail, ktrDetailPayload } from './KtrDetailFields';
 import type { MobilizationLevel, Prestacion } from '../types';
-import { DumbbellIcon, StethoscopeIcon } from 'lucide-react';
+import { BrainIcon, DumbbellIcon, StethoscopeIcon } from 'lucide-react';
 
 interface ActivityCardProps {
   patientId: string;
@@ -27,6 +28,7 @@ function startOfToday(now: Date): number {
  * read, so logging here is the *only* entry for that work.
  */
 export function ActivityCard({ patientId, prestaciones, now, onChanged }: ActivityCardProps) {
+  const navigate = useNavigate();
   const { addPrestacion, features, patients, getActiveEpisode, getEpisodeMobilizationStart, startMobilization } = useApp();
   const patient = patients.find((p) => p.id === patientId);
   // Paciente en VMI cuyo episodio todavía no tiene registrado el inicio de la movilización activa.
@@ -81,27 +83,27 @@ export function ActivityCard({ patientId, prestaciones, now, onChanged }: Activi
     <Card>
       <div className="flex items-center justify-between mb-3">
         <h2 className="text-lg font-bold text-gray-900">Actividad</h2>
-        <span className="text-xs text-gray-400">Un solo registro: suma a la productividad y al timeline</span>
+        
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-3 gap-2">
         <button
           onClick={() => {
             setKtrOpen((v) => !v);
             setPickingLevel(false);
           }}
           disabled={busy !== null}
-          className={`rounded-2xl border-2 p-4 text-left disabled:opacity-50 ${
+          className={`rounded-2xl border-2 p-3 text-left disabled:opacity-50 ${
             ktrOpen ? 'border-blue-500 bg-blue-50' : 'border-blue-200 bg-blue-50 active:bg-blue-100'
           }`}
         >
           <StethoscopeIcon className="w-6 h-6 text-blue-600 mb-2" />
           <div className="font-bold text-gray-900">KTR</div>
-          <div className="text-xs text-gray-600">Kinesioterapia respiratoria</div>
+          <div className="text-xs text-gray-600">Respiratoria</div>
           <div className="text-xs text-blue-800 mt-2 font-semibold">
             Hoy: {ktrToday.length}
-            {lastKtr ? ` · última ${ago(lastKtr.timestamp, now)}` : ''}
           </div>
+          {lastKtr && <div className="text-[11px] text-blue-800/80">última {ago(lastKtr.timestamp, now)}</div>}
         </button>
 
         <button
@@ -115,17 +117,28 @@ export function ActivityCard({ patientId, prestaciones, now, onChanged }: Activi
             setPickingLevel((v) => !v);
           }}
           disabled={busy !== null}
-          className={`rounded-2xl border-2 p-4 text-left disabled:opacity-50 ${
+          className={`rounded-2xl border-2 p-3 text-left disabled:opacity-50 ${
             pickingLevel ? 'border-emerald-500 bg-emerald-50' : 'border-emerald-200 bg-emerald-50 active:bg-emerald-100'
           }`}
         >
           <DumbbellIcon className="w-6 h-6 text-emerald-600 mb-2" />
           <div className="font-bold text-gray-900">KTM</div>
-          <div className="text-xs text-gray-600">Kinesioterapia motora</div>
+          <div className="text-xs text-gray-600">Motora</div>
           <div className="text-xs text-emerald-800 mt-2 font-semibold">
             Hoy: {ktmToday.length}
-            {lastKtm ? ` · última ${ago(lastKtm.timestamp, now)}` : ''}
           </div>
+          {lastKtm && <div className="text-[11px] text-emerald-800/80">última {ago(lastKtm.timestamp, now)}</div>}
+        </button>
+
+        <button
+          onClick={() => navigate(`/patient/${patientId}/mrc/new`)}
+          disabled={busy !== null}
+          className="rounded-2xl border-2 border-violet-200 bg-violet-50 active:bg-violet-100 p-3 text-left disabled:opacity-50"
+        >
+          <BrainIcon className="w-6 h-6 text-violet-600 mb-2" />
+          <div className="font-bold text-gray-900">MRC</div>
+          <div className="text-xs text-gray-600">Fuerza muscular</div>
+          <div className="text-xs text-violet-800 mt-2 font-semibold">Evaluar</div>
         </button>
       </div>
 

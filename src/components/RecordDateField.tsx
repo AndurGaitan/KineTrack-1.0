@@ -1,12 +1,36 @@
+import { useState } from 'react';
 import type { RecordTimestampState } from '../hooks/useRecordTimestamp';
 import { toLocalDateTimeInputValue } from '../utils/dateInput';
 
 /**
  * "Fecha y hora del registro": permite cargar un registro de días anteriores.
  * Por defecto es ahora; si se cambia, el registro queda en ese momento.
+ *
+ * `compact`: en los formularios de carga rápida queda en una línea
+ * ("Registro de ahora · Cambiar") y el campo aparece solo si se pide.
  */
-export function RecordDateField({ state, label = 'Fecha y hora del registro' }: { state: RecordTimestampState; label?: string }) {
+export function RecordDateField({
+  state,
+  label = 'Fecha y hora del registro',
+  compact = false,
+}: {
+  state: RecordTimestampState;
+  label?: string;
+  compact?: boolean;
+}) {
+  const [open, setOpen] = useState(false);
   const retro = state.timestamp !== undefined && !state.isFuture && new Date(state.timestamp).getTime() < Date.now() - 10 * 60 * 1000;
+
+  if (compact && !open && !retro && !state.isFuture) {
+    return (
+      <div className="flex items-center justify-between text-sm text-gray-600 px-1">
+        <span>Registro de ahora</span>
+        <button type="button" onClick={() => setOpen(true)} className="text-blue-700 font-medium underline min-h-[32px]">
+          Cargar de otro momento
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">

@@ -11,7 +11,8 @@ import {
   MobilizationLevel,
   WeaningStatus,
   VentMode,
-  VentControlVariable
+  VentControlVariable,
+  Patient
 } from '../types';
 import {
   calculateVMI,
@@ -21,6 +22,8 @@ import {
 import { ventModes, mobilizationLevels } from '../utils/vmiEducation';
 import { RassSelector } from '../components/RassSelector';
 import { RecordDateField } from '../components/RecordDateField';
+import { PrefillNotice } from '../components/PrefillNotice';
+import { ChoiceChips } from '../components/ChoiceChips';
 import { PveDecisionForm, PveDraft, emptyPveDraft, pveDraftError, pveDraftToInput } from '../components/PveDecisionForm';
 import { useRecordTimestamp } from '../hooks/useRecordTimestamp';
 import { ZapIcon, EditIcon } from 'lucide-react';
@@ -51,37 +54,41 @@ const toNumberOrUndefined = (v: string): number | undefined => {
 
 const clamp = (n: number, min: number, max: number) => Math.min(max, Math.max(min, n));
 
-export function VMIEntryPage() {
-  const { patientId } = useParams<{ patientId: string }>();
+/**
+ * Carga de monitorización VMI. Se precarga con la programación del último
+ * registro (modo, parámetros, PEEP, FiO₂): solo se cambia lo que varió. Lo
+ * esencial queda abierto; el resto de las secciones, plegadas.
+ */
+export function VMIEntryForm({ patient, onDone, onCancel }: { patient: Patient; onDone: () => void; onCancel?: () => void }) {
   const navigate = useNavigate();
-  const { patients, addVMIRecord, addPveDecision, sectors, getActiveEpisode, features } = useApp();
+  const { addVMIRecord, addPveDecision, getActiveEpisode, getPatientVMIRecords, features } = useApp();
   const recordedAt = useRecordTimestamp();
+  const [saving, setSaving] = useState(false);
 
-  const patient = patients.find(p => p.id === patientId);
-  const sector = patient ? sectors.find(s => s.id === patient.sectorId) : null;
-  const activeEpisode = patient ? getActiveEpisode(patient.id) : undefined;
+  const activeEpisode = getActiveEpisode(patient.id);
+  const last = getPatientVMIRecords(patient.id, activeEpisode?.id)[0];
 
   const [formData, setFormData] = useState(() => ({
     // A) Ventilator Mode & Settings (MODE FIRST)
-    ventMode: '' as VentMode | '',
-    ventModeOther: '',
-    controlVariable: '' as VentControlVariable | '',
+    ventMode: (last?.ventMode ?? '') as VentMode | '',
+    ventModeOther: last?.ventModeOther ?? '',
+    controlVariable: (last?.controlVariable ?? '') as VentControlVariable | '',
 
     // PCI/PBW ya no se pide acá — se mide una vez en la ficha del paciente
     // (Contexto Clínico) y se hereda tal cual quedó guardado ahí.
-    predictedBodyWeight: patient?.predictedBodyWeight ?? 0,
+    predictedBodyWeight: patient.predictedBodyWeight ?? 0,
 
     // Vent params (no defaults)
-    tidalVolumeSet: undefined as number | undefined,
+    tidalVolumeSet: last?.tidalVolumeSet as number | undefined,
     tidalVolumeExpired: undefined as number | undefined,
-    controlPressure: undefined as number | undefined,
-    supportPressure: undefined as number | undefined,
-    inspiratoryTime: undefined as number | undefined,
+    controlPressure: last?.controlPressure as number | undefined,
+    supportPressure: last?.supportPressure as number | undefined,
+    inspiratoryTime: last?.inspiratoryTime as number | undefined,
     plateauPressure: undefined as number | undefined,
     peakPressure: undefined as number | undefined,
-    peep: undefined as number | undefined,
-    fio2: undefined as number | undefined,
-    respiratoryRate: undefined as number | undefined,
+    peep: last?.peep as number | undefined,
+    fio2: last?.fio2 as number | undefined,
+    respiratoryRate: last?.respiratoryRate as number | undefined,
 
     // B) Synchrony
     hasAsynchrony: false,
@@ -97,7 +104,7 @@ export function VMIEntryPage() {
     baseExcess: undefined as number | undefined,
 
     // D) Weaning
-    weaningStatus: 'not-candidate' as WeaningStatus,
+    weaningStatus: (last?.weaningStatus ?? 'not-candidate') as WeaningStatus,
     sbtPerformed: false,
     sbtType: '' as '' | 'psv' | 'cpap' | 't-piece',
     sbtResult: '' as '' | 'success' | 'failure',
@@ -187,6 +194,7 @@ export function VMIEntryPage() {
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
+    if (saving) return;
 
     if (!canSave) {
       setAlerts(prev => [
@@ -202,8 +210,9 @@ export function VMIEntryPage() {
       return;
     }
 
+    setSaving(true);
     await addVMIRecord({
-      patientId: patient!.id,
+      patientId: patient.id,
       episodeId: activeEpisode?.id,
       timestamp: recordedAt.timestamp,
 
@@ -264,20 +273,13 @@ export function VMIEntryPage() {
     });
 
     if (!features.gasometry) {
-      const input = pveDraftToInput(pveDraft, patient!.id, recordedAt.timestamp);
+      const input = pveDraftToInput(pveDraft, patient.id, recordedAt.timestamp);
       if (input) await addPveDecision(input);
     }
 
-    navigate(`/patient/${patient!.id}/vmi`);
+    setSaving(false);
+    onDone();
   };
-
-  if (!patient || patient.supportType !== 'imv') {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-        <p className="text-gray-600">Este módulo solo está disponible para pacientes en VMI</p>
-      </div>
-    );
-  }
 
   const toggleAsynchronyType = (type: AsynchronyType) => {
     setFormData(prev => ({
@@ -289,35 +291,17 @@ export function VMIEntryPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Header title="Monitorización VMI" showBack showPatientList sectorId={sector?.id} />
-
-      <main className="max-w-2xl mx-auto p-4 pb-24">
-        <div className="bg-blue-50 border-2 border-blue-200 rounded-2xl p-4 mb-6">
-          <p className="text-sm text-blue-900">
-            <strong>Herramienta avanzada de VMI:</strong> Este módulo está diseñado para terapeutas con
-            manejo avanzado de ventilación mecánica, y para ayudar a quienes están en formación a pensar
-            como un experto.
-          </p>
-        </div>
-
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mb-6">
-          <div className="text-sm text-gray-600 mb-1">Paciente</div>
-          <div className="text-xl font-bold text-gray-900">{patient.alias}</div>
-        </div>
-
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <RecordDateField state={recordedAt} label="Fecha y hora de la monitorización" />
+    <div>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {last && <PrefillNotice timestamp={last.timestamp} />}
           {/* STEP 1: Ventilator Mode (FIRST) */}
-          <CollapsibleSection title="1) Modo Ventilatorio" subtitle="VCV, PCV o PSV">
+          <CollapsibleSection title="Modo Ventilatorio" subtitle="VCV, PCV o PSV">
             <div className="space-y-4">
-              <VMISelect
+              <ChoiceChips
                 label="Modo Ventilatorio"
-                educationKey="ventMode"
-                options={ventModes.map(m => ({ value: m.value, label: m.label }))}
+                options={ventModes.map(m => ({ value: m.value as VentMode, label: m.value === 'VC' ? 'VCV' : m.value === 'PC' ? 'PCV' : m.value === 'PSV' ? 'PSV' : m.label, hint: m.label }))}
                 value={formData.ventMode}
-                onChange={e => setFormData({ ...formData, ventMode: e.target.value as VentMode })}
-                required
+                onChange={v => setFormData({ ...formData, ventMode: v })}
               />
 
               {formData.ventMode && (
@@ -342,7 +326,7 @@ export function VMIEntryPage() {
 
           {/* STEP 2: Mode-specific parameter + common parameters */}
           {formData.ventMode && (
-            <CollapsibleSection title="2) Parámetros" subtitle="Parámetro propio del modo + parámetros comunes">
+            <CollapsibleSection title="Parámetros" subtitle="Parámetro propio del modo + parámetros comunes">
               <div className="space-y-4">
                 {formData.ventMode === 'VC' && (
                   <VMIField
@@ -425,7 +409,7 @@ export function VMIEntryPage() {
 
           {/* STEP 3: Predicted Body Weight (PCI/PBW) */}
           {formData.ventMode && (
-            <CollapsibleSection title="3) Peso Corporal Ideal (PCI)" subtitle="Se mide una sola vez en la ficha del paciente">
+            <CollapsibleSection title="Peso Corporal Ideal (PCI)" subtitle="Se mide una sola vez en la ficha del paciente" defaultOpen={false}>
               <div className="space-y-4">
                 <div className={`p-4 rounded-xl ${pbwOk ? 'bg-blue-50' : 'bg-gray-50'}`}>
                   <div className="text-sm text-gray-600 mb-1">PCI / PBW (Peso Predicho)</div>
@@ -457,7 +441,7 @@ export function VMIEntryPage() {
 
           {/* STEP 4: Advanced Monitoring (Pplat, Ppeak, Vt Espirado/Vt-kg, ΔP, Compliance, Mechanical Power) */}
           {formData.ventMode && (
-            <CollapsibleSection title="4) Monitorización Avanzada" subtitle="Protección pulmonar y Mechanical Power">
+            <CollapsibleSection title="Monitorización Avanzada" subtitle="Protección pulmonar y Mechanical Power" defaultOpen={false}>
               <div className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <VMIField
@@ -574,7 +558,7 @@ export function VMIEntryPage() {
           )}
 
           {/* B) Synchrony */}
-          <CollapsibleSection title="5) Sincronía Paciente-Ventilador" subtitle="Evaluación de asincronías">
+          <CollapsibleSection title="Sincronía Paciente-Ventilador" subtitle="Evaluación de asincronías" defaultOpen={false}>
             <div className="space-y-4">
               <div>
                 <label className="flex items-center gap-3 p-4 border-2 border-gray-300 rounded-xl cursor-pointer hover:bg-gray-50">
@@ -629,7 +613,7 @@ export function VMIEntryPage() {
           </CollapsibleSection>
 
           {/* B2) Sedation / agitation (RASS) — opcional */}
-          <CollapsibleSection title="6) Sedación y Agitación (RASS)" subtitle="Nivel de sedación del paciente (opcional)">
+          <CollapsibleSection title="Sedación y Agitación (RASS)" subtitle="Nivel de sedación del paciente (opcional)" defaultOpen={false}>
             <RassSelector value={formData.rass} onChange={rass => setFormData({ ...formData, rass })} />
           </CollapsibleSection>
 
@@ -637,7 +621,7 @@ export function VMIEntryPage() {
               pH, PaCO₂, PaO₂, HCO₃, SatO₂, Exceso de Bases (FiO₂ ya se
               carga en Configuración del Ventilador, arriba). */}
           {!features.gasometry && (
-            <CollapsibleSection title="7) Oxigenación" subtitle="SpO₂ al momento de la monitorización">
+            <CollapsibleSection title="Oxigenación" subtitle="SpO₂ al momento de la monitorización">
               <VMIField
                 label="SpO₂"
                 unit="%"
@@ -651,7 +635,7 @@ export function VMIEntryPage() {
               />
             </CollapsibleSection>
           )}
-          {features.gasometry && <CollapsibleSection title="7) Oxigenación y Equilibrio Ácido-Base" subtitle="Gasometría y parámetros de intercambio">
+          {features.gasometry && <CollapsibleSection title="Oxigenación y Equilibrio Ácido-Base" subtitle="Gasometría y parámetros de intercambio">
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 {/* pH bug fix: same clamp-on-blur pattern. */}
@@ -731,7 +715,7 @@ export function VMIEntryPage() {
           </CollapsibleSection>}
 
           {/* D) Weaning */}
-          <CollapsibleSection title="8) Destete de la Ventilación" subtitle="Evaluación y pruebas de destete">
+          <CollapsibleSection title="Destete de la Ventilación" subtitle="Evaluación y pruebas de destete">
             <div className="space-y-4">
               <VMISelect
                 label="Estado de Destete"
@@ -806,7 +790,7 @@ export function VMIEntryPage() {
           </CollapsibleSection>
 
           {/* E) Mobilization — etapa 1: se registra aparte (inicio de movilización activa) */}
-          {features.mobilizationLevel && <CollapsibleSection title="9) Movilización y Rehabilitación" subtitle="Nivel de actividad física">
+          {features.mobilizationLevel && <CollapsibleSection title="Movilización y Rehabilitación" subtitle="Nivel de actividad física" defaultOpen={false}>
             <div className="space-y-4">
               <div>
                 <label className="text-sm font-medium text-gray-700 mb-2 block">Nivel máximo de movilización</label>
@@ -853,13 +837,17 @@ export function VMIEntryPage() {
             </div>
           )}
 
+          <RecordDateField state={recordedAt} label="Fecha y hora de la monitorización" compact />
+
           {/* Submit */}
-          <div className="flex gap-3 pt-4">
-            <Button type="button" variant="secondary" onClick={() => navigate(-1)} fullWidth>
-              Cancelar
-            </Button>
-            <Button type="submit" fullWidth disabled={!canSave}>
-              Guardar Monitorización
+          <div className="flex gap-3 pt-2">
+            {onCancel && (
+              <Button type="button" variant="secondary" onClick={onCancel} fullWidth>
+                Cancelar
+              </Button>
+            )}
+            <Button type="submit" fullWidth disabled={!canSave || saving}>
+              {saving ? 'Guardando...' : 'Guardar monitorización'}
             </Button>
           </div>
 
@@ -869,6 +857,34 @@ export function VMIEntryPage() {
             </div>
           )}
         </form>
+    </div>
+  );
+}
+
+export function VMIEntryPage() {
+  const { patientId } = useParams<{ patientId: string }>();
+  const navigate = useNavigate();
+  const { patients, sectors } = useApp();
+  const patient = patients.find(p => p.id === patientId);
+  const sector = patient ? sectors.find(s => s.id === patient.sectorId) : null;
+
+  if (!patient || patient.supportType !== 'imv') {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+        <p className="text-gray-600">Este módulo solo está disponible para pacientes en VMI</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <Header title="Monitorización VMI" showBack showPatientList sectorId={sector?.id} />
+      <main className="max-w-2xl mx-auto p-4 pb-24">
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 mb-4">
+          <div className="text-sm text-gray-600">Paciente</div>
+          <div className="text-xl font-bold text-gray-900">{patient.alias}</div>
+        </div>
+        <VMIEntryForm patient={patient} onDone={() => navigate(`/patient/${patient.id}`)} onCancel={() => navigate(-1)} />
       </main>
     </div>
   );

@@ -13,8 +13,8 @@ const closureReasonLabels = {
 };
 const supportTypeLabels = {
   imv: 'VMI',
-  niv: 'VNI',
-  hfnc: 'HFNC',
+  niv: 'VMNI',
+  hfnc: 'CAFO',
   traqueostomia: 'TQT',
   'conventional-oxygen': 'O₂ Conv.',
   'room-air': 'Aire Amb.'

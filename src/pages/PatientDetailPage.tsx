@@ -9,13 +9,13 @@ import { ChangeSupportModal } from '../components/ChangeSupportModal';
 import { ChangeBedModal } from '../components/ChangeBedModal';
 import { ClosePatientModal } from '../components/ClosePatientModal';
 import { ActionSheet } from '../components/ActionSheet';
-import { ActivityCard } from '../components/ActivityCard';
+import { PatientCarePanel } from '../components/PatientCarePanel';
 import { EditIcon, BedDoubleIcon, ActivityIcon, WindIcon, DropletIcon, ChevronDownIcon, ChevronUpIcon, RepeatIcon, XCircleIcon, ClipboardPlusIcon, ClipboardListIcon, DumbbellIcon, ClipboardCheckIcon, BrainIcon, TrendingUpIcon, StethoscopeIcon } from 'lucide-react';
 import { SupportType, ClosureReason, AirwayEventInput } from '../types';
 const supportTypeLabels = {
   imv: 'VMI',
-  niv: 'VNI',
-  hfnc: 'HFNC',
+  niv: 'VMNI',
+  hfnc: 'CAFO',
   traqueostomia: 'TQT',
   'conventional-oxygen': 'O₂ Convencional',
   'room-air': 'Aire Ambiente'
@@ -96,6 +96,7 @@ export function PatientDetailPage() {
   const now = useMemo(() => new Date(), [prestaciones]);
   const [expandedEpisodes, setExpandedEpisodes] = useState<Record<string, boolean>>({});
   const [showChangeSupportModal, setShowChangeSupportModal] = useState(false);
+  const [changeSupportTo, setChangeSupportTo] = useState<SupportType | undefined>(undefined);
   const [showChangeBedModal, setShowChangeBedModal] = useState(false);
   const [showClosePatientModal, setShowClosePatientModal] = useState(false);
   const [showPrestacionMenu, setShowPrestacionMenu] = useState(false);
@@ -157,6 +158,10 @@ export function PatientDetailPage() {
     changeSupportType(patient.id, newSupport, reason, date, airwayEvent, location);
     setShowChangeSupportModal(false);
   };
+  const handleStartChangeSupport = (to: SupportType) => {
+    setChangeSupportTo(to);
+    setShowChangeSupportModal(true);
+  };
   const handleChangeBed = (sectorId: string, bedId: string) => {
     updatePatient(patient.id, { sectorId, bedId });
     setShowChangeBedModal(false);
@@ -210,6 +215,55 @@ export function PatientDetailPage() {
           </div>
         </Card>
 
+        {isClosed && patient.closure && <Card className="bg-gray-50 border-gray-300">
+            <div className="flex items-start gap-3">
+              <XCircleIcon className="w-5 h-5 text-gray-600 flex-shrink-0 mt-0.5" />
+              <div>
+                <h3 className="font-bold text-gray-900 mb-1">Caso cerrado</h3>
+                <p className="text-sm text-gray-700">
+                  {patient.closure.reason === 'discharge' && 'Alta médica'}
+                  {patient.closure.reason === 'transfer-ward' && 'Pase a sala general'}
+                  {patient.closure.reason === 'transfer-facility' && 'Traslado a otra institución'}
+                  {patient.closure.reason === 'deceased' && 'Fallecimiento'}
+                </p>
+                <p className="text-xs text-gray-600 mt-1">
+                  {formatDateTime(patient.closure.date).date} -{' '}
+                  {formatDateTime(patient.closure.date).time}
+                </p>
+                {patient.closure.notes && <p className="text-sm text-gray-700 mt-2 italic">
+                    {patient.closure.notes}
+                  </p>}
+              </div>
+            </div>
+          </Card>}
+
+        {!isClosed && <>
+            <PatientCarePanel patient={patient} onChangeSupport={handleStartChangeSupport} />
+
+            {/* Otras prestaciones y evolución */}
+            <div className="grid grid-cols-2 gap-3">
+              <Button variant="secondary" onClick={() => setShowPrestacionMenu(true)} className="flex items-center justify-center gap-2">
+                <ClipboardPlusIcon className="w-5 h-5" />
+                Otras prestaciones
+              </Button>
+              <Button variant="secondary" onClick={() => navigate(`/patient/${patient.id}/pase-de-guardia`)} className="flex items-center justify-center gap-2">
+                <ClipboardListIcon className="w-5 h-5" />
+                Evolución
+              </Button>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <Button variant="secondary" onClick={() => setShowChangeBedModal(true)} className="flex items-center justify-center gap-2">
+                <BedDoubleIcon className="w-5 h-5" />
+                Cambiar de cama
+              </Button>
+              <Button variant="danger" onClick={() => setShowClosePatientModal(true)} className="flex items-center justify-center gap-2">
+                <XCircleIcon className="w-5 h-5" />
+                Cerrar caso
+              </Button>
+            </div>
+          </>}
+
         <Card>
           <div className="text-sm text-gray-600 mb-3">Contexto Clínico</div>
           {!patient.age && !patient.admissionDiagnosis && !patient.sex && !patient.heightCm && patient.antecedentes.length === 0 ? <p className="text-sm text-gray-400 italic">
@@ -249,145 +303,6 @@ export function PatientDetailPage() {
                 </div>}
             </div>}
         </Card>
-
-        {isClosed && patient.closure && <Card className="bg-gray-50 border-gray-300">
-            <div className="flex items-start gap-3">
-              <XCircleIcon className="w-5 h-5 text-gray-600 flex-shrink-0 mt-0.5" />
-              <div>
-                <h3 className="font-bold text-gray-900 mb-1">Caso cerrado</h3>
-                <p className="text-sm text-gray-700">
-                  {patient.closure.reason === 'discharge' && 'Alta médica'}
-                  {patient.closure.reason === 'transfer-ward' && 'Pase a sala general'}
-                  {patient.closure.reason === 'transfer-facility' && 'Traslado a otra institución'}
-                  {patient.closure.reason === 'deceased' && 'Fallecimiento'}
-                </p>
-                <p className="text-xs text-gray-600 mt-1">
-                  {formatDateTime(patient.closure.date).date} -{' '}
-                  {formatDateTime(patient.closure.date).time}
-                </p>
-                {patient.closure.notes && <p className="text-sm text-gray-700 mt-2 italic">
-                    {patient.closure.notes}
-                  </p>}
-              </div>
-            </div>
-          </Card>}
-
-        {!isClosed && <>
-            <h2 className="text-lg font-bold text-gray-900 -mb-2">Prestaciones</h2>
-
-            {/* Current Support Module */}
-            {supportType === 'imv' && <Card className="bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-200">
-                <div className="flex items-start justify-between mb-4">
-                  <div>
-                    <div className="flex items-center gap-2 mb-2">
-                      <ActivityIcon className="w-6 h-6 text-blue-600" />
-                      <h3 className="text-lg font-bold text-gray-900">
-                        Monitorización Avanzada VMI
-                      </h3>
-                    </div>
-                    <p className="text-sm text-gray-700">
-                      Herramienta de nivel experto para{' '}
-                      {supportTypeFullLabels[supportType]}
-                    </p>
-                  </div>
-                </div>
-                <Button onClick={() => navigate(`/patient/${patient.id}/vmi`)} className="w-full bg-blue-600">
-                  Acceder a Monitorización VMI
-                </Button>
-              </Card>}
-
-            {supportType === 'niv' && <Card className="bg-gradient-to-br from-purple-50 to-pink-50 border-purple-200">
-                <div className="flex items-start justify-between mb-4">
-                  <div>
-                    <div className="flex items-center gap-2 mb-2">
-                      <WindIcon className="w-6 h-6 text-purple-600" />
-                      <h3 className="text-lg font-bold text-gray-900">
-                        Monitorización VNI
-                      </h3>
-                    </div>
-                    <p className="text-sm text-gray-700">
-                      Evaluación de interfaz, piel, HACOR y parámetros de{' '}
-                      {supportTypeFullLabels[supportType]}
-                    </p>
-                  </div>
-                </div>
-                <Button onClick={() => navigate(`/patient/${patient.id}/niv`)} className="w-full bg-purple-600">
-                  Acceder a Monitorización VNI
-                </Button>
-              </Card>}
-
-            {supportType === 'hfnc' && <Card className="bg-gradient-to-br from-teal-50 to-cyan-50 border-teal-200">
-                <div className="flex items-start justify-between mb-4">
-                  <div>
-                    <div className="flex items-center gap-2 mb-2">
-                      <DropletIcon className="w-6 h-6 text-teal-600" />
-                      <h3 className="text-lg font-bold text-gray-900">
-                        Monitorización HFNC
-                      </h3>
-                    </div>
-                    <p className="text-sm text-gray-700">
-                      Evaluación de flujo, ROX, humidificación y ajuste de{' '}
-                      {supportTypeFullLabels[supportType]}
-                    </p>
-                  </div>
-                </div>
-                <Button onClick={() => navigate(`/patient/${patient.id}/hfnc`)} className="w-full bg-teal-600">
-                  Acceder a Monitorización HFNC
-                </Button>
-              </Card>}
-
-            {supportType === 'traqueostomia' && features.tracheostomy && <Card className="bg-gradient-to-br from-indigo-50 to-blue-50 border-indigo-200">
-                <div className="flex items-start justify-between mb-4">
-                  <div>
-                    <div className="flex items-center gap-2 mb-2">
-                      <WindIcon className="w-6 h-6 text-indigo-600" />
-                      <h3 className="text-lg font-bold text-gray-900">
-                        Seguimiento de Traqueostomía
-                      </h3>
-                    </div>
-                    <p className="text-sm text-gray-700">
-                      Estado de la traqueostomía, actividad (KTR/KTM) y proceso de decanulación para{' '}
-                      {supportTypeFullLabels[supportType]}
-                    </p>
-                  </div>
-                </div>
-                <Button onClick={() => navigate(`/patient/${patient.id}/traqueostomia`)} className="w-full bg-indigo-600">
-                  Acceder a Seguimiento de Traqueostomía
-                </Button>
-              </Card>}
-
-            {(supportType === 'conventional-oxygen' || supportType === 'room-air' || (supportType === 'traqueostomia' && !features.tracheostomy)) && (
-              <ActivityCard patientId={patient.id} prestaciones={prestaciones} now={now} />
-            )}
-
-            {/* Team productivity / quality logging */}
-            <Button variant="secondary" onClick={() => setShowPrestacionMenu(true)} fullWidth className="flex items-center justify-center gap-2">
-              <ClipboardPlusIcon className="w-5 h-5" />
-              + Registrar Prestación
-            </Button>
-
-            {/* Narrative note — ready to paste into the electronic clinical record */}
-            <Button variant="secondary" onClick={() => navigate(`/patient/${patient.id}/pase-de-guardia`)} fullWidth className="flex items-center justify-center gap-2">
-              <ClipboardListIcon className="w-5 h-5" />
-              Evolución
-            </Button>
-
-            {/* Action Buttons */}
-            <div className="grid grid-cols-2 gap-3">
-              <Button variant="secondary" onClick={() => setShowChangeSupportModal(true)} className="flex items-center justify-center gap-2">
-                <RepeatIcon className="w-5 h-5" />
-                Cambiar Soporte
-              </Button>
-              <Button variant="secondary" onClick={() => setShowChangeBedModal(true)} className="flex items-center justify-center gap-2">
-                <BedDoubleIcon className="w-5 h-5" />
-                Cambiar de Cama
-              </Button>
-            </div>
-            <Button variant="danger" onClick={() => setShowClosePatientModal(true)} fullWidth className="flex items-center justify-center gap-2">
-              <XCircleIcon className="w-5 h-5" />
-              Cerrar Caso
-            </Button>
-          </>}
 
         {/* Episode History */}
         <div>
@@ -622,7 +537,7 @@ export function PatientDetailPage() {
         </div>
       </main>
 
-      {showChangeSupportModal && <ChangeSupportModal currentSupport={patient.supportType} patient={patient} sectors={sectors} onClose={() => setShowChangeSupportModal(false)} onConfirm={handleChangeSupport} />}
+      {showChangeSupportModal && <ChangeSupportModal currentSupport={patient.supportType} initialSupport={changeSupportTo} patient={patient} sectors={sectors} onClose={() => setShowChangeSupportModal(false)} onConfirm={handleChangeSupport} />}
 
       {showChangeBedModal && <ChangeBedModal patient={patient} sectors={sectors} onClose={() => setShowChangeBedModal(false)} onConfirm={handleChangeBed} />}
 

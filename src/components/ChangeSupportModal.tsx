@@ -7,6 +7,8 @@ import { toLocalDateTimeInputValue } from '../utils/dateInput';
 import { useApp } from '../contexts/AppContext';
 interface ChangeSupportModalProps {
   currentSupport: SupportType;
+  /** Soporte ya elegido al abrir (cuando se llega tocando un soporte en la ficha). */
+  initialSupport?: SupportType;
   patient: Patient;
   sectors: Sector[];
   onClose: () => void;
@@ -23,10 +25,10 @@ const supportOptions = [{
   label: 'VMI - Ventilación Mecánica Invasiva'
 }, {
   value: 'niv',
-  label: 'VNI - Ventilación No Invasiva'
+  label: 'VMNI - Ventilación Mecánica No Invasiva'
 }, {
   value: 'hfnc',
-  label: 'HFNC - Cánula Nasal de Alto Flujo'
+  label: 'CAFO - Cánula Nasal de Alto Flujo'
 }, {
   value: 'traqueostomia',
   label: 'Traqueostomía - Respiración Espontánea'
@@ -60,6 +62,7 @@ function getAirwayQuestion(
 
 export function ChangeSupportModal({
   currentSupport,
+  initialSupport,
   patient,
   sectors,
   onClose,
@@ -68,7 +71,7 @@ export function ChangeSupportModal({
   const { features } = useApp();
   // Etapa 1: sin traqueostomía como destino (si ya está en ella, igual puede cambiar).
   const selectableOptions = supportOptions.filter(opt => features.tracheostomy || opt.value !== 'traqueostomia' || currentSupport === 'traqueostomia');
-  const [newSupport, setNewSupport] = useState<SupportType | ''>('');
+  const [newSupport, setNewSupport] = useState<SupportType | ''>(initialSupport ?? '');
   const [reason, setReason] = useState('');
   const [customReason, setCustomReason] = useState('');
   const [date, setDate] = useState(() => toLocalDateTimeInputValue(new Date()));
