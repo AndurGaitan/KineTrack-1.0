@@ -551,3 +551,8 @@ export function narratePrestaciones(
   }
   return parts.length > 0 ? parts.join(' ') : undefined;
 }
+
+/** Traqueostomía para el pase compacto: igual que la narración, sin repetir "traqueostomizado". */
+export function narrateTraqueostomiaForPase(input: TrachNarrativeInput): string {
+  return narrateTraqueostomia(input).replace(/^Traqueostomizado, en respiración espontánea/, 'Resp. espontánea');
+}

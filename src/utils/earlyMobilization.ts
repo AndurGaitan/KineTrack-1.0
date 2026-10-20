@@ -48,3 +48,46 @@ export function formatSpan(ms: number): string {
   if (h > 0) return `${h} h ${m} min`;
   return `${m} min`;
 }
+
+/** "22 h" o "2 d 4 h": horas enteras, sin minutos (para textos de pase). */
+function hoursText(ms: number): string {
+  const totalHours = Math.max(1, Math.round(ms / 3600000));
+  const d = Math.floor(totalHours / 24);
+  const h = totalHours % 24;
+  return d > 0 ? `${d} d${h > 0 ? ` ${h} h` : ''}` : `${totalHours} h`;
+}
+
+export interface EarlyMobilizationStatus {
+  /** Texto corto listo para el pase: "iniciada a las 30 h de VMI", "pendiente, quedan 12 h", etc. */
+  text: string;
+  /** Sigue sin iniciarse (pendiente, vencida o en pausa por contraindicación). */
+  pending: boolean;
+}
+
+/** Estado de la movilización precoz de un episodio de VMI, en una frase. */
+export function earlyMobilizationStatus(
+  episodeStartAt: string,
+  start: { startedAt: string } | undefined,
+  contraindications: { reason: string; startAt: string; endAt?: string }[],
+  now: Date
+): EarlyMobilizationStatus {
+  const episodeStart = new Date(episodeStartAt);
+  const relevant = contraindications.filter((c) => !c.endAt || new Date(c.endAt).getTime() > episodeStart.getTime());
+  const deadline = mobilizationDeadline(episodeStart, relevant, now);
+
+  if (start) {
+    const startedAt = new Date(start.startedAt);
+    const hours = Math.max(0, Math.round((startedAt.getTime() - episodeStart.getTime()) / 3600000));
+    const inWindow = startedAt.getTime() <= deadline.getTime();
+    return { text: `iniciada a las ${hours} h de VMI${inWindow ? '' : ' (fuera de las 72 h)'}`, pending: false };
+  }
+
+  const open = relevant.find((c) => !c.endAt);
+  if (open) {
+    return { text: `contraindicada (${mobilizationReasonLabel(open.reason)}), ventana de 72 h en pausa`, pending: true };
+  }
+
+  const remainingMs = deadline.getTime() - now.getTime();
+  if (remainingMs > 0) return { text: `pendiente, quedan ${hoursText(remainingMs)} de las 72 h`, pending: true };
+  return { text: `sin iniciar, ventana de 72 h vencida hace ${hoursText(-remainingMs)}`, pending: true };
+}

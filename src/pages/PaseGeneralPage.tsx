@@ -30,6 +30,10 @@ export function PaseGeneralPage() {
     getPatientTrachRecords,
     getPatientNIVSessions,
     getPatientSVPeriods,
+    getPatientOxygenRecords,
+    getPatientPveDecisions,
+    getEpisodeMobilizationStart,
+    getPatientMobilizationContraindications,
   } = useApp();
 
   const periodState = useHandoffPeriod();
@@ -95,6 +99,10 @@ export function PaseGeneralPage() {
           trachOverview: trachByPatient[patient.id] ?? null,
           airwayEvents: airwayEvents.filter((e) => e.patientId === patient.id),
           svPeriods: getPatientSVPeriods(patient.id),
+          oxygen: patient.supportType === 'conventional-oxygen' ? getPatientOxygenRecords(patient.id) : [],
+          pveDecisions: getPatientPveDecisions(patient.id),
+          mobilizationStart: getEpisodeMobilizationStart(activeEpisode?.id),
+          mobilizationContraindications: getPatientMobilizationContraindications(patient.id),
         },
         { period, userId: user.id, mineOnly }
       );
@@ -134,7 +142,7 @@ export function PaseGeneralPage() {
   };
 
   const handleCopy = async () => {
-    const finalText = appendPlan(editor.text, plan);
+    const finalText = appendPlan(editor.text, plan, { whatsapp: true });
     try {
       await copyText(finalText);
       setCopied(true);
@@ -163,8 +171,8 @@ export function PaseGeneralPage() {
         <div className="bg-purple-50 border-2 border-purple-200 rounded-2xl p-4">
           <p className="text-sm text-purple-900">
             <strong>Pase del período:</strong> se arma solo con lo que se cargó en el período elegido (monitorizaciones,
-            prestaciones, sesiones, seguimiento de traqueostomía, MRC, extubaciones) — lo que no se cargó no aparece.
-            Podés editar el texto antes de copiarlo.
+            prestaciones, PVE, movilización precoz, MRC, extubaciones) — lo que no se cargó no aparece. Está escrito en
+            formato corto para WhatsApp: los textos entre *asteriscos* quedan en negrita al pegarlos. Podés editarlo antes de copiar.
           </p>
         </div>
 

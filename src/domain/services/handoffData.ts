@@ -10,11 +10,15 @@
 import {
   AirwayEvent,
   HFNCRecord,
+  MobilizationContraindication,
+  MobilizationStart,
   MrcAssessment,
   NIVRecord,
   NIVSession,
+  OxygenRecord,
   Patient,
   Prestacion,
+  PveDecision,
   SpontaneousVentilationPeriod,
   SupportEpisode,
   TrachOverview,
@@ -31,9 +35,10 @@ import {
 import { svHoursInRange } from '../../utils/spontaneousVentilation';
 
 /** Agrega el plan / pendientes del kinesiólogo al final del texto (al copiar y al guardar). */
-export function appendPlan(text: string, plan: string): string {
+export function appendPlan(text: string, plan: string, options?: { whatsapp?: boolean }): string {
   const trimmed = plan.trim();
-  return trimmed ? `${text.trimEnd()}\n\nPlan / pendientes: ${trimmed}` : text;
+  if (!trimmed) return text;
+  return `${text.trimEnd()}\n\n${options?.whatsapp ? '*Plan / pendientes:*' : 'Plan / pendientes:'} ${trimmed}`;
 }
 
 export type PeriodPreset = 'hoy' | '12h' | '24h' | 'dia' | 'custom';
@@ -125,6 +130,14 @@ export interface ActivitySources {
   airwayEvents: AirwayEvent[];
   /** Todos los períodos de ventilación espontánea del paciente (se filtran al rango). */
   svPeriods: SpontaneousVentilationPeriod[];
+  /** Registros de oxigenoterapia convencional, del más nuevo al más viejo. */
+  oxygen?: OxygenRecord[];
+  /** Decisiones de PVE del paciente (se filtran al rango). */
+  pveDecisions?: PveDecision[];
+  /** Inicio de movilización activa del episodio de VMI actual, si hay. */
+  mobilizationStart?: MobilizationStart;
+  /** Contraindicaciones para movilizar del paciente. */
+  mobilizationContraindications?: MobilizationContraindication[];
 }
 
 export interface ActivityScope {
@@ -144,6 +157,12 @@ export interface PatientActivity {
   episodeChanges: SupportEpisode[];
   /** Ventilación espontánea (traqueostomía en VMI) dentro del período. */
   spontaneousVentilation?: SpontaneousVentilationNarrativeInput;
+  /** Último registro de oxigenoterapia convencional del período. */
+  oxygenRecord?: OxygenRecord;
+  /** Decisiones de PVE tomadas en el período, de la más vieja a la más nueva. */
+  pveDecisions: PveDecision[];
+  /** Movilización precoz: se informa el estado actual si hubo novedades en el período o el paciente sigue en VMI. */
+  mobilization?: { start?: MobilizationStart; contraindications: MobilizationContraindication[] };
 }
 
 /**
@@ -221,6 +240,16 @@ export function collectPatientActivity(
 
   const airwayEvents = src.airwayEvents.filter((e) => inPeriod(e.occurredAt) && isMine(e.performedByUserId));
 
+  const oxygenRecord = recordsIn(src.oxygen ?? [])[0];
+  const pveDecisions = (src.pveDecisions ?? [])
+    .filter((d) => inPeriod(d.timestamp) && isMine(d.performedByUserId))
+    .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+  const mobStart = src.mobilizationStart;
+  const mobContras = src.mobilizationContraindications ?? [];
+  const mobilizationNews =
+    (!!mobStart && inPeriod(mobStart.startedAt) && isMine(mobStart.performedByUserId)) ||
+    mobContras.some((c) => (inPeriod(c.startAt) && isMine(c.performedByUserId)) || inPeriod(c.endAt));
+
   // Ventilación espontánea: períodos que se solapan con el rango (los cargó esta persona o todo el equipo).
   const svInRange =
     patient.airwayType === 'traqueostomia'
@@ -241,6 +270,9 @@ export function collectPatientActivity(
     !!latestSupportRecord ||
     hasSessionInPeriod ||
     !!trach ||
+    !!oxygenRecord ||
+    pveDecisions.length > 0 ||
+    mobilizationNews ||
     airwayEvents.length > 0 ||
     !!spontaneousVentilation ||
     (!scope.mineOnly && episodeChanges.length > 0);
@@ -255,5 +287,8 @@ export function collectPatientActivity(
     airwayEvents,
     episodeChanges,
     spontaneousVentilation,
+    oxygenRecord,
+    pveDecisions,
+    mobilization: patient.supportType === 'imv' ? { start: mobStart, contraindications: mobContras } : undefined,
   };
 }
