@@ -209,7 +209,7 @@ export function PatientDetailPage() {
                 <Badge variant="support" type={patient.supportType}>
                   {supportTypeLabels[patient.supportType]}
                 </Badge>
-                {isClosed && <Badge className="bg-gray-600 text-white">Cerrado</Badge>}
+                {isClosed && <Badge className="bg-gray-200 text-gray-700">Cerrado</Badge>}
               </div>
             </div>
           </div>

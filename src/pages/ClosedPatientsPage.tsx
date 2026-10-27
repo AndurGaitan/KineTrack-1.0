@@ -64,7 +64,7 @@ export function ClosedPatientsPage() {
                     <Badge variant="support" type={patient.supportType}>
                       {supportTypeLabels[patient.supportType]}
                     </Badge>
-                    <Badge className="bg-gray-600 text-white">Cerrado</Badge>
+                    <Badge className="bg-gray-200 text-gray-700">Cerrado</Badge>
                   </div>
                 </div>
 

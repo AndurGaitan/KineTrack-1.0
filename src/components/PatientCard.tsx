@@ -34,7 +34,7 @@ export function PatientCard({
       </div>
 
       {patient.status === 'closed' && <div className="mt-2">
-          <Badge className="bg-gray-600 text-white">Cerrado</Badge>
+          <Badge className="bg-gray-200 text-gray-700">Cerrado</Badge>
         </div>}
     </Card>;
 }

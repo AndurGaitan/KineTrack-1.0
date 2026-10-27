@@ -145,7 +145,7 @@ export function SectorsAdminPage() {
                     <button
                       key={bed.id}
                       onClick={() => toggleBedActive(sector.id, bed.id, bed.active)}
-                      className={`px-3 py-1 rounded-lg text-sm font-medium border ${bed.active ? 'bg-blue-50 border-blue-200 text-blue-800' : 'bg-gray-100 border-gray-200 text-gray-400 line-through'}`}
+                      className={`px-3 py-1 rounded-lg text-sm font-medium border ${bed.active ? 'bg-blue-50 border-blue-200 text-blue-800' : 'bg-gray-100 border-gray-200 text-gray-500 line-through'}`}
                       title={bed.active ? 'Click para desactivar' : 'Click para reactivar'}
                     >
                       {bed.label}
