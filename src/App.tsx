@@ -35,6 +35,7 @@ import { SchedulePage } from './pages/coordinator/SchedulePage';
 import { VMIPatientsListPage } from './pages/coordinator/VMIPatientsListPage';
 import { BulkPrestacionPage } from './pages/coordinator/BulkPrestacionPage';
 import { StagePage } from './pages/coordinator/StagePage';
+import { UpdateNotice } from './components/UpdateNotice';
 
 // Recharts (and the Recharts-only VMITrendsPage) is code-split out of the
 // main bundle — it roughly doubles the app's gzip size and only
@@ -207,6 +208,7 @@ export function App() {
       <ErrorBoundary>
         <AppProvider>
           <AppRoutes />
+          <UpdateNotice />
         </AppProvider>
       </ErrorBoundary>
     </BrowserRouter>;

@@ -7,11 +7,14 @@ import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Badge } from '../components/ui/Badge';
 import * as authApi from '../api/authApi';
+import { ChoiceChips } from '../components/ChoiceChips';
+import { useTheme, ThemeChoice } from '../hooks/useTheme';
 import { LogOutIcon } from 'lucide-react';
 
 export function ProfilePage() {
   const navigate = useNavigate();
   const { user, updateProfile, logout } = useApp();
+  const { choice: themeChoice, setTheme } = useTheme();
   const [name, setName] = useState(user?.name ?? '');
   const [submitting, setSubmitting] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -73,6 +76,20 @@ export function ProfilePage() {
       <Header title="Mi Perfil" showBack />
 
       <main className="max-w-2xl mx-auto p-4 pb-24 space-y-6">
+        <Card>
+          <ChoiceChips<ThemeChoice>
+            label="Apariencia"
+            options={[
+              { value: 'auto', label: 'Automático', hint: 'Como el teléfono' },
+              { value: 'light', label: 'Claro' },
+              { value: 'dark', label: 'Oscuro' },
+            ]}
+            value={themeChoice}
+            onChange={(v) => v && setTheme(v)}
+            columns={3}
+          />
+        </Card>
+
         <Card>
           <div className="flex items-center gap-2 mb-4">
             <Badge className={user.role === 'coordinador' ? 'bg-purple-100 text-purple-700' : 'bg-gray-100 text-gray-700'}>

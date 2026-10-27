@@ -22,8 +22,8 @@ import {
   successRate,
 } from '../../utils/weaningTrends';
 
-const axisTick = { fontSize: 11, fill: '#6b7280' };
-const tooltipStyle = { fontSize: 12, borderRadius: 8 };
+const axisTick = { fontSize: 11, fill: 'rgb(var(--c-gray-500))' };
+const tooltipStyle = { fontSize: 12, borderRadius: 8, background: 'rgb(var(--surface))', color: 'rgb(var(--c-gray-900))', border: '0.5px solid rgb(var(--hairline) / 0.3)' };
 
 function ChartCard({ title, subtitle, children }: { title: string; subtitle?: string; children: React.ReactNode }) {
   return (
@@ -157,7 +157,7 @@ export function WeaningTrendsSection({ range }: { range: { from: string; to: str
               <ChartCard title="PVE en el tiempo" subtitle="Cantidad de pruebas por vía aérea">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={countData} margin={{ top: 8, right: 8, bottom: 0, left: -16 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                    <CartesianGrid strokeDasharray="3 3" stroke="rgb(var(--hairline) / 0.22)" />
                     <XAxis dataKey="label" tick={axisTick} interval="preserveStartEnd" minTickGap={16} />
                     <YAxis allowDecimals={false} tick={axisTick} width={36} />
                     <Tooltip contentStyle={tooltipStyle} />
@@ -172,7 +172,7 @@ export function WeaningTrendsSection({ range }: { range: { from: string; to: str
               <ChartCard title="% de éxito de las PVE" subtitle="Solo períodos con pruebas que tienen resultado (en el detalle se ve la cantidad)">
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={rateData} margin={{ top: 8, right: 8, bottom: 0, left: -16 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                    <CartesianGrid strokeDasharray="3 3" stroke="rgb(var(--hairline) / 0.22)" />
                     <XAxis dataKey="label" tick={axisTick} interval="preserveStartEnd" minTickGap={16} />
                     <YAxis domain={[0, 100]} unit="%" tick={axisTick} width={44} />
                     <Tooltip
@@ -232,7 +232,7 @@ export function WeaningTrendsSection({ range }: { range: { from: string; to: str
                 <div className="h-56">
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={hoursData} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                      <CartesianGrid strokeDasharray="3 3" stroke="rgb(var(--hairline) / 0.22)" />
                       <XAxis dataKey="label" tick={axisTick} interval="preserveStartEnd" minTickGap={16} />
                       <YAxis tick={axisTick} width={44} unit=" h" />
                       <Tooltip

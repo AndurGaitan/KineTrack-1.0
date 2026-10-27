@@ -65,17 +65,17 @@ export function TrendChart({ title, unit, data, series, referenceLines }: TrendC
         <div className="h-48">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={data} margin={{ top: 8, right: 12, bottom: 0, left: -16 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+              <CartesianGrid strokeDasharray="3 3" stroke="rgb(var(--hairline) / 0.22)" />
               <XAxis
                 dataKey="timestampMs"
                 type="number"
                 domain={['dataMin', 'dataMax']}
                 tickFormatter={formatTick}
-                tick={{ fontSize: 11, fill: '#6b7280' }}
+                tick={{ fontSize: 11, fill: 'rgb(var(--c-gray-500))' }}
                 minTickGap={40}
               />
-              <YAxis tick={{ fontSize: 11, fill: '#6b7280' }} width={36} />
-              <Tooltip labelFormatter={(ms) => formatTooltipLabel(ms as number)} contentStyle={{ fontSize: 12, borderRadius: 8 }} />
+              <YAxis tick={{ fontSize: 11, fill: 'rgb(var(--c-gray-500))' }} width={36} />
+              <Tooltip labelFormatter={(ms) => formatTooltipLabel(ms as number)} contentStyle={{ fontSize: 12, borderRadius: 8, background: 'rgb(var(--surface))', color: 'rgb(var(--c-gray-900))', border: '0.5px solid rgb(var(--hairline) / 0.3)' }} />
               {series.length > 1 && <Legend wrapperStyle={{ fontSize: 11 }} />}
               {referenceLines?.map((ref) => (
                 <ReferenceLine

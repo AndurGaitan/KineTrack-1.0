@@ -1,0 +1,104 @@
+/*
+ * Base visual de KineTrack (pautas de iOS sobre la identidad de la marca).
+ * Se carga después de Tailwind para poder ajustar sus utilidades.
+ * Los colores salen de theme.css (claro y oscuro automáticos, o forzados con data-theme).
+ */
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  background-color: rgb(var(--c-gray-50));
+  color: rgb(var(--c-gray-900));
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior-y: none;
+}
+
+/* Superficies: lo "blanco" de la app pasa a la superficie del tema (blanco en claro, gris oscuro en oscuro). */
+.bg-white {
+  background-color: rgb(var(--surface) / var(--tw-bg-opacity, 1));
+}
+.bg-white\/50 {
+  background-color: rgb(var(--surface) / 0.5);
+}
+
+/* Elementos tocables: sin zoom por doble toque ni selección accidental. */
+button,
+[role='button'],
+a,
+label,
+select,
+summary {
+  touch-action: manipulation;
+}
+button,
+[role='button'] {
+  -webkit-user-select: none;
+  user-select: none;
+}
+button:not(:disabled):active,
+[role='button']:active {
+  transition: transform 0.12s ease, opacity 0.12s ease;
+}
+
+/* iOS hace zoom al enfocar un campo con letra menor a 16 px. */
+input.text-sm,
+input.text-xs,
+select.text-sm,
+select.text-xs,
+textarea.text-sm,
+textarea.text-xs {
+  font-size: 16px;
+}
+
+/* Barra superior y barra inferior translúcidas (efecto vidrio de iOS). */
+.app-bar {
+  background-color: rgb(var(--bar) / var(--bar-alpha));
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
+  backdrop-filter: saturate(180%) blur(20px);
+  border-bottom: 0.5px solid rgb(var(--hairline) / var(--hairline-alpha));
+}
+.tab-bar {
+  background-color: rgb(var(--bar) / var(--bar-alpha));
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
+  backdrop-filter: saturate(180%) blur(20px);
+  border-top: 0.5px solid rgb(var(--hairline) / var(--hairline-alpha));
+}
+
+/* Zonas seguras (notch y barra inferior) cuando la app está instalada. */
+.safe-top {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+.safe-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
+}
+
+/* Logo con letras claras para el modo oscuro. */
+.logo-dark {
+  display: none;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) .logo-light {
+    display: none;
+  }
+  :root:not([data-theme='light']) .logo-dark {
+    display: block;
+  }
+}
+:root[data-theme='dark'] .logo-light {
+  display: none;
+}
+:root[data-theme='dark'] .logo-dark {
+  display: block;
+}

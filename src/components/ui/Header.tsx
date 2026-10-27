@@ -16,8 +16,8 @@ export function Header({
   action
 }: HeaderProps) {
   const navigate = useNavigate();
-  return <header className="sticky top-0 z-10 bg-white border-b border-gray-200 px-4 py-4">
-      <div className="flex items-center justify-between max-w-2xl mx-auto">
+  return <header className="sticky top-0 z-10 app-bar safe-top">
+      <div className="flex items-center justify-between max-w-2xl mx-auto px-4 py-4">
         <div className="flex items-center gap-3">
           {showBack && <button onClick={() => navigate(-1)} className="p-2 -ml-2 active:bg-gray-100 rounded-lg transition-colors" aria-label="Volver">
               <ArrowLeftIcon className="w-6 h-6" />
