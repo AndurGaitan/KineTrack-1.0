@@ -550,9 +550,7 @@ export type KtmType =
   | 'resistida'
   | 'sedestacion'
   | 'bipedestacion'
-  | 'marcha'
-  | 'cicloergometro'
-  | 'electroestimulacion';
+  | 'marcha';
 
 export type KtrTechnique =
   | 'higiene-bronquial'

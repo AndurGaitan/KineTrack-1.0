@@ -30,12 +30,10 @@ export const ktmTypeLabels: Record<KtmType, string> = {
   pasiva: 'Movilización pasiva',
   'activo-asistida': 'Activa asistida',
   activa: 'Activa libre',
-  resistida: 'Con resistencia',
+  resistida: 'Activa con resistencia',
   sedestacion: 'Sedestación',
   bipedestacion: 'Bipedestación',
   marcha: 'Marcha',
-  cicloergometro: 'Cicloergómetro',
-  electroestimulacion: 'Electroestimulación',
 };
 
 export const ktmTypeOptions: { value: KtmType; label: string }[] = (Object.entries(ktmTypeLabels) as [KtmType, string][]).map(
