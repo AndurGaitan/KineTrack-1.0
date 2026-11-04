@@ -1,4 +1,4 @@
-// Genera src/theme.css: variables de color (claro y oscuro) para toda la paleta de Tailwind que usa la app.
+// Genera src/theme.css: variables de color (tema claro) para toda la paleta de Tailwind que usa la app.
 // Uso: node scripts/gen-theme.mjs
 // El modo oscuro refleja cada escala (50↔900, 100↔800...) para que los fondos tintados y los textos de
 // cada tono sigan siendo legibles sin reescribir las pantallas; gris, blanco y azul de marca son a medida.
@@ -77,30 +77,6 @@ ${slateAlias(allLight)}
   --bar-alpha: 0.82;
   --accent: 30 115 200;
   color-scheme: light;
-}
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-${lines(allDark).replace(/^/gm, '  ')}
-${slateAlias(allDark).replace(/^/gm, '  ')}
-    --surface: ${surfaceDark};
-    --hairline: 84 84 88;
-    --hairline-alpha: 0.6;
-    --bar: 28 28 30;
-    --bar-alpha: 0.8;
-    --accent: 74 155 232;
-    color-scheme: dark;
-  }
-}
-:root[data-theme="dark"] {
-${lines(allDark)}
-${slateAlias(allDark)}
-  --surface: ${surfaceDark};
-  --hairline: 84 84 88;
-  --hairline-alpha: 0.6;
-  --bar: 28 28 30;
-  --bar-alpha: 0.8;
-  --accent: 74 155 232;
-  color-scheme: dark;
 }
 `;
 writeFileSync(new URL('../src/theme.css', import.meta.url), css);

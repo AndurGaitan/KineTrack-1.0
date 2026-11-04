@@ -45,8 +45,7 @@ export function LoginPage() {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-blue-100 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <img src="/logo2_kinetrack.png" alt="KineTrack Logo" className="logo-light w-22 h-22 mx-auto mb-1 object-contain" />
-          <img src="/logo2_kinetrack_dark.png" alt="" aria-hidden="true" className="logo-dark w-22 h-22 mx-auto mb-1 object-contain" />
+          <img src="/logo2_kinetrack.png" alt="KineTrack Logo" className="w-22 h-22 mx-auto mb-1 object-contain" />
           <p className="text-gray-600">Seguimiento clínico inteligente para kinesiología en UCI</p>
         </div>
 

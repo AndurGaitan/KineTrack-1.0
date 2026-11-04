@@ -1,7 +1,7 @@
 /*
  * Base visual de KineTrack (pautas de iOS sobre la identidad de la marca).
  * Se carga después de Tailwind para poder ajustar sus utilidades.
- * Los colores salen de theme.css (claro y oscuro automáticos, o forzados con data-theme).
+ * Los colores salen de theme.css (tema claro).
  */
 html {
   -webkit-text-size-adjust: 100%;
@@ -82,23 +82,4 @@ textarea.text-xs {
     transition-duration: 0.01ms !important;
     animation-duration: 0.01ms !important;
   }
-}
-
-/* Logo con letras claras para el modo oscuro. */
-.logo-dark {
-  display: none;
-}
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme='light']) .logo-light {
-    display: none;
-  }
-  :root:not([data-theme='light']) .logo-dark {
-    display: block;
-  }
-}
-:root[data-theme='dark'] .logo-light {
-  display: none;
-}
-:root[data-theme='dark'] .logo-dark {
-  display: block;
 }
