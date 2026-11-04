@@ -10,7 +10,7 @@
 import { MrcAssessment, NIVRecord, NIVSession, HFNCRecord, OxygenRecord, Patient, Prestacion, PveDecision, SupportEpisode, VMIRecord } from '../../types';
 import { earlyMobilizationStatus } from '../../utils/earlyMobilization';
 import { computeNIVUsageSummary } from '../../utils/nivCalculations';
-import { oxygenDeviceLabels, ktrTechniqueLabels } from '../../utils/prestacionLabels';
+import { oxygenDeviceLabels, ktrTechniqueLabels, ktmTypeLabels } from '../../utils/prestacionLabels';
 import { formatSVHours, svInterruptionReasonLabels, svModalityShortLabels } from '../../utils/spontaneousVentilation';
 import { formatRass, weaningStatuses } from '../../utils/vmiEducation';
 import { cannulaFitOptions } from '../../utils/hfncEducation';
@@ -161,7 +161,9 @@ function prestacionesLine(prestaciones: Prestacion[], mrc: MrcAssessment | undef
   const ktm = by('kinesioterapia-motora');
   if (ktm.length > 0) {
     const levels = [...new Set(ktm.map((p) => p.mobilizationLevel).filter((l): l is NonNullable<typeof l> => l != null))].sort();
-    items.push(`KTM${times(ktm.length)}${levels.length > 0 ? ` (nivel ${levels.join('-')})` : ''}`);
+    const types = [...new Set(ktm.flatMap((p) => p.ktmTypes ?? []))].map((t) => ktmTypeLabels[t].toLowerCase());
+    const detail = [...types, levels.length > 0 ? `nivel ${levels.join('-')}` : undefined].filter(Boolean).join(', ');
+    items.push(`KTM${times(ktm.length)}${detail ? ` (${detail})` : ''}`);
   }
   const evals = by('evaluacion');
   if (evals.length > 0) items.push(`Evaluación${times(evals.length)}`);

@@ -6,9 +6,10 @@ import { Button } from '../components/ui/Button';
 import { Select, Input } from '../components/ui/Input';
 import { useRecordTimestamp } from '../hooks/useRecordTimestamp';
 import { RecordDateField } from '../components/RecordDateField';
-import { MobilizationLevel, OxygenDeviceType, PrestacionType } from '../types';
+import { KtmType, MobilizationLevel, OxygenDeviceType, PrestacionType } from '../types';
 import { mobilizationLevels } from '../utils/vmiEducation';
-import { oxygenDeviceOptions } from '../utils/prestacionLabels';
+import { ktmTypeOptions, oxygenDeviceOptions } from '../utils/prestacionLabels';
+import { MultiChoiceChips } from '../components/MultiChoiceChips';
 import { KtrDetail, KtrDetailFields, emptyKtrDetail, ktrDetailPayload } from '../components/KtrDetailFields';
 
 const typeOptions: { value: PrestacionType; label: string }[] = [
@@ -47,6 +48,7 @@ export function PrestacionFormPage() {
   const [mobilizationLevel, setMobilizationLevel] = useState('');
   const [ktrDetail, setKtrDetail] = useState<KtrDetail>(emptyKtrDetail);
   const [startsMobilization, setStartsMobilization] = useState(false);
+  const [ktmTypes, setKtmTypes] = useState<KtmType[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -88,6 +90,7 @@ export function PrestacionFormPage() {
         mobilizationLevel:
           showMobilization && mobilizationLevel !== '' ? (Number(mobilizationLevel) as MobilizationLevel) : undefined,
         ...(type === 'kinesioterapia-respiratoria' ? ktrDetailPayload(ktrDetail) : {}),
+        ...(type === 'kinesioterapia-motora' && ktmTypes.length > 0 ? { ktmTypes } : {}),
       });
       if (canStartMobilization && startsMobilization) await startMobilization(patient.id, recordedAt.timestamp);
       navigate(`/patient/${patient.id}`);
@@ -144,6 +147,12 @@ export function PrestacionFormPage() {
           {type === 'kinesioterapia-respiratoria' && (
             <div className="bg-white border border-gray-200 rounded-xl p-4">
               <KtrDetailFields value={ktrDetail} onChange={setKtrDetail} />
+            </div>
+          )}
+
+          {type === 'kinesioterapia-motora' && (
+            <div className="bg-white border border-gray-200 rounded-xl p-4">
+              <MultiChoiceChips<KtmType> label="Tipo de kinesioterapia motora (opcional)" options={ktmTypeOptions} value={ktmTypes} onChange={setKtmTypes} />
             </div>
           )}
 

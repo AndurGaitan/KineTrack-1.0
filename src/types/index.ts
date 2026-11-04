@@ -539,7 +539,20 @@ export interface Prestacion {
   secretionAmount?: TrachSecretionAmount;
   secretionCharacter?: TrachSecretionCharacter;
   techniques?: KtrTechnique[];
+  // Solo para kinesioterapia motora (KTM): tipo de kinesioterapia realizada.
+  ktmTypes?: KtmType[];
 }
+
+export type KtmType =
+  | 'pasiva'
+  | 'activo-asistida'
+  | 'activa'
+  | 'resistida'
+  | 'sedestacion'
+  | 'bipedestacion'
+  | 'marcha'
+  | 'cicloergometro'
+  | 'electroestimulacion';
 
 export type KtrTechnique =
   | 'higiene-bronquial'

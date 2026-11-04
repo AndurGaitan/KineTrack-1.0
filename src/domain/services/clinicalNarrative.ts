@@ -27,7 +27,7 @@ import {
 } from '../../types';
 import { calculateEpisodeDuration } from './episodeService';
 import { cannulaFitOptions } from '../../utils/hfncEducation';
-import { ktrTechniqueLabels, oxygenDeviceLabels } from '../../utils/prestacionLabels';
+import { ktmTypeLabels, ktrTechniqueLabels, oxygenDeviceLabels } from '../../utils/prestacionLabels';
 import { formatSVHours, svInterruptionReasonLabels, svModalityShortLabels } from '../../utils/spontaneousVentilation';
 import { interfaceTypes, nivModes, skinIntegrityOptions } from '../../utils/nivEducation';
 import { computeNIVUsageSummary } from '../../utils/nivCalculations';
@@ -425,6 +425,8 @@ function describePrestacionGroup(type: PrestacionType, list: Prestacion[]): stri
   if (list.length > 1) details.push(`${list.length} sesiones`);
 
   if (type === 'kinesioterapia-motora') {
+    const ktmTypes = [...new Set(list.flatMap((p) => p.ktmTypes ?? []))];
+    if (ktmTypes.length > 0) details.push(joinEs(ktmTypes.map((t) => ktmTypeLabels[t].toLowerCase())));
     const levels = [...new Set(list.map((p) => p.mobilizationLevel).filter((l): l is NonNullable<typeof l> => l != null))].sort();
     if (levels.length === 1) {
       const description = mobilizationLevels.find((m) => m.value === levels[0])?.description;

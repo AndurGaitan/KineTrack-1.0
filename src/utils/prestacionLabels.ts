@@ -1,4 +1,4 @@
-import type { KtrTechnique, OxygenDeviceType } from '../types';
+import type { KtmType, KtrTechnique, OxygenDeviceType } from '../types';
 
 export const oxygenDeviceLabels: Record<OxygenDeviceType, string> = {
   'canula-nasal-simple': 'Cánula nasal simple',
@@ -24,3 +24,20 @@ export const ktrTechniqueLabels: Record<KtrTechnique, string> = {
 export const ktrTechniqueOptions: { value: KtrTechnique; label: string }[] = (
   Object.entries(ktrTechniqueLabels) as [KtrTechnique, string][]
 ).map(([value, label]) => ({ value, label }));
+
+/** Tipos de kinesioterapia motora que se pueden marcar en una sesión de KTM. */
+export const ktmTypeLabels: Record<KtmType, string> = {
+  pasiva: 'Movilización pasiva',
+  'activo-asistida': 'Activa asistida',
+  activa: 'Activa libre',
+  resistida: 'Con resistencia',
+  sedestacion: 'Sedestación',
+  bipedestacion: 'Bipedestación',
+  marcha: 'Marcha',
+  cicloergometro: 'Cicloergómetro',
+  electroestimulacion: 'Electroestimulación',
+};
+
+export const ktmTypeOptions: { value: KtmType; label: string }[] = (Object.entries(ktmTypeLabels) as [KtmType, string][]).map(
+  ([value, label]) => ({ value, label })
+);

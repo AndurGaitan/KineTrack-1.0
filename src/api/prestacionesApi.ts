@@ -1,5 +1,6 @@
 import { apiFetch } from './client';
 import type {
+  KtmType,
   KtrTechnique,
   MobilizationLevel,
   OxygenDeviceType,
@@ -22,6 +23,7 @@ export type CreatePrestacionInput = {
   secretionAmount?: TrachSecretionAmount;
   secretionCharacter?: TrachSecretionCharacter;
   techniques?: KtrTechnique[];
+  ktmTypes?: KtmType[];
 };
 
 export function createPrestacion(input: CreatePrestacionInput) {

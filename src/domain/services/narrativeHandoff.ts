@@ -10,7 +10,7 @@
  */
 import { AirwayEvent, HFNCRecord, MobilizationContraindication, MobilizationStart, MrcAssessment, NIVRecord, NIVSession, OxygenRecord, Patient, Prestacion, PveDecision, SupportEpisode, VMIRecord } from '../../types';
 import { computeNIVUsageSummary } from '../../utils/nivCalculations';
-import { oxygenDeviceLabels, ktrTechniqueLabels } from '../../utils/prestacionLabels';
+import { oxygenDeviceLabels, ktrTechniqueLabels, ktmTypeLabels } from '../../utils/prestacionLabels';
 import { cannulaFitOptions } from '../../utils/hfncEducation';
 import { formatRass, mobilizationLevels, rassLevels } from '../../utils/vmiEducation';
 import { pveReasonLabel } from '../../components/PveDecisionForm';
@@ -289,7 +289,10 @@ function prestacionesSentences(input: NarrativeHandoffInput): string[] {
   const ktm = by('kinesioterapia-motora');
   if (ktm.length > 0) {
     const levels = [...new Set(ktm.map((p) => p.mobilizationLevel).filter((l): l is NonNullable<typeof l> => l != null))].sort();
-    items.push(`kinesioterapia motora${sessions(ktm.length)}${levels.length > 0 ? ` de nivel ${joinEs(levels.map(String))}` : ''}`);
+    const types = [...new Set(ktm.flatMap((p) => p.ktmTypes ?? []))].map((t) => ktmTypeLabels[t].toLowerCase());
+    items.push(
+      `kinesioterapia motora${sessions(ktm.length)}${types.length > 0 ? ` con ${joinEs(types)}` : ''}${levels.length > 0 ? `, de nivel ${joinEs(levels.map(String))}` : ''}`
+    );
   }
   const evals = by('evaluacion');
   if (evals.length > 0) items.push(`evaluación clínica${sessions(evals.length)}`);

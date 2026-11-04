@@ -79,10 +79,10 @@ export function PatientCarePanel({ patient, onChangeSupport }: { patient: Patien
     <div className="space-y-4">
       <Card>
         <div className="flex items-center justify-between mb-3">
-          <h2 className="text-lg font-bold text-gray-900">Soporte respiratorio</h2>
+          <h2 className="text-lg font-bold text-gray-900">Soporte ventilatorio</h2>
           {episode && <span className="text-xs text-gray-500">hace {formatSpan(now.getTime() - new Date(episode.startAt).getTime())}</span>}
         </div>
-        <div className="grid grid-cols-5 gap-2" role="radiogroup" aria-label="Soporte respiratorio">
+        <div className="grid grid-cols-5 gap-2" role="radiogroup" aria-label="Soporte ventilatorio">
           {chips.slice(0, 5).map(chip => (
             <SupportChip key={chip.value} chip={chip} active={current === chip.value} onPick={() => chip.value !== current && onChangeSupport(chip.value)} />
           ))}
