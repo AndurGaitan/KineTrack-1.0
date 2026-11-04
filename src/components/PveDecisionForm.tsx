@@ -1,4 +1,4 @@
-import type { PveDecisionKind, PveSbtType } from '../types';
+import type { PveDecisionKind, PveSbtType, WeaningStatus } from '../types';
 import type { CreatePveDecisionInput } from '../api/pveDecisionsApi';
 
 /**
@@ -72,10 +72,17 @@ export function pveDraftToInput(d: PveDraft, patientId: string, timestamp?: stri
 }
 
 const options: { value: PveDecisionKind; label: string; hint: string; active: string }[] = [
-  { value: 'realizada', label: 'Realizada', hint: 'Se hizo la prueba', active: 'border-green-500 bg-green-50' },
-  { value: 'contraindicada', label: 'Contraindicada', hint: 'No es elegible hoy', active: 'border-amber-500 bg-amber-50' },
-  { value: 'no-realizada', label: 'No realizada', hint: 'Era elegible, no se hizo', active: 'border-gray-500 bg-gray-100' },
+  { value: 'contraindicada', label: 'No candidato', hint: 'Contraindicada hoy', active: 'border-amber-500 bg-amber-50' },
+  { value: 'no-realizada', label: 'Candidato, sin PVE', hint: 'Era elegible, no se hizo', active: 'border-gray-500 bg-gray-100' },
+  { value: 'realizada', label: 'PVE realizada', hint: 'Se hizo la prueba', active: 'border-green-500 bg-green-50' },
 ];
+
+/** Estado de destete que le corresponde a cada decisión (así no se pregunta dos veces). */
+export const weaningStatusFromPve: Record<PveDecisionKind, WeaningStatus> = {
+  contraindicada: 'not-candidate',
+  'no-realizada': 'candidate',
+  realizada: 'sbt-trial',
+};
 
 const fieldClass = 'w-full min-h-[48px] px-3 text-base border-2 border-gray-300 rounded-xl focus:border-blue-600 focus:outline-none bg-white';
 

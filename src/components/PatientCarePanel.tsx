@@ -8,7 +8,6 @@ import { NIVEntryForm } from '../pages/NIVEntryPage';
 import { HFNCEntryForm } from '../pages/HFNCEntryPage';
 import { OxygenForm } from './OxygenForm';
 import { MobilizationCard } from './MobilizationCard';
-import { PveTodayCard } from './PveTodayCard';
 import { NIVSessionsCard } from './NIVSessionsCard';
 import { AirwayCard } from './AirwayCard';
 import { SpontaneousVentilationCard } from './SpontaneousVentilationCard';
@@ -108,7 +107,6 @@ export function PatientCarePanel({ patient, onChangeSupport }: { patient: Patien
           {current === 'imv' && (
             <VMIEntryForm key={formKey} patient={patient} onDone={done}>
               <MobilizationCard patientId={patient.id} now={now} />
-              <PveTodayCard patientId={patient.id} now={now} />
             </VMIEntryForm>
           )}
           {current === 'niv' && <NIVEntryForm key={formKey} patient={patient} onDone={done} />}

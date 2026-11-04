@@ -9,7 +9,6 @@ import { ActivityCard } from '../components/ActivityCard';
 import { AirwayCard } from '../components/AirwayCard';
 import { SpontaneousVentilationCard } from '../components/SpontaneousVentilationCard';
 import { MobilizationCard } from '../components/MobilizationCard';
-import { PveTodayCard } from '../components/PveTodayCard';
 import { ActivityIcon, TrendingUpIcon } from 'lucide-react';
 export function VMIHubPage() {
   const {
@@ -89,8 +88,6 @@ export function VMIHubPage() {
         <ActivityCard patientId={patient.id} prestaciones={prestaciones} now={now} />
 
         <MobilizationCard patientId={patient.id} now={now} />
-
-        <PveTodayCard patientId={patient.id} now={now} />
 
         <Button onClick={() => navigate(`/patient/${patient.id}/vmi/new`)} fullWidth className="min-h-[64px] text-xl">
           + Nueva Monitorización

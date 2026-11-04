@@ -24,7 +24,8 @@ import { RassSelector } from '../components/RassSelector';
 import { RecordDateField } from '../components/RecordDateField';
 import { PrefillNotice } from '../components/PrefillNotice';
 import { ChoiceChips } from '../components/ChoiceChips';
-import { PveDecisionForm, PveDraft, emptyPveDraft, pveDraftError, pveDraftToInput } from '../components/PveDecisionForm';
+import { PveDraft, emptyPveDraft, pveDraftError, pveDraftToInput, weaningStatusFromPve } from '../components/PveDecisionForm';
+import { WeaningBlock, pveDecisionsOfDay } from '../components/WeaningBlock';
 import { useRecordTimestamp } from '../hooks/useRecordTimestamp';
 import { ZapIcon, EditIcon } from 'lucide-react';
 import { EducationalTooltip } from '../components/ui/Tooltip';
@@ -36,12 +37,6 @@ const asynchronyTypes = [
   { value: 'premature-cycling', label: 'Ciclado prematuro', description: 'Termina antes de tiempo' },
   { value: 'delayed-cycling', label: 'Ciclado tardío', description: 'Termina después de tiempo' },
   { value: 'auto-peep', label: 'Auto-PEEP', description: 'Hiperinsuflación dinámica' }
-];
-
-const sbtTypeOptions = [
-  { value: 'psv', label: 'Presión de Soporte (PSV)' },
-  { value: 'cpap', label: 'CPAP' },
-  { value: 't-piece', label: 'Tubo en T' }
 ];
 
 // Helpers: keep numbers truly empty (avoid Number('') => 0)
@@ -61,7 +56,7 @@ const clamp = (n: number, min: number, max: number) => Math.min(max, Math.max(mi
  */
 export function VMIEntryForm({ patient, onDone, onCancel, children }: { patient: Patient; onDone: () => void; onCancel?: () => void; children?: ReactNode }) {
   const navigate = useNavigate();
-  const { addVMIRecord, addPveDecision, getActiveEpisode, getPatientVMIRecords, features } = useApp();
+  const { addVMIRecord, addPveDecision, deletePveDecision, getPatientPveDecisions, getActiveEpisode, getPatientVMIRecords, features } = useApp();
   const recordedAt = useRecordTimestamp();
   const [saving, setSaving] = useState(false);
 
@@ -105,10 +100,6 @@ export function VMIEntryForm({ patient, onDone, onCancel, children }: { patient:
 
     // D) Weaning
     weaningStatus: (last?.weaningStatus ?? 'not-candidate') as WeaningStatus,
-    sbtPerformed: false,
-    sbtType: '' as '' | 'psv' | 'cpap' | 't-piece',
-    sbtResult: '' as '' | 'success' | 'failure',
-    sbtFailureReason: '',
 
     // E) Mobilization
     mobilizationLevel: 0 as MobilizationLevel,
@@ -118,9 +109,11 @@ export function VMIEntryForm({ patient, onDone, onCancel, children }: { patient:
     rass: undefined as number | undefined
   }));
 
-  // Etapa 1: la PVE se registra como decisión (realizada / contraindicada / no realizada).
+  // Destete y PVE: una sola decisión (no candidato / candidato sin PVE / PVE realizada).
+  // El estado de destete del registro se deduce de ella.
   const [pveDraft, setPveDraft] = useState<PveDraft>(emptyPveDraft);
-  const pveError = features.simplifiedWeaning ? pveDraftError(pveDraft) : null;
+  const pveError = pveDraftError(pveDraft);
+  const todaysPve = pveDecisionsOfDay(getPatientPveDecisions(patient.id), recordedAt.timestamp ? new Date(recordedAt.timestamp) : new Date());
 
   const [calculations, setCalculations] = useState(() => calculateVMI(formData));
   const [alerts, setAlerts] = useState<string[]>([]);
@@ -246,12 +239,12 @@ export function VMIEntryForm({ patient, onDone, onCancel, children }: { patient:
       hco3: features.gasometry ? formData.hco3 ?? undefined : undefined,
       baseExcess: features.gasometry ? formData.baseExcess ?? undefined : undefined,
 
-      weaningStatus: formData.weaningStatus,
-      // Etapa 1: la PVE va como decisión aparte (no se duplica en la monitorización).
-      sbtPerformed: !features.simplifiedWeaning ? formData.sbtPerformed || undefined : undefined,
-      sbtType: !features.simplifiedWeaning ? formData.sbtType || undefined : undefined,
-      sbtResult: !features.simplifiedWeaning ? formData.sbtResult || undefined : undefined,
-      sbtFailureReason: !features.simplifiedWeaning ? formData.sbtFailureReason || undefined : undefined,
+      // Se deduce de la decisión (la de ahora, o la ya cargada hoy); sin decisión, queda como estaba.
+      weaningStatus: pveDraft.decision
+        ? weaningStatusFromPve[pveDraft.decision]
+        : todaysPve[0]
+          ? weaningStatusFromPve[todaysPve[0].decision]
+          : formData.weaningStatus,
 
       // Etapa 1: sin nivel de movilización (el inicio de la movilización se registra aparte).
       mobilizationLevel: features.mobilizationLevel ? formData.mobilizationLevel : undefined,
@@ -272,9 +265,10 @@ export function VMIEntryForm({ patient, onDone, onCancel, children }: { patient:
       alerts
     });
 
-    if (features.simplifiedWeaning) {
-      const input = pveDraftToInput(pveDraft, patient.id, recordedAt.timestamp);
-      if (input) await addPveDecision(input);
+    const pveInput = pveDraftToInput(pveDraft, patient.id, recordedAt.timestamp);
+    if (pveInput && (await addPveDecision(pveInput))) {
+      // Una decisión por día: la nueva reemplaza a la que ya estaba cargada.
+      for (const old of todaysPve) await deletePveDecision(old.id);
     }
 
     setSaving(false);
@@ -407,82 +401,16 @@ export function VMIEntryForm({ patient, onDone, onCancel, children }: { patient:
             </CollapsibleSection>
           )}
 
-          {/* D) Weaning */}
-          <CollapsibleSection title="Destete de la Ventilación" subtitle="Evaluación y pruebas de destete">
-            <div className="space-y-4">
-              <VMISelect
-                label="Estado de Destete"
-                options={[
-                  { value: 'not-candidate', label: 'No candidato' },
-                  { value: 'candidate', label: 'Candidato a destete' },
-                  { value: 'sbt-trial', label: 'En prueba de respiración espontánea' },
-                  { value: 'extubated', label: 'Extubado' }
-                ]}
-                value={formData.weaningStatus}
-                onChange={e => setFormData({ ...formData, weaningStatus: e.target.value as WeaningStatus })}
-                required
-              />
-
-              {features.simplifiedWeaning && formData.weaningStatus !== 'extubated' && (
-                <div>
-                  <div className="text-sm font-medium text-gray-700 mb-2">Decisión sobre la PVE de hoy (opcional)</div>
-                  <PveDecisionForm value={pveDraft} onChange={setPveDraft} />
-                </div>
-              )}
-
-              {!features.simplifiedWeaning && (formData.weaningStatus === 'candidate' || formData.weaningStatus === 'sbt-trial') && (
-                <>
-                  <div>
-                    <label className="flex items-center gap-3 p-4 border-2 border-gray-300 rounded-xl cursor-pointer hover:bg-gray-50">
-                      <input
-                        type="checkbox"
-                        checked={formData.sbtPerformed}
-                        onChange={e => setFormData({ ...formData, sbtPerformed: e.target.checked })}
-                        className="w-6 h-6"
-                      />
-                      <span className="text-lg font-medium">SBT realizada</span>
-                    </label>
-                  </div>
-
-                  {formData.sbtPerformed && (
-                    <>
-                      {/* Bug fix: "Tipo de SBT" era texto libre, pero el backend
-                          solo acepta 'psv' | 'cpap' | 't-piece' — cualquier otro
-                          texto (como sugería el placeholder anterior) hacía
-                          fallar el guardado completo del registro. */}
-                      <VMISelect
-                        label="Tipo de SBT"
-                        options={sbtTypeOptions}
-                        value={formData.sbtType}
-                        onChange={e => setFormData({ ...formData, sbtType: e.target.value as any })}
-                      />
-
-                      <VMISelect
-                        label="Resultado de SBT"
-                        options={[
-                          { value: 'success', label: 'Exitosa' },
-                          { value: 'failure', label: 'Fallida' }
-                        ]}
-                        value={formData.sbtResult}
-                        onChange={e => setFormData({ ...formData, sbtResult: e.target.value as any })}
-                      />
-
-                      {formData.sbtResult === 'failure' && (
-                        <VMIField
-                          label="Motivo de falla"
-                          placeholder="Ej: Taquipnea, desaturación"
-                          value={formData.sbtFailureReason}
-                          onChange={e => setFormData({ ...formData, sbtFailureReason: e.target.value })}
-                        />
-                      )}
-                    </>
-                  )}
-                </>
-              )}
+          {/* D) Destete y PVE, en un solo lugar */}
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-200 px-6 py-4 space-y-3">
+            <div>
+              <h3 className="text-lg font-bold text-gray-900">Destete de hoy</h3>
+              <p className="text-sm text-gray-600 mt-1">Opcional: si no cambia nada, queda el estado anterior.</p>
             </div>
-          </CollapsibleSection>
+            <WeaningBlock value={pveDraft} onChange={setPveDraft} existing={todaysPve} />
+          </div>
 
-          {/* Movilización precoz y PVE de hoy, a mano debajo de los parámetros (los pasa la ficha) */}
+          {/* Movilización precoz, a mano debajo de los parámetros (la pasa la ficha) */}
           {children && (
             <div className="space-y-4" onKeyDown={e => { if (e.key === 'Enter' && (e.target as HTMLElement).tagName === 'INPUT') e.preventDefault(); }}>
               {children}
