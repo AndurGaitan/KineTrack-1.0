@@ -96,7 +96,7 @@ export function MobilizationCard({ patientId, now }: { patientId: string; now: D
 
   return (
     <Card>
-      <div className="flex items-center justify-between mb-3">
+      <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 mb-3">
         <h2 className="text-lg font-bold text-gray-900">Movilización precoz</h2>
         <span className="text-xs text-gray-500">VMI hace {formatSpan(hoursOfVmi * 3600000)} · ventana de {MOBILIZATION_WINDOW_HOURS} h</span>
       </div>

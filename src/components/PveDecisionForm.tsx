@@ -101,7 +101,7 @@ export function PveDecisionForm({
 
   return (
     <div className="space-y-3">
-      <div className="grid grid-cols-3 gap-2" role="radiogroup" aria-label="Decisión sobre la PVE">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2" role="radiogroup" aria-label="Decisión sobre la PVE">
         {options.map((opt) => (
           <button
             key={opt.value}
