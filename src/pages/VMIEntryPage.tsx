@@ -402,11 +402,8 @@ export function VMIEntryForm({ patient, onDone, onCancel, children }: { patient:
           )}
 
           {/* D) Destete y PVE, en un solo lugar */}
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-200 px-6 py-4 space-y-3">
-            <div>
-              <h3 className="text-lg font-bold text-gray-900">Destete de hoy</h3>
-              <p className="text-sm text-gray-600 mt-1">Opcional: si no cambia nada, queda el estado anterior.</p>
-            </div>
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-200 px-4 py-4 sm:px-6 space-y-3">
+            <h3 className="text-lg font-bold text-gray-900">Destete</h3>
             <WeaningBlock value={pveDraft} onChange={setPveDraft} existing={todaysPve} />
           </div>
 

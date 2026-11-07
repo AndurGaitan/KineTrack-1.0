@@ -22,10 +22,10 @@ export const pveNotDoneReasons: { value: string; label: string }[] = [
   { value: 'otra', label: 'Otra' },
 ];
 
-export const pveSbtTypes: { value: PveSbtType; label: string }[] = [
-  { value: 'psv', label: 'Presión de soporte (PSV)' },
-  { value: 'cpap', label: 'CPAP' },
-  { value: 't-piece', label: 'Tubo en T' },
+export const pveSbtTypes: { value: PveSbtType; label: string; short: string }[] = [
+  { value: 'psv', label: 'Presión de soporte (PSV)', short: 'PSV' },
+  { value: 'cpap', label: 'CPAP', short: 'CPAP' },
+  { value: 't-piece', label: 'Tubo en T', short: 'Tubo en T' },
 ];
 
 export const pveDecisionLabels: Record<PveDecisionKind, string> = {
@@ -115,7 +115,7 @@ export function PveDecisionForm({
                   : { ...emptyPveDraft, decision: opt.value }
               )
             }
-            className={`p-3 border-2 rounded-xl text-left transition-colors min-h-[64px] ${
+            className={`px-3 py-2.5 border-2 rounded-xl text-left transition-colors min-h-[56px] sm:min-h-[64px] ${
               value.decision === opt.value ? opt.active : 'border-gray-200 hover:bg-gray-50'
             }`}
           >
@@ -128,19 +128,23 @@ export function PveDecisionForm({
       {value.decision === 'realizada' && (
         <div className="space-y-3">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Modalidad</label>
-            <select
-              className={fieldClass}
-              value={value.sbtType}
-              onChange={(e) => onChange({ ...value, sbtType: e.target.value as PveDraft['sbtType'] })}
-            >
-              <option value="">Seleccionar...</option>
+            <div className="block text-sm font-medium text-gray-700 mb-1">Modalidad</div>
+            <div className="grid grid-cols-3 gap-2" role="radiogroup" aria-label="Modalidad de la PVE">
               {pveSbtTypes.map((t) => (
-                <option key={t.value} value={t.value}>
-                  {t.label}
-                </option>
+                <button
+                  key={t.value}
+                  type="button"
+                  role="radio"
+                  aria-checked={value.sbtType === t.value}
+                  onClick={() => onChange({ ...value, sbtType: t.value })}
+                  className={`min-h-[48px] px-1 border-2 rounded-xl text-sm font-semibold leading-tight ${
+                    value.sbtType === t.value ? 'border-green-500 bg-green-50 text-gray-900' : 'border-gray-200 text-gray-700 active:bg-gray-50'
+                  }`}
+                >
+                  {t.short}
+                </button>
               ))}
-            </select>
+            </div>
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Resultado</label>
