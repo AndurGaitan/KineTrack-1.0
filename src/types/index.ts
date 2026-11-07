@@ -213,7 +213,9 @@ export interface VMIRecord {
 // NIV (Non-Invasive Ventilation) Types
 export type NIVInterfaceType = 'full-face' | 'oronasal' | 'nasal' | 'helmet' | 'other';
 export type SkinIntegrityStatus = 'no-lesions' | 'mild-erythema' | 'pressure-injury-1-2' | 'severe-injury';
-export type NIVMode = 'cpap' | 'bipap' | 'other';
+export type NIVMode = 'psv' | 'cpap' | 'bipap' | 'other';
+/** Uso de la VNI en las últimas 24 h (reemplaza al registro de sesiones). */
+export type NIVUsage = 'continuous' | 'gt16' | '12-16' | '8-12' | '4-8' | 'lt4';
 export interface NIVRecord {
   id: string;
   patientId: string;
@@ -259,21 +261,11 @@ export interface NIVRecord {
   // Previous IMV
   previousIMVDays?: number;
 
+  // Uso de la VNI en las últimas 24 h (seguimiento del destete de VNI)
+  usage24h?: NIVUsage;
+
   // Alerts
   alerts: string[];
-}
-
-/// A documented window of actual NIV use (start/end) for tracking
-/// intermittent weaning — independent of NIVRecord parameter monitoring.
-/// `endAt` undefined means the session is still ongoing.
-export interface NIVSession {
-  id: string;
-  patientId: string;
-  episodeId?: string;
-  performedByUserId?: string;
-  startAt: string;
-  endAt?: string;
-  notes?: string;
 }
 
 // HFNC (High-Flow Nasal Cannula) Types
@@ -503,7 +495,6 @@ export interface AppState {
   scores: ScoreRecord[];
   vmiRecords: VMIRecord[];
   nivRecords: NIVRecord[];
-  nivSessions: NIVSession[];
   hfncRecords: HFNCRecord[];
   trachRecords: TrachRecord[];
   oxygenRecords: OxygenRecord[];

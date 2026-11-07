@@ -4,7 +4,6 @@ import { useApp } from '../contexts/AppContext';
 import { Header } from '../components/ui/Header';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
-import { NIVSessionsCard } from '../components/NIVSessionsCard';
 import { ActivityCard } from '../components/ActivityCard';
 import { WindIcon, TrendingUpIcon } from 'lucide-react';
 export function NIVHubPage() {
@@ -17,14 +16,12 @@ export function NIVHubPage() {
   const {
     patients,
     getPatientNIVRecords,
-    getActiveEpisode,
     getPatientPrestaciones,
     sectors
   } = useApp();
   const patient = patients.find(p => p.id === patientId);
   const sector = patient ? sectors.find(s => s.id === patient.sectorId) : null;
   const records = patient ? getPatientNIVRecords(patient.id) : [];
-  const activeEpisode = patient ? getActiveEpisode(patient.id) : undefined;
   const prestaciones = patient ? getPatientPrestaciones(patient.id) : [];
   const now = useMemo(() => new Date(), [prestaciones, records.length]);
   if (!patient || patient.supportType !== 'niv') {
@@ -87,8 +84,6 @@ export function NIVHubPage() {
         <Button onClick={() => navigate(`/patient/${patient.id}/niv/new`)} fullWidth className="min-h-[64px] text-xl bg-purple-600">
           + Nueva Monitorización
         </Button>
-
-        <NIVSessionsCard patientId={patient.id} episodeId={activeEpisode?.id} />
 
         <div>
           <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">

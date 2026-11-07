@@ -9,7 +9,7 @@
  * - Easy to validate and transform
  */
 
-import { SupportType, PatientStatus, ClosureReason, VentMode, VentControlVariable, AsynchronyType, AsynchronyFrequency, WeaningStatus, MobilizationLevel, NIVInterfaceType, SkinIntegrityStatus, NIVMode, CannulaFit, RiskLevel } from '../types';
+import { SupportType, PatientStatus, ClosureReason, VentMode, VentControlVariable, AsynchronyType, AsynchronyFrequency, WeaningStatus, MobilizationLevel, NIVInterfaceType, SkinIntegrityStatus, NIVMode, NIVUsage, CannulaFit, RiskLevel } from '../types';
 
 /**
  * Patient - Core entity representing a patient in the ICU
@@ -144,6 +144,7 @@ export interface NIVObservation extends ClinicalObservation {
   baseExcess?: number;
   respiratoryRate: number;
   previousIMVDays?: number;
+  usage24h?: NIVUsage;
   calculated: {
     hacorScore?: number;
     hacorRisk?: RiskLevel;

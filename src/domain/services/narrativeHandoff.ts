@@ -8,12 +8,12 @@
  * período. No incluye pendientes. De la movilización precoz solo informa si se
  * está llevando a cabo o si no cumple criterios.
  */
-import { AirwayEvent, HFNCRecord, MobilizationContraindication, MobilizationStart, MrcAssessment, NIVRecord, NIVSession, OxygenRecord, Patient, Prestacion, PveDecision, SupportEpisode, VMIRecord } from '../../types';
-import { computeNIVUsageSummary } from '../../utils/nivCalculations';
+import { AirwayEvent, HFNCRecord, MobilizationContraindication, MobilizationStart, MrcAssessment, NIVRecord, OxygenRecord, Patient, Prestacion, PveDecision, SupportEpisode, VMIRecord } from '../../types';
 import { oxygenDeviceLabels, ktrTechniqueLabels, ktmTypeLabels } from '../../utils/prestacionLabels';
 import { cannulaFitOptions } from '../../utils/hfncEducation';
 import { formatRass, mobilizationLevels, rassLevels } from '../../utils/vmiEducation';
 import { pveReasonLabel } from '../../components/PveDecisionForm';
+import { nivModeShort, nivUsageText } from '../../utils/nivEducation';
 import {
   LatestSupportRecord,
   SpontaneousVentilationNarrativeInput,
@@ -33,8 +33,8 @@ export interface NarrativeHandoffInput {
   /** Frase que encabeza la oración de prestaciones ("Durante el día", "En las últimas 12 horas"...). */
   periodPhrase: string;
   mrcAssessment?: MrcAssessment;
-  nivSessions?: NIVSession[];
   trach?: TrachNarrativeInput;
+  daysSinceNiv?: number;
   airwayEvents?: AirwayEvent[];
   episodeChanges?: SupportEpisode[];
   spontaneousVentilation?: SpontaneousVentilationNarrativeInput;
@@ -197,12 +197,12 @@ function imvSentences(r: VMIRecord, dur: string | undefined, decisions: PveDecis
   return out;
 }
 
-function nivSentences(r: NIVRecord, dur: string | undefined, sessions: NIVSession[] | undefined): string[] {
+function nivSentences(r: NIVRecord, dur: string | undefined): string[] {
   const out: string[] = [];
-  const mode = r.mode === 'cpap' ? 'CPAP' : r.mode === 'bipap' ? 'BiPAP' : (r.modeOther ?? 'otro modo');
+  const mode = nivModeShort[r.mode] ?? (r.modeOther ?? 'otro modo');
   const iface =
     r.interfaceType === 'other' ? (r.interfaceOther ?? 'otra') : ({ 'full-face': 'máscara facial total', oronasal: 'máscara oronasal', nasal: 'máscara nasal', helmet: 'helmet' } as Record<string, string>)[r.interfaceType];
-  const params = [`presión de soporte de ${r.supportPressure} cmH₂O`, `PEEP ${r.peep}`, `FiO₂ ${r.fio2}%`];
+  const params = r.mode === 'cpap' ? [`CPAP de ${r.peep} cmH₂O`, `FiO₂ ${r.fio2}%`] : [`presión de soporte de ${r.supportPressure} cmH₂O`, `PEEP ${r.peep}`, `FiO₂ ${r.fio2}%`];
   if (r.leak != null) params.push(`fuga de ${r.leak} l/min`);
   params.push(`frecuencia respiratoria de ${r.respiratoryRate}`);
   if (r.spo2 != null) params.push(`SpO₂ de ${r.spo2}%`);
@@ -213,10 +213,7 @@ function nivSentences(r: NIVRecord, dur: string | undefined, sessions: NIVSessio
   const skin = ({ 'no-lesions': 'sin lesiones', 'mild-erythema': 'con eritema leve', 'pressure-injury-1-2': 'con lesión por presión grado I-II', 'severe-injury': 'con lesión grave' } as Record<string, string>)[r.skinIntegrity];
   out.push(`La piel se encuentra ${skin ?? r.skinIntegrity}${r.skinNotes ? ` (${r.skinNotes})` : ''}.`);
   if (r.previousIMVDays) out.push(`Cuenta con ${r.previousIMVDays} ${r.previousIMVDays === 1 ? 'día' : 'días'} previos de ventilación mecánica invasiva.`);
-  if (sessions && sessions.length > 0) {
-    const usage = computeNIVUsageSummary(sessions);
-    out.push(`Utilizó la ventilación no invasiva ${num(usage.hoursUsedLast24h)} horas en las últimas 24 horas${usage.activeSession ? ', con una sesión activa' : ''}.`);
-  }
+  if (r.usage24h) out.push(`Utiliza la ventilación no invasiva ${nivUsageText[r.usage24h]}.`);
   return out;
 }
 
@@ -236,13 +233,13 @@ function oxygenSentences(r: OxygenRecord, dur: string | undefined): string[] {
 }
 
 function supportSentences(input: NarrativeHandoffInput, now: Date): string[] {
-  const { patient, activeEpisode, latestSupportRecord: latest, nivSessions, trach, oxygenRecord, pveDecisions = [] } = input;
+  const { patient, activeEpisode, latestSupportRecord: latest, trach, oxygenRecord, pveDecisions = [] } = input;
   const dur = durationText(activeEpisode?.startAt, now);
   if (patient.supportType === 'traqueostomia') {
-    return trach || latest ? [narrateSupport(latest, patient, nivSessions, trach)] : [`Se encuentra con ${supportPlain.traqueostomia} ${dur ?? ''}.`.replace(' .', '.')];
+    return trach || latest ? [narrateSupport(latest, patient, trach)] : [`Se encuentra con ${supportPlain.traqueostomia} ${dur ?? ''}.`.replace(' .', '.')];
   }
   if (latest?.type === 'imv') return imvSentences(latest.record, dur, pveDecisions);
-  if (latest?.type === 'niv') return nivSentences(latest.record, dur, nivSessions);
+  if (latest?.type === 'niv') return nivSentences(latest.record, dur);
   if (latest?.type === 'hfnc') return hfncSentences(latest.record, dur);
   if (oxygenRecord) return oxygenSentences(oxygenRecord, dur);
   // Sin registro de parámetros en el período: se informa el soporte actual y, en VMI, las decisiones de PVE.
@@ -315,6 +312,7 @@ export function buildNarrativeEvolution(input: NarrativeHandoffInput, now: Date 
   const sentences = [
     ...introSentences(input.patient),
     ...supportSentences(input, now),
+    ...(input.daysSinceNiv != null ? [`Sin ventilación no invasiva desde hace ${input.daysSinceNiv === 0 ? 'menos de un día' : input.daysSinceNiv === 1 ? '1 día' : `${input.daysSinceNiv} días`}.`] : []),
     mobilizationSentence(input),
     eventsSentence(input),
     narrateSpontaneousVentilation(input.spontaneousVentilation, input.periodPhrase),

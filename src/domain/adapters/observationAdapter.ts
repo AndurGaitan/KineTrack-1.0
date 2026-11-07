@@ -142,6 +142,7 @@ export function nivRecordToObservation(record: NIVRecord): NIVObservation {
     baseExcess: record.baseExcess,
     respiratoryRate: record.respiratoryRate,
     previousIMVDays: record.previousIMVDays,
+    usage24h: record.usage24h,
     calculated: {
       hacorScore: record.hacorScore,
       hacorRisk: record.hacorRisk
@@ -182,6 +183,7 @@ export function observationToNIVRecord(obs: NIVObservation): NIVRecord {
     baseExcess: obs.baseExcess,
     respiratoryRate: obs.respiratoryRate,
     previousIMVDays: obs.previousIMVDays,
+    usage24h: obs.usage24h,
     hacorScore: obs.calculated.hacorScore,
     hacorRisk: obs.calculated.hacorRisk,
     alerts: obs.alerts

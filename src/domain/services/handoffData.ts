@@ -14,7 +14,6 @@ import {
   MobilizationStart,
   MrcAssessment,
   NIVRecord,
-  NIVSession,
   OxygenRecord,
   Patient,
   Prestacion,
@@ -33,6 +32,7 @@ import {
   pickLatestSupportRecord,
 } from './clinicalNarrative';
 import { svHoursInRange } from '../../utils/spontaneousVentilation';
+import { daysSinceNivEnded } from '../../utils/nivCalculations';
 
 /** Agrega el plan / pendientes del kinesiólogo al final del texto (al copiar y al guardar). */
 export function appendPlan(text: string, plan: string, options?: { whatsapp?: boolean }): string {
@@ -124,7 +124,8 @@ export interface ActivitySources {
   niv: NIVRecord[];
   hfnc: HFNCRecord[];
   trach: TrachRecord[];
-  nivSessions: NIVSession[];
+  /** Historial de soportes del paciente (para calcular los días sin VNI). */
+  episodes?: SupportEpisode[];
   mrc: MrcAssessment[];
   trachOverview?: TrachOverview | null;
   airwayEvents: AirwayEvent[];
@@ -151,8 +152,9 @@ export interface PatientActivity {
   latestSupportRecord: LatestSupportRecord;
   prestaciones: Prestacion[];
   mrcAssessment?: MrcAssessment;
-  nivSessions?: NIVSession[];
   trach?: TrachNarrativeInput;
+  /** Días sin VNI (solo si dejó la VNI hace poco y ya no está en VNI/VMI). */
+  daysSinceNiv?: number;
   airwayEvents: AirwayEvent[];
   episodeChanges: SupportEpisode[];
   /** Ventilación espontánea (traqueostomía en VMI) dentro del período. */
@@ -212,10 +214,6 @@ export function collectPatientActivity(
     latestSupportRecord = candidates.sort((a, b) => new Date(b.record.timestamp).getTime() - new Date(a.record.timestamp).getTime())[0];
   }
 
-  const hasSessionInPeriod =
-    patient.supportType === 'niv' &&
-    src.nivSessions.some((s) => (inPeriod(s.startAt) && isMine(s.performedByUserId)) || inPeriod(s.endAt));
-
   let trach: TrachNarrativeInput | undefined;
   if (patient.supportType === 'traqueostomia') {
     const overview = src.trachOverview;
@@ -268,7 +266,6 @@ export function collectPatientActivity(
     prestaciones.length > 0 ||
     !!mrcAssessment ||
     !!latestSupportRecord ||
-    hasSessionInPeriod ||
     !!trach ||
     !!oxygenRecord ||
     pveDecisions.length > 0 ||
@@ -282,8 +279,8 @@ export function collectPatientActivity(
     latestSupportRecord,
     prestaciones,
     mrcAssessment,
-    nivSessions: hasSessionInPeriod ? src.nivSessions : undefined,
     trach,
+    daysSinceNiv: daysSinceNivEnded(src.episodes ?? [], patient.supportType),
     airwayEvents,
     episodeChanges,
     spontaneousVentilation,

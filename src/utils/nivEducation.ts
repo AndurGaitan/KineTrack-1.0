@@ -96,12 +96,36 @@ export const skinIntegrityOptions = [{
 }];
 export const lesionLocations = ['Puente nasal', 'Mejillas', 'Frente', 'Mentón', 'Región perioral', 'Orejas (por arnés)'];
 export const nivModes = [{
+  value: 'psv',
+  label: 'PSV',
+  hint: 'PS + PEEP'
+}, {
   value: 'cpap',
-  label: 'CPAP'
+  label: 'CPAP',
+  hint: 'Presión continua'
 }, {
   value: 'bipap',
-  label: 'BiPAP / BiLevel'
+  label: 'BiPAP / BiLevel',
+  hint: 'PS + PEEP'
 }, {
   value: 'other',
-  label: 'Otro modo'
+  label: 'Otro modo',
+  hint: 'Especificar'
 }];
+
+/** Uso de la VNI en las últimas 24 h: un toque, sin reloj de sesiones. */
+export const nivUsageOptions = [
+  { value: 'continuous', label: 'Continua', hint: 'Las 24 h', short: 'de forma continua' },
+  { value: 'gt16', label: 'Más de 16 h', hint: 'Casi todo el día', short: 'más de 16 horas en las últimas 24' },
+  { value: '12-16', label: '12 a 16 h', hint: '', short: 'entre 12 y 16 horas en las últimas 24' },
+  { value: '8-12', label: '8 a 12 h', hint: '', short: 'entre 8 y 12 horas en las últimas 24' },
+  { value: '4-8', label: '4 a 8 h', hint: '', short: 'entre 4 y 8 horas en las últimas 24' },
+  { value: 'lt4', label: 'Menos de 4 h', hint: 'Casi destetado', short: 'menos de 4 horas en las últimas 24' }
+] as const;
+
+/** Etiquetas para los pases: `nivUsageText[valor]` → "entre 8 y 12 horas en las últimas 24". */
+export const nivUsageText: Record<string, string> = Object.fromEntries(nivUsageOptions.map(o => [o.value, o.short]));
+export const nivUsageShort: Record<string, string> = Object.fromEntries(nivUsageOptions.map(o => [o.value, o.value === 'continuous' ? 'continua' : o.label.replace('Más de 16 h', '>16 h').replace('Menos de 4 h', '<4 h').replace(' a ', '–')]));
+
+/** Etiqueta corta del modo para los pases (PSV, CPAP, BiPAP). */
+export const nivModeShort: Record<string, string> = { psv: 'PSV', cpap: 'CPAP', bipap: 'BiPAP' };

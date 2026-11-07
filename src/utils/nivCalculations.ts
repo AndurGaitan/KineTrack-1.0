@@ -1,4 +1,4 @@
-import { NIVRecord, NIVSession, RiskLevel } from '../types';
+import { NIVRecord, RiskLevel } from '../types';
 import { calculateHACORScore } from './scores';
 export interface NIVCalculations {
   hacorScore: number;
@@ -71,46 +71,23 @@ export function generateNIVAlerts(record: Partial<NIVRecord>): string[] {
   return alerts;
 }
 
-export interface NIVUsageSummary {
-  activeSession?: NIVSession;
-  hoursUsedLast24h: number;
-  consecutiveDaysWithoutNIV: number;
-}
-
 /**
- * Derives intermittency/weaning tracking from documented NIV sessions
- * (start/end windows), without asking for anything extra: hours of actual
- * NIV use in the last rolling 24h, and consecutive days without NIV use
- * (0 while a session is active, floor of hours since the last session ended
- * otherwise — or 0 if no session has ever been logged).
+ * Días desde que terminó la última VNI. Se deduce del historial de soportes (el
+ * cambio de soporte cierra el episodio), sin registrar nada aparte. Solo aplica si
+ * el paciente ya no está en VNI/VMI/TQT y la VNI terminó hace poco (`maxDays`).
  */
-export function computeNIVUsageSummary(sessions: NIVSession[], now: Date = new Date()): NIVUsageSummary {
-  const activeSession = sessions.find((s) => !s.endAt);
-
-  const windowStart = new Date(now.getTime() - 24 * 60 * 60 * 1000);
-  const hoursUsedLast24h = sessions.reduce((total, session) => {
-    const start = new Date(session.startAt);
-    const end = session.endAt ? new Date(session.endAt) : now;
-    const overlapStart = start > windowStart ? start : windowStart;
-    const overlapEnd = end < now ? end : now;
-    const overlapMs = overlapEnd.getTime() - overlapStart.getTime();
-    return total + (overlapMs > 0 ? overlapMs / (60 * 60 * 1000) : 0);
-  }, 0);
-
-  let consecutiveDaysWithoutNIV = 0;
-  if (!activeSession && sessions.length > 0) {
-    const lastEndedAt = sessions
-      .filter((s) => s.endAt)
-      .map((s) => new Date(s.endAt!).getTime())
-      .reduce((latest, t) => Math.max(latest, t), 0);
-    if (lastEndedAt > 0) {
-      consecutiveDaysWithoutNIV = Math.floor((now.getTime() - lastEndedAt) / (24 * 60 * 60 * 1000));
-    }
-  }
-
-  return {
-    activeSession,
-    hoursUsedLast24h: Math.round(hoursUsedLast24h * 10) / 10,
-    consecutiveDaysWithoutNIV,
-  };
+export function daysSinceNivEnded(
+  episodes: { supportType: string; endAt?: string }[],
+  currentSupport: string,
+  now: Date = new Date(),
+  maxDays = 7
+): number | undefined {
+  if (currentSupport === 'niv' || currentSupport === 'imv' || currentSupport === 'traqueostomia') return undefined;
+  const lastEnd = episodes
+    .filter((e) => e.supportType === 'niv' && e.endAt)
+    .map((e) => new Date(e.endAt!).getTime())
+    .reduce((latest, t) => Math.max(latest, t), 0);
+  if (lastEnd === 0) return undefined;
+  const days = Math.floor((now.getTime() - lastEnd) / (24 * 60 * 60 * 1000));
+  return days >= 0 && days <= maxDays ? days : undefined;
 }

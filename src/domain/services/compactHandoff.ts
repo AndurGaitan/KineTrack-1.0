@@ -7,14 +7,14 @@
  * pase con la vista. No hay oraciones largas ni horarios sueltos: solo días u
  * horas de evolución.
  */
-import { MrcAssessment, NIVRecord, NIVSession, HFNCRecord, OxygenRecord, Patient, Prestacion, PveDecision, SupportEpisode, VMIRecord } from '../../types';
+import { MrcAssessment, NIVRecord, HFNCRecord, OxygenRecord, Patient, Prestacion, PveDecision, SupportEpisode, VMIRecord } from '../../types';
 import { earlyMobilizationStatus } from '../../utils/earlyMobilization';
-import { computeNIVUsageSummary } from '../../utils/nivCalculations';
 import { oxygenDeviceLabels, ktrTechniqueLabels, ktmTypeLabels } from '../../utils/prestacionLabels';
 import { formatSVHours, svInterruptionReasonLabels, svModalityShortLabels } from '../../utils/spontaneousVentilation';
 import { formatRass, weaningStatuses } from '../../utils/vmiEducation';
 import { cannulaFitOptions } from '../../utils/hfncEducation';
 import { pveReasonLabel } from '../../components/PveDecisionForm';
+import { nivModeShort, nivUsageShort } from '../../utils/nivEducation';
 import type { GeneralHandoffPatientInput } from './generalHandoffText';
 import { describeAspiration, describeSecretions, mrcStatusLabels, narrateTraqueostomiaForPase } from './clinicalNarrative';
 
@@ -111,18 +111,17 @@ export function describePve(d: PveDecision): string {
 const interfaceShort: Record<string, string> = { 'full-face': 'facial total', oronasal: 'oronasal', nasal: 'nasal', helmet: 'helmet' };
 const skinShort: Record<string, string> = { 'no-lesions': 'sin lesiones', 'mild-erythema': 'eritema leve', 'pressure-injury-1-2': 'LPP I-II', 'severe-injury': 'lesión grave' };
 
-function nivLines(r: NIVRecord, sessions: NIVSession[] | undefined): (string | undefined)[] {
-  const mode = r.mode === 'cpap' ? 'CPAP' : r.mode === 'bipap' ? 'BiPAP' : (r.modeOther ?? 'otro modo');
+function nivLines(r: NIVRecord): (string | undefined)[] {
+  const mode = nivModeShort[r.mode] ?? (r.modeOther ?? 'otro modo');
   const iface = r.interfaceType === 'other' ? (r.interfaceOther ?? 'otra interfaz') : (interfaceShort[r.interfaceType] ?? r.interfaceType);
-  const usage = sessions && sessions.length > 0 ? computeNIVUsageSummary(sessions) : undefined;
   const gas = [r.ph != null ? `pH ${num(r.ph)}` : undefined, r.paco2 != null ? `PaCO₂ ${num(r.paco2)}` : undefined, r.pao2 != null ? `PaO₂ ${num(r.pao2)}` : undefined, r.hco3 != null ? `HCO₃ ${num(r.hco3)}` : undefined];
   const hasGas = r.ph != null || r.paco2 != null || r.pao2 != null || r.hco3 != null;
   return [
-    line('VMNI', mode, iface, `PS ${r.supportPressure}`, `PEEP ${r.peep}`, `FiO₂ ${r.fio2}%`, r.leak != null ? `fuga ${r.leak}` : undefined, `FR ${r.respiratoryRate}`, r.spo2 != null ? `SpO₂ ${r.spo2}%` : undefined),
+    line('VMNI', mode, iface, r.mode === 'cpap' ? undefined : `PS ${r.supportPressure}`, r.mode === 'cpap' ? `CPAP ${r.peep}` : `PEEP ${r.peep}`, `FiO₂ ${r.fio2}%`, r.leak != null ? `fuga ${r.leak}` : undefined, `FR ${r.respiratoryRate}`, r.spo2 != null ? `SpO₂ ${r.spo2}%` : undefined),
     r.hacorScore != null ? line('HACOR', `${r.hacorScore}${r.hacorRisk ? ` (${r.hacorRisk === 'low' ? 'bajo' : r.hacorRisk === 'medium' ? 'medio' : 'alto'})` : ''}`) : undefined,
     hasGas ? line('GSA:', ...gas) : undefined,
     line('Piel:', skinShort[r.skinIntegrity] ?? r.skinIntegrity, r.skinNotes),
-    usage ? line('Uso:', `${num(usage.hoursUsedLast24h)} h en 24 h${usage.activeSession ? ' (sesión activa)' : ''}`, `${usage.consecutiveDaysWithoutNIV} d sin VMNI`) : undefined,
+    r.usage24h ? line('Uso:', r.usage24h === 'continuous' ? 'continuo' : `${nivUsageShort[r.usage24h]} en 24 h`) : undefined,
     r.previousIMVDays ? line('VMI previa:', `${r.previousIMVDays} d`) : undefined,
   ];
 }
@@ -208,7 +207,7 @@ function svLine(input: GeneralHandoffPatientInput): string | undefined {
 
 /** Bloque de un paciente: encabezado en negrita + una línea por tema. */
 export function buildCompactPatientBlock(input: GeneralHandoffPatientInput, now: Date = new Date()): string {
-  const { patient, sector, activeEpisode, latestSupportRecord, prestaciones, mrcAssessment, nivSessions, trach, oxygenRecord, pveDecisions, mobilization } = input;
+  const { patient, sector, activeEpisode, latestSupportRecord, prestaciones, mrcAssessment, trach, oxygenRecord, pveDecisions, mobilization } = input;
 
   const bed = patient.bedLabel ? `Cama ${patient.bedLabel}${sector?.name ? ` (${sector.name})` : ''}` : sector?.name;
   const header = `${bold(`${bed ? `${bed} - ` : ''}${patient.alias}`)}${patient.age != null ? `, ${patient.age} a` : ''}`;
@@ -228,13 +227,16 @@ export function buildCompactPatientBlock(input: GeneralHandoffPatientInput, now:
 
   const type = latestSupportRecord?.type;
   if (type === 'imv') lines.push(...withDuration(vmiLines(latestSupportRecord!.record as VMIRecord, pveDecisions)));
-  else if (type === 'niv') lines.push(...withDuration(nivLines(latestSupportRecord!.record as NIVRecord, nivSessions)));
+  else if (type === 'niv') lines.push(...withDuration(nivLines(latestSupportRecord!.record as NIVRecord)));
   else if (type === 'hfnc') lines.push(...withDuration(hfncLines(latestSupportRecord!.record as HFNCRecord)));
   else if (patient.supportType === 'traqueostomia' && trach) lines.push(`${bold('TQT')}${duration ? `${SEP}${duration}` : ''} ${narrateTraqueostomiaForPase(trach)}`);
   else if (oxygenRecord) lines.push(...withDuration(oxygenLines(oxygenRecord)));
   else if (patient.supportType === 'conventional-oxygen') lines.push(`${bold('O₂')}${duration ? `${SEP}${duration}` : ''} convencional`);
   else if (patient.supportType === 'room-air') lines.push(`${bold('Aire ambiente')}${duration ? `${SEP}${duration}` : ''}`);
   else lines.push(`${bold(supportShort[patient.supportType])}${duration ? `${SEP}${duration}` : ''}`);
+
+  // Dejó la VNI hace poco: se informa cuántos días lleva sin ella.
+  if (input.daysSinceNiv != null) lines.push(line('Sin VMNI:', input.daysSinceNiv === 0 ? 'menos de 1 d' : `${input.daysSinceNiv} d`));
 
   // Sin monitorización de VMI cargada en el período, igual se informan las decisiones de PVE.
   if (type !== 'imv' && pveDecisions.length > 0) lines.push(line('Destete:', ...pveDecisions.map(describePve)));

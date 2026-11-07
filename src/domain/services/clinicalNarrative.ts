@@ -14,7 +14,6 @@ import {
   HFNCRecord,
   MrcAssessment,
   NIVRecord,
-  NIVSession,
   Patient,
   Prestacion,
   PrestacionType,
@@ -29,8 +28,7 @@ import { calculateEpisodeDuration } from './episodeService';
 import { cannulaFitOptions } from '../../utils/hfncEducation';
 import { ktmTypeLabels, ktrTechniqueLabels, oxygenDeviceLabels } from '../../utils/prestacionLabels';
 import { formatSVHours, svInterruptionReasonLabels, svModalityShortLabels } from '../../utils/spontaneousVentilation';
-import { interfaceTypes, nivModes, skinIntegrityOptions } from '../../utils/nivEducation';
-import { computeNIVUsageSummary } from '../../utils/nivCalculations';
+import { interfaceTypes, nivModes, nivUsageText, skinIntegrityOptions } from '../../utils/nivEducation';
 import { formatRass, mobilizationLevels, rassLevels, ventModes, weaningStatuses } from '../../utils/vmiEducation';
 import {
   aspirationBlocks,
@@ -229,14 +227,14 @@ function narrateImv(record: VMIRecord): string {
   return parts.join(' ');
 }
 
-function narrateNiv(record: NIVRecord, nivSessions: NIVSession[] | undefined): string {
+function narrateNiv(record: NIVRecord): string {
   const interfaceLabel = interfaceTypes.find((i) => i.value === record.interfaceType)?.label || record.interfaceType;
   const modeLabel = nivModes.find((m) => m.value === record.mode)?.label || record.mode;
   const skinLabel = skinIntegrityOptions.find((s) => s.value === record.skinIntegrity)?.label || record.skinIntegrity;
 
   const parts: string[] = [];
   parts.push(
-    `En ventilación no invasiva (${modeLabel}), interfaz ${interfaceLabel}. Parámetros: PS ${record.supportPressure}, PEEP ${record.peep}, sensibilidad espiratoria ${record.expiratorySensitivity}%, FiO₂ ${record.fio2}%${record.leak != null ? `, fuga ${record.leak} l/min` : ''}.`
+    `En ventilación no invasiva (${modeLabel}), interfaz ${interfaceLabel}. Parámetros: ${record.mode === 'cpap' ? `CPAP ${record.peep}` : `PS ${record.supportPressure}, PEEP ${record.peep}, sensibilidad espiratoria ${record.expiratorySensitivity}%`}, FiO₂ ${record.fio2}%${record.leak != null ? `, fuga ${record.leak} l/min` : ''}.`
   );
   if (record.hacorScore != null && record.hacorRisk) {
     parts.push(`HACOR ${record.hacorScore}, riesgo ${riskLabels[record.hacorRisk]}.`);
@@ -263,12 +261,7 @@ function narrateNiv(record: NIVRecord, nivSessions: NIVSession[] | undefined): s
     parts.push(`Con ${record.previousIMVDays} día${record.previousIMVDays === 1 ? '' : 's'} previos en VMI.`);
   }
 
-  if (nivSessions && nivSessions.length > 0) {
-    const usage = computeNIVUsageSummary(nivSessions);
-    parts.push(
-      `Uso de VNI: ${usage.hoursUsedLast24h} horas en las últimas 24 horas${usage.activeSession ? ' (sesión activa)' : ''}, ${usage.consecutiveDaysWithoutNIV} día${usage.consecutiveDaysWithoutNIV === 1 ? '' : 's'} consecutivos sin VNI.`
-    );
-  }
+  if (record.usage24h) parts.push(`Uso de VNI: ${nivUsageText[record.usage24h]}.`);
 
   const alertsText = formatAlerts(record.alerts);
   if (alertsText) parts.push(`${alertsText}.`);
@@ -361,7 +354,6 @@ function narrateTraqueostomia(input: TrachNarrativeInput): string {
 export function narrateSupport(
   latest: LatestSupportRecord,
   patient: Patient,
-  nivSessions: NIVSession[] | undefined,
   trach?: TrachNarrativeInput
 ): string {
   // La traqueostomía se narra con el estado + aspiraciones + proceso, no solo con el último registro.
@@ -377,7 +369,7 @@ export function narrateSupport(
     case 'imv':
       return narrateImv(latest.record);
     case 'niv':
-      return narrateNiv(latest.record, nivSessions);
+      return narrateNiv(latest.record);
     case 'hfnc':
       return narrateHfnc(latest.record);
     case 'traqueostomia':

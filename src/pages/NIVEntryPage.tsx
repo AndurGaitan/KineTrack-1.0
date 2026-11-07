@@ -10,9 +10,9 @@ import { AlertPanel } from '../components/AlertPanel';
 import { RecordDateField } from '../components/RecordDateField';
 import { PrefillNotice } from '../components/PrefillNotice';
 import { useRecordTimestamp } from '../hooks/useRecordTimestamp';
-import { NIVInterfaceType, SkinIntegrityStatus, NIVMode, Patient } from '../types';
+import { NIVInterfaceType, SkinIntegrityStatus, NIVMode, NIVUsage, Patient } from '../types';
 import { calculateHACORForNIV, generateNIVAlerts } from '../utils/nivCalculations';
-import { interfaceTypes, skinIntegrityOptions, lesionLocations, nivModes } from '../utils/nivEducation';
+import { interfaceTypes, skinIntegrityOptions, lesionLocations, nivModes, nivUsageOptions } from '../utils/nivEducation';
 
 // Helpers: keep numbers truly empty (avoid Number('') => 0), same pattern as VMIEntryPage.
 const toNumberOrUndefined = (v: string): number | undefined => {
@@ -24,7 +24,8 @@ const toNumberOrUndefined = (v: string): number | undefined => {
 
 const interfaceOptions = interfaceTypes.map(t => ({ value: t.value as NIVInterfaceType, label: t.label }));
 const skinOptions = skinIntegrityOptions.map(o => ({ value: o.value as SkinIntegrityStatus, label: o.label }));
-const modeOptions = nivModes.map(m => ({ value: m.value as NIVMode, label: m.label }));
+const modeOptions = nivModes.map(m => ({ value: m.value as NIVMode, label: m.label, hint: m.hint }));
+const usageOptions = nivUsageOptions.map(o => ({ value: o.value as NIVUsage, label: o.label, hint: o.hint || undefined }));
 
 /**
  * Carga de monitorización VNI (VMNI). Se precarga con el último registro:
@@ -44,17 +45,19 @@ export function NIVEntryForm({ patient, onDone, onCancel }: { patient: Patient; 
     skinNotes: last?.skinNotes ?? '',
     mode: (last?.mode ?? '') as NIVMode | '',
     modeOther: last?.modeOther ?? '',
-    supportPressure: last?.supportPressure ?? 10,
-    peep: last?.peep ?? 5,
+    // Sin registro previo arrancan vacíos: no se guarda un valor que nadie midió.
+    supportPressure: last?.supportPressure as number | undefined,
+    peep: last?.peep as number | undefined,
     expiratorySensitivity: last?.expiratorySensitivity ?? 25,
-    fio2: last?.fio2 ?? 40,
-    leak: last?.leak ?? 0,
+    fio2: last?.fio2 as number | undefined,
+    leak: last?.leak as number | undefined,
+    usage24h: (last?.usage24h ?? '') as NIVUsage | '',
     // HACOR (solo con gasometría, etapa 2)
     heartRate: last?.heartRate ?? 80,
     ph: last?.ph ?? 7.4,
     consciousness: last?.consciousness ?? 15,
     pao2: last?.pao2 ?? 80,
-    respiratoryRate: last?.respiratoryRate ?? 24,
+    respiratoryRate: last?.respiratoryRate as number | undefined,
     paco2: undefined as number | undefined,
     hco3: undefined as number | undefined,
     spo2: last?.spo2 as number | undefined,
@@ -66,8 +69,8 @@ export function NIVEntryForm({ patient, onDone, onCancel }: { patient: Patient; 
     ph: formData.ph,
     consciousness: formData.consciousness,
     pao2: formData.pao2,
-    fio2: formData.fio2,
-    respiratoryRate: formData.respiratoryRate
+    fio2: formData.fio2 ?? 0,
+    respiratoryRate: formData.respiratoryRate ?? 0
   }));
   const [alerts, setAlerts] = useState<string[]>([]);
   useEffect(() => {
@@ -76,8 +79,8 @@ export function NIVEntryForm({ patient, onDone, onCancel }: { patient: Patient; 
       ph: formData.ph,
       consciousness: formData.consciousness,
       pao2: formData.pao2,
-      fio2: formData.fio2,
-      respiratoryRate: formData.respiratoryRate
+      fio2: formData.fio2 ?? 0,
+      respiratoryRate: formData.respiratoryRate ?? 0
     });
     setCalculations(calc);
     setAlerts(generateNIVAlerts({
@@ -85,12 +88,23 @@ export function NIVEntryForm({ patient, onDone, onCancel }: { patient: Patient; 
       interfaceType: formData.interfaceType || undefined,
       skinIntegrity: formData.skinIntegrity || undefined,
       mode: formData.mode || undefined,
+      usage24h: formData.usage24h || undefined,
       hacorScore: features.gasometry ? calc.hacorScore : undefined,
       hacorRisk: features.gasometry ? calc.hacorRisk : undefined
     }));
   }, [formData, features.gasometry]);
   const set = (patch: Partial<typeof formData>) => setFormData(prev => ({ ...prev, ...patch }));
-  const canSave = !!formData.interfaceType && !!formData.skinIntegrity && !!formData.mode && !recordedAt.isFuture;
+  const isCpap = formData.mode === 'cpap';
+  const missing = [
+    !formData.interfaceType && 'interfaz',
+    !formData.mode && 'modo',
+    !isCpap && formData.mode && formData.supportPressure == null && 'PS',
+    formData.mode && formData.peep == null && (isCpap ? 'CPAP' : 'PEEP'),
+    formData.mode && formData.fio2 == null && 'FiO₂',
+    formData.mode && formData.respiratoryRate == null && 'FR',
+    !formData.skinIntegrity && 'estado de la piel'
+  ].filter((x): x is string => !!x);
+  const canSave = missing.length === 0 && !recordedAt.isFuture;
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (!canSave || saving) return;
@@ -106,10 +120,11 @@ export function NIVEntryForm({ patient, onDone, onCancel }: { patient: Patient; 
       skinNotes: formData.skinNotes || undefined,
       mode: formData.mode as NIVMode,
       modeOther: formData.mode === 'other' ? formData.modeOther || undefined : undefined,
-      supportPressure: formData.supportPressure,
-      peep: formData.peep,
+      // En CPAP no hay presión de soporte: el nivel de CPAP es el PEEP.
+      supportPressure: isCpap ? 0 : formData.supportPressure!,
+      peep: formData.peep!,
       expiratorySensitivity: formData.expiratorySensitivity,
-      fio2: formData.fio2,
+      fio2: formData.fio2!,
       leak: formData.leak || undefined,
       // Etapa 1: sin gasometría ni HACOR (solo SpO₂ y FR).
       ...(features.gasometry ? {
@@ -124,8 +139,9 @@ export function NIVEntryForm({ patient, onDone, onCancel }: { patient: Patient; 
         hacorRisk: calculations.hacorRisk
       } : {}),
       spo2: formData.spo2,
-      respiratoryRate: formData.respiratoryRate,
+      respiratoryRate: formData.respiratoryRate!,
       previousIMVDays: formData.previousIMVDays || undefined,
+      usage24h: formData.usage24h || undefined,
       alerts
     });
     setSaving(false);
@@ -147,14 +163,16 @@ export function NIVEntryForm({ patient, onDone, onCancel }: { patient: Patient; 
       <ChoiceChips label="Modo" options={modeOptions} value={formData.mode} onChange={v => set({ mode: v })} />
       {formData.mode === 'other' && <NIVField label="Especificar modo" placeholder="Ej: AVAPS" value={formData.modeOther} onChange={e => set({ modeOther: e.target.value })} />}
 
-      <div className="grid grid-cols-3 gap-3">
-        <NIVField label="PS" educationKey="supportPressureNIV" unit="cmH₂O" type="number" inputMode="decimal" value={formData.supportPressure} onChange={e => set({ supportPressure: Number(e.target.value) })} required />
-        <NIVField label="PEEP" educationKey="peepNIV" unit="cmH₂O" type="number" inputMode="decimal" value={formData.peep} onChange={e => set({ peep: Number(e.target.value) })} required />
-        <NIVField label="FiO₂" unit="%" type="number" inputMode="decimal" value={formData.fio2} onChange={e => set({ fio2: Number(e.target.value) })} required />
-        <NIVField label="Fuga" unit="L/min" type="number" inputMode="decimal" value={formData.leak} onChange={e => set({ leak: Number(e.target.value) })} />
+      {formData.mode && <div className="grid grid-cols-2 gap-3">
+        {!isCpap && <NIVField label="PS" educationKey="supportPressureNIV" unit="cmH₂O" type="number" inputMode="decimal" value={formData.supportPressure ?? ''} onChange={e => set({ supportPressure: toNumberOrUndefined(e.target.value) })} required />}
+        <NIVField label={isCpap ? 'CPAP' : 'PEEP'} educationKey="peepNIV" unit="cmH₂O" type="number" inputMode="decimal" value={formData.peep ?? ''} onChange={e => set({ peep: toNumberOrUndefined(e.target.value) })} required />
+        <NIVField label="FiO₂" unit="%" type="number" inputMode="decimal" value={formData.fio2 ?? ''} onChange={e => set({ fio2: toNumberOrUndefined(e.target.value) })} required />
+        <NIVField label="FR" educationKey="hacorNIV" unit="rpm" type="number" inputMode="decimal" value={formData.respiratoryRate ?? ''} onChange={e => set({ respiratoryRate: toNumberOrUndefined(e.target.value) })} required />
         <NIVField label="SpO₂" unit="%" type="number" inputMode="decimal" value={formData.spo2 ?? ''} onChange={e => set({ spo2: toNumberOrUndefined(e.target.value) })} />
-        <NIVField label="FR" educationKey="hacorNIV" unit="rpm" type="number" inputMode="decimal" value={formData.respiratoryRate} onChange={e => set({ respiratoryRate: Number(e.target.value) })} required />
-      </div>
+        <NIVField label="Fuga" unit="L/min" type="number" inputMode="decimal" value={formData.leak ?? ''} onChange={e => set({ leak: toNumberOrUndefined(e.target.value) })} />
+      </div>}
+
+      <ChoiceChips label="Uso de la VNI en las últimas 24 h (opcional)" options={usageOptions} value={formData.usage24h} onChange={v => set({ usage24h: v })} allowClear columns={2} />
 
       <ChoiceChips label="Estado de la piel" options={skinOptions} value={formData.skinIntegrity} onChange={v => set({ skinIntegrity: v })} />
       {hasSkinIssue && <div className="space-y-3">
@@ -202,7 +220,7 @@ export function NIVEntryForm({ patient, onDone, onCancel }: { patient: Patient; 
       <RecordDateField state={recordedAt} label="Fecha y hora de la monitorización" compact />
 
       {!canSave && !recordedAt.isFuture && <div className="text-xs text-gray-500">
-          Para guardar elegí: {[!formData.interfaceType && 'interfaz', !formData.mode && 'modo', !formData.skinIntegrity && 'estado de la piel'].filter(Boolean).join(', ')}.
+          Para guardar completá: {missing.join(', ')}.
         </div>}
 
       <div className="flex gap-3">

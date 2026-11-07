@@ -8,7 +8,6 @@ import { NIVEntryForm } from '../pages/NIVEntryPage';
 import { HFNCEntryForm } from '../pages/HFNCEntryPage';
 import { OxygenForm } from './OxygenForm';
 import { MobilizationCard } from './MobilizationCard';
-import { NIVSessionsCard } from './NIVSessionsCard';
 import { AirwayCard } from './AirwayCard';
 import { SpontaneousVentilationCard } from './SpontaneousVentilationCard';
 import { formatSpan } from '../utils/earlyMobilization';
@@ -127,8 +126,6 @@ export function PatientCarePanel({ patient, onChangeSupport }: { patient: Patien
           {features.tracheostomy && patient.airwayType === 'traqueostomia' && <SpontaneousVentilationCard patientId={patient.id} episodeId={episode?.id} />}
         </>
       )}
-
-      {current === 'niv' && <NIVSessionsCard patientId={patient.id} episodeId={episode?.id} />}
 
       {current === 'traqueostomia' && features.tracheostomy && (
         <Card>
