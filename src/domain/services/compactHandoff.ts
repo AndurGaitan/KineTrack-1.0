@@ -94,7 +94,8 @@ function vmiLines(r: VMIRecord, pveDecisions: PveDecision[]): (string | undefine
     line('Mec:', ...mech),
     hasGas ? line('GSA:', ...gas) : undefined,
     line('Sedación:', ...sedation),
-    line('Destete:', weaningLabel.toLowerCase().replace(/^./, (c) => c.toUpperCase()), ...pveParts),
+    // Con la PVE realizada el estado "en prueba" es redundante: alcanza con la PVE.
+    line('Destete:', ...(r.weaningStatus === 'sbt-trial' && pveParts.length > 0 ? [] : [weaningLabel.toLowerCase().replace(/^./, (c) => c.toUpperCase())]), ...pveParts),
     mob ? line('Mov:', mob) : undefined,
   ];
 }
