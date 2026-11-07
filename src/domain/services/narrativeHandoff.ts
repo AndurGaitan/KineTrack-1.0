@@ -190,7 +190,9 @@ function imvSentences(r: VMIRecord, dur: string | undefined, decisions: PveDecis
   if (pve.length === 0 && r.sbtPerformed) {
     pve = pveSentences([{ decision: 'realizada', sbtType: r.sbtType, sbtResult: r.sbtResult, failureReason: r.sbtFailureReason } as PveDecision]);
   }
-  out.push(`${status}${pve.length > 0 ? `; ${pve.join('; ')}` : ''}.`);
+  // "En prueba de ventilación espontánea" + "se realizó la prueba…" decían lo mismo: con la PVE realizada alcanza una sola frase.
+  if (r.weaningStatus === 'sbt-trial' && pve.length > 0) out.push(`${pve.join('; ').replace(/^./, (c) => c.toUpperCase())}.`);
+  else out.push(`${status}${pve.length > 0 ? `; ${pve.join('; ')}` : ''}.`);
 
   const level = mobilizationLevels.find((m) => m.value === r.mobilizationLevel)?.description;
   if (level) out.push(`Movilización nivel ${r.mobilizationLevel} (${level.toLowerCase()})${r.mobilizationBarrier ? `, con barrera: ${r.mobilizationBarrier}` : ''}.`);
