@@ -620,7 +620,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setState((prev) => ({ ...prev, mobilizationContraindications: [...prev.mobilizationContraindications, created] }));
       return true;
     } catch (error) {
-      reportError('registrar contraindicación de movilización', error);
+      reportError('registrar que no cumple criterios para movilizar', error);
       return false;
     }
   };
@@ -633,7 +633,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         mobilizationContraindications: prev.mobilizationContraindications.map((c) => (c.id === id ? updated : c)),
       }));
     } catch (error) {
-      reportError('levantar contraindicación de movilización', error);
+      reportError('actualizar el registro de criterios de movilización', error);
     }
   };
 
@@ -645,7 +645,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         mobilizationContraindications: prev.mobilizationContraindications.filter((c) => c.id !== id),
       }));
     } catch (error) {
-      reportError('eliminar contraindicación de movilización', error);
+      reportError('eliminar el registro de criterios de movilización', error);
     }
   };
 

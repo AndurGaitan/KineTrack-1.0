@@ -30,7 +30,7 @@ export interface NarrativeHandoffInput {
   activeEpisode?: SupportEpisode;
   latestSupportRecord: LatestSupportRecord;
   prestaciones: Prestacion[];
-  /** Frase que encabeza la oración de prestaciones ("Durante el día", "En las últimas 12 horas"...). */
+  /** Frase que encabeza la oración de prestaciones ("Durante el turno", "En las últimas 12 horas"...). */
   periodPhrase: string;
   mrcAssessment?: MrcAssessment;
   trach?: TrachNarrativeInput;
@@ -129,7 +129,7 @@ function pveSentences(decisions: PveDecision[]): string[] {
     }
     const reason = pveReasonLabel(d.decision, d.reason);
     return d.decision === 'contraindicada'
-      ? `la prueba de ventilación espontánea se consideró contraindicada${reason ? ` por ${lowerFirst(reason)}` : ''}`
+      ? `no cumple criterios para la prueba de ventilación espontánea${reason ? ` por ${lowerFirst(reason)}` : ''}`
       : `no se realizó la prueba de ventilación espontánea${reason ? ` por ${lowerFirst(reason)}` : ''}`;
   });
 }
@@ -179,9 +179,9 @@ function imvSentences(r: VMIRecord, dur: string | undefined, decisions: PveDecis
 
   const status =
     r.weaningStatus === 'not-candidate'
-      ? 'No es candidato a destete'
+      ? 'No cumple criterios para el destete'
       : r.weaningStatus === 'candidate'
-        ? 'Es candidato a destete'
+        ? 'Cumple criterios para el destete'
         : r.weaningStatus === 'sbt-trial'
           ? 'Se encuentra en prueba de ventilación espontánea'
           : 'Se encuentra extubado';
@@ -191,7 +191,9 @@ function imvSentences(r: VMIRecord, dur: string | undefined, decisions: PveDecis
     pve = pveSentences([{ decision: 'realizada', sbtType: r.sbtType, sbtResult: r.sbtResult, failureReason: r.sbtFailureReason } as PveDecision]);
   }
   // "En prueba de ventilación espontánea" + "se realizó la prueba…" decían lo mismo: con la PVE realizada alcanza una sola frase.
-  if (r.weaningStatus === 'sbt-trial' && pve.length > 0) out.push(`${pve.join('; ').replace(/^./, (c) => c.toUpperCase())}.`);
+  // Igual con "no cumple criterios": la frase de la PVE ya lo dice, no se repite el estado.
+  const noCriteria = decisions.some((d) => d.decision === 'contraindicada');
+  if ((r.weaningStatus === 'sbt-trial' || (r.weaningStatus === 'not-candidate' && noCriteria)) && pve.length > 0) out.push(`${pve.join('; ').replace(/^./, (c) => c.toUpperCase())}.`);
   else out.push(`${status}${pve.length > 0 ? `; ${pve.join('; ')}` : ''}.`);
 
   const level = mobilizationLevels.find((m) => m.value === r.mobilizationLevel)?.description;

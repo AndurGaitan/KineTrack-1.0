@@ -3,7 +3,8 @@ import type { CreatePveDecisionInput } from '../api/pveDecisionsApi';
 
 /**
  * Decisión diaria sobre la prueba de ventilación espontánea (PVE):
- * realizada, contraindicada (con motivo) o no realizada (con motivo).
+ * realizada, no cumple criterios (con motivo) o cumple criterios y no se realizó (con motivo).
+ * Internamente "no cumple criterios" se guarda como 'contraindicada' (valor histórico de la base).
  * Lo usan la monitorización VMI y la tarjeta "PVE de hoy".
  */
 
@@ -30,7 +31,7 @@ export const pveSbtTypes: { value: PveSbtType; label: string; short: string }[] 
 
 export const pveDecisionLabels: Record<PveDecisionKind, string> = {
   realizada: 'PVE realizada',
-  contraindicada: 'PVE contraindicada',
+  contraindicada: 'No cumple criterios para la PVE',
   'no-realizada': 'PVE no realizada',
 };
 
@@ -53,7 +54,7 @@ export const emptyPveDraft: PveDraft = { decision: '', reason: '', sbtType: '', 
 export function pveDraftError(d: PveDraft): string | null {
   if (!d.decision) return null;
   if (d.decision === 'realizada') return d.sbtType ? null : 'Indicá la modalidad de la PVE';
-  return d.reason ? null : d.decision === 'contraindicada' ? 'Indicá el motivo de la contraindicación' : 'Indicá por qué no se realizó';
+  return d.reason ? null : d.decision === 'contraindicada' ? 'Indicá por qué no cumple criterios' : 'Indicá por qué no se realizó';
 }
 
 export function pveDraftToInput(d: PveDraft, patientId: string, timestamp?: string): CreatePveDecisionInput | null {
@@ -72,8 +73,8 @@ export function pveDraftToInput(d: PveDraft, patientId: string, timestamp?: stri
 }
 
 const options: { value: PveDecisionKind; label: string; hint: string; active: string }[] = [
-  { value: 'contraindicada', label: 'No candidato', hint: 'Contraindicada hoy', active: 'border-amber-500 bg-amber-50' },
-  { value: 'no-realizada', label: 'Candidato, sin PVE', hint: 'Era elegible, no se hizo', active: 'border-gray-500 bg-gray-100' },
+  { value: 'contraindicada', label: 'No cumple criterios', hint: 'No está en condiciones hoy', active: 'border-amber-500 bg-amber-50' },
+  { value: 'no-realizada', label: 'Cumple criterios, sin PVE', hint: 'Era elegible, no se hizo', active: 'border-gray-500 bg-gray-100' },
   { value: 'realizada', label: 'PVE realizada', hint: 'Se hizo la prueba', active: 'border-green-500 bg-green-50' },
 ];
 
@@ -186,7 +187,7 @@ export function PveDecisionForm({
       {(value.decision === 'contraindicada' || value.decision === 'no-realizada') && (
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
-            {value.decision === 'contraindicada' ? 'Motivo de la contraindicación' : 'Motivo por el que no se realizó'}
+            {value.decision === 'contraindicada' ? 'Motivo por el que no cumple criterios' : 'Motivo por el que no se realizó'}
           </label>
           <select className={fieldClass} value={value.reason} onChange={(e) => onChange({ ...value, reason: e.target.value })}>
             <option value="">Seleccionar...</option>
@@ -197,7 +198,7 @@ export function PveDecisionForm({
             ))}
           </select>
           {value.decision === 'contraindicada' && (
-            <p className="text-xs text-gray-500 mt-1">Un día contraindicado no cuenta como día elegible en el indicador de PVE.</p>
+            <p className="text-xs text-gray-500 mt-1">Un día en que no cumple criterios no cuenta como día elegible en el indicador de PVE.</p>
           )}
         </div>
       )}

@@ -46,7 +46,7 @@ export type PeriodPreset = 'hoy' | '12h' | '24h' | 'dia' | 'custom';
 export interface HandoffPeriod {
   from: Date;
   to: Date;
-  /** Encabezado de la oración de kinesioterapia ("Durante el día", "En las últimas 12 horas"...). */
+  /** Encabezado de la oración de kinesioterapia ("Durante el turno", "En las últimas 12 horas"...). */
   phrase: string;
   /** Descripción corta del período (solo fechas, sin horas sueltas). */
   title: string;
@@ -115,7 +115,7 @@ export function resolvePeriod(input: PeriodInput, now: Date = new Date()): Hando
     }
   }
 
-  return { from: startOfDay(now), to: endOfDay(now), phrase: 'Durante el día', title: fmtDate(now.toISOString()) };
+  return { from: startOfDay(now), to: endOfDay(now), phrase: 'Durante el turno', title: fmtDate(now.toISOString()) };
 }
 
 export interface ActivitySources {

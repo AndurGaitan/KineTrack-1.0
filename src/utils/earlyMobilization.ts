@@ -84,7 +84,7 @@ export function earlyMobilizationStatus(
 
   const open = relevant.find((c) => !c.endAt);
   if (open) {
-    return { text: `contraindicada (${mobilizationReasonLabel(open.reason)}), ventana de 72 h en pausa`, pending: true };
+    return { text: `no cumple criterios para movilizar (${mobilizationReasonLabel(open.reason)}), ventana de 72 h en pausa`, pending: true };
   }
 
   const remainingMs = deadline.getTime() - now.getTime();

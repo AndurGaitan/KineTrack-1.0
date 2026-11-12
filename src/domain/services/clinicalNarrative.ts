@@ -483,7 +483,7 @@ export interface SpontaneousVentilationNarrativeInput {
 }
 
 /**
- * "Durante el día realizó 6 h de ventilación espontánea por traqueostomía
+ * "Durante el turno realizó 6 h de ventilación espontánea por traqueostomía
  * (3 períodos: aire ambiente y oxígeno). Un período no se toleró (taquipnea)."
  */
 export function narrateSpontaneousVentilation(input: SpontaneousVentilationNarrativeInput | undefined, periodPhrase: string): string | undefined {
@@ -511,14 +511,14 @@ export function narrateSpontaneousVentilation(input: SpontaneousVentilationNarra
 
 /**
  * Prestaciones + MRC como una o dos oraciones. `periodPhrase` encabeza la
- * primera ("Durante el día recibió..." para el pase general que siempre
+ * primera ("Durante el turno recibió..." para el pase general que siempre
  * mira "hoy"; "En las últimas Xh recibió..." para la evolución individual,
  * que respeta la ventana de turno elegida por el kinesiólogo).
  */
 export function narratePrestaciones(
   prestaciones: Prestacion[],
   mrcAssessment: MrcAssessment | undefined,
-  periodPhrase: string = 'Durante el día'
+  periodPhrase: string = 'Durante el turno'
 ): string | undefined {
   const parts: string[] = [];
   const byType = new Map<PrestacionType, Prestacion[]>();

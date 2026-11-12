@@ -94,8 +94,8 @@ function vmiLines(r: VMIRecord, pveDecisions: PveDecision[]): (string | undefine
     line('Mec:', ...mech),
     hasGas ? line('GSA:', ...gas) : undefined,
     line('Sedación:', ...sedation),
-    // Con la PVE realizada el estado "en prueba" es redundante: alcanza con la PVE.
-    line('Destete:', ...(r.weaningStatus === 'sbt-trial' && pveParts.length > 0 ? [] : [weaningLabel.toLowerCase().replace(/^./, (c) => c.toUpperCase())]), ...pveParts),
+    // Con la PVE realizada (o "no cumple criterios") el estado de destete es redundante: alcanza con la PVE.
+    line('Destete:', ...((r.weaningStatus === 'sbt-trial' || (r.weaningStatus === 'not-candidate' && pveDecisions.some((d) => d.decision === 'contraindicada'))) && pveParts.length > 0 ? [] : [weaningLabel.toLowerCase().replace(/^./, (c) => c.toUpperCase())]), ...pveParts),
     mob ? line('Mov:', mob) : undefined,
   ];
 }
@@ -106,7 +106,7 @@ export function describePve(d: PveDecision): string {
     return details.length > 0 ? `PVE realizada (${details.join(', ')})` : 'PVE realizada';
   }
   const reason = pveReasonLabel(d.decision, d.reason);
-  return `PVE ${d.decision === 'contraindicada' ? 'contraindicada' : 'no realizada'}${reason ? ` (${reason})` : ''}`;
+  return `${d.decision === 'contraindicada' ? 'No cumple criterios para PVE' : 'PVE no realizada'}${reason ? ` (${reason})` : ''}`;
 }
 
 const interfaceShort: Record<string, string> = { 'full-face': 'facial total', oronasal: 'oronasal', nasal: 'nasal', helmet: 'helmet' };

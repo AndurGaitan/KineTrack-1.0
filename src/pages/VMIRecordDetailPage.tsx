@@ -377,8 +377,8 @@ export function VMIRecordDetailPage() {
             <div>
               <div className="text-sm text-gray-600 mb-1">Estado</div>
               <div className="text-lg font-medium text-gray-900">
-                {record.weaningStatus === 'not-candidate' && 'No candidato'}
-                {record.weaningStatus === 'candidate' && 'Candidato a destete'}
+                {record.weaningStatus === 'not-candidate' && 'No cumple criterios'}
+                {record.weaningStatus === 'candidate' && 'Cumple criterios para destete'}
                 {record.weaningStatus === 'sbt-trial' && 'En prueba de respiración espontánea'}
                 {record.weaningStatus === 'extubated' && 'Extubado'}
               </div>

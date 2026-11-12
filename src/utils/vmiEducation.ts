@@ -188,11 +188,11 @@ export const ventModes = [{
 }];
 export const weaningStatuses = [{
   value: 'not-candidate',
-  label: 'No candidato',
-  description: 'Aún no cumple criterios'
+  label: 'No cumple criterios',
+  description: 'Aún no está en condiciones de la PVE'
 }, {
   value: 'candidate',
-  label: 'Candidato',
+  label: 'Cumple criterios',
   description: 'Cumple criterios para SBT'
 }, {
   value: 'sbt-trial',

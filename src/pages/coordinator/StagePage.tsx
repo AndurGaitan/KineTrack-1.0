@@ -8,8 +8,8 @@ import type { AppStage } from '../../types';
 const stage1Includes = [
   'Prestaciones: KTR y KTM (un toque, sin nivel de movilización)',
   'Evaluaciones: MRC, VMI, VNI y HFNC (CAFO) solo con parámetros',
-  'Decisión diaria de PVE (realizada, contraindicada o no realizada)',
-  'Inicio de movilización activa y contraindicaciones (ventana de 72 h desde el inicio de la VMI)',
+  'Decisión diaria de PVE (realizada, no cumple criterios o cumple criterios y no se realizó)',
+  'Inicio de movilización activa y períodos en que no cumple criterios (ventana de 72 h desde el inicio de la VMI)',
 ];
 
 const stage1Hides = [

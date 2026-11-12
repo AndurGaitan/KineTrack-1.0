@@ -106,8 +106,8 @@ export function MobilizationCard({ patientId, now }: { patientId: string; now: D
           <div className="font-semibold">✓ Movilización activa iniciada el {fmt(start.startedAt)}</div>
           <div className="mt-0.5">
             {new Date(start.startedAt).getTime() <= deadline.getTime()
-              ? `Dentro de las ${MOBILIZATION_WINDOW_HOURS} h${paused ? ' (ajustadas por contraindicaciones)' : ''}`
-              : `Fuera de las ${MOBILIZATION_WINDOW_HOURS} h${paused ? ' (ajustadas por contraindicaciones)' : ''}`}
+              ? `Dentro de las ${MOBILIZATION_WINDOW_HOURS} h${paused ? ' (ajustadas por períodos sin criterios)' : ''}`
+              : `Fuera de las ${MOBILIZATION_WINDOW_HOURS} h${paused ? ' (ajustadas por períodos sin criterios)' : ''}`}
             {start.notes ? ` · ${start.notes}` : ''}
           </div>
           <button
@@ -122,14 +122,14 @@ export function MobilizationCard({ patientId, now }: { patientId: string; now: D
         </div>
       ) : open ? (
         <div className="rounded-xl bg-amber-50 border border-amber-200 p-3 text-sm text-amber-900">
-          <div className="font-semibold">Contraindicada desde el {fmt(open.startAt)}</div>
+          <div className="font-semibold">No cumple criterios desde el {fmt(open.startAt)}</div>
           <div className="mt-0.5">{mobilizationReasonLabel(open.reason)} · la ventana de {MOBILIZATION_WINDOW_HOURS} h está en pausa.</div>
           <button
             type="button"
             onClick={() => void liftMobilizationContraindication(open.id)}
             className="mt-2 rounded-lg bg-amber-600 text-white text-sm font-semibold px-3 py-2 active:bg-amber-700"
           >
-            Levantar contraindicación (ya se puede movilizar)
+            Ya cumple criterios (retomar la ventana)
           </button>
         </div>
       ) : (
@@ -142,7 +142,7 @@ export function MobilizationCard({ patientId, now }: { patientId: string; now: D
             <>
               <div className="font-semibold">Sin movilización activa registrada</div>
               <div className="mt-0.5">
-                Quedan {formatSpan(remainingMs)} de la ventana de {MOBILIZATION_WINDOW_HOURS} h{paused ? ' (ajustada por contraindicaciones)' : ''}.
+                Quedan {formatSpan(remainingMs)} de la ventana de {MOBILIZATION_WINDOW_HOURS} h{paused ? ' (ajustada por períodos sin criterios)' : ''}.
               </div>
             </>
           ) : (
@@ -177,7 +177,7 @@ export function MobilizationCard({ patientId, now }: { patientId: string; now: D
               }}
               className="rounded-xl border-2 border-amber-300 bg-amber-50 text-amber-900 font-semibold px-4 py-3 active:bg-amber-100"
             >
-              Registrar contraindicación
+              Registrar que no cumple criterios
             </button>
           )}
         </div>
@@ -228,14 +228,14 @@ export function MobilizationCard({ patientId, now }: { patientId: string; now: D
               <input type="datetime-local" className={fieldClass} value={toValue} max={nowInput} onChange={(e) => setToValue(e.target.value)} />
             </div>
           </div>
-          <p className="text-xs text-gray-500">Mientras dure la contraindicación, el reloj de las {MOBILIZATION_WINDOW_HOURS} h queda en pausa. Dejá "hasta" vacío si sigue vigente.</p>
+          <p className="text-xs text-gray-500">Mientras no cumpla criterios, el reloj de las {MOBILIZATION_WINDOW_HOURS} h queda en pausa. Dejá "hasta" vacío si sigue vigente.</p>
           {formError && <p className="text-sm text-red-600">{formError}</p>}
           <div className="grid grid-cols-2 gap-2">
             <button type="button" onClick={closeForm} disabled={busy} className="rounded-xl border border-gray-300 px-4 py-3 text-gray-700 disabled:opacity-50">
               Cancelar
             </button>
             <button type="button" onClick={() => void submitContra()} disabled={busy} className="rounded-xl bg-amber-600 text-white font-bold px-4 py-3 disabled:opacity-50">
-              Guardar contraindicación
+              Guardar
             </button>
           </div>
         </div>
@@ -243,7 +243,7 @@ export function MobilizationCard({ patientId, now }: { patientId: string; now: D
 
       {contraindications.length > 0 && (
         <div className="mt-4">
-          <div className="text-xs font-semibold text-gray-500 mb-1">Contraindicaciones registradas</div>
+          <div className="text-xs font-semibold text-gray-500 mb-1">Períodos en que no cumplió criterios</div>
           <ul className="space-y-1">
             {contraindications.slice(0, 5).map((c) => (
               <li key={c.id} className="flex items-start justify-between gap-2 text-sm text-gray-700">
@@ -253,7 +253,7 @@ export function MobilizationCard({ patientId, now }: { patientId: string; now: D
                 <button
             type="button"
                   onClick={() => {
-                    if (window.confirm('¿Eliminar esta contraindicación?')) void deleteMobilizationContraindication(c.id);
+                    if (window.confirm('¿Eliminar este registro?')) void deleteMobilizationContraindication(c.id);
                   }}
                   className="text-xs text-gray-400 underline shrink-0"
                 >
