@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
-import { ktrTechniqueOptions } from '../utils/prestacionLabels';
+import { ktrTechniqueOptions, respiratorySampleOptions } from '../utils/prestacionLabels';
 import { secretionAmountLabels, secretionCharacterLabels } from '../domain/services/trachDecannulation';
-import type { KtrTechnique, TrachSecretionAmount, TrachSecretionCharacter } from '../types';
+import type { KtrTechnique, RespiratorySample, TrachSecretionAmount, TrachSecretionCharacter } from '../types';
 
 /** Detalle opcional de una kinesioterapia respiratoria. Todo es opcional; vacío = "no indicado". */
 export interface KtrDetail {
@@ -9,9 +9,11 @@ export interface KtrDetail {
   aspirated: boolean | undefined;
   secretionAmount: TrachSecretionAmount | undefined;
   secretionCharacter: TrachSecretionCharacter | undefined;
+  /** Toma de muestra respiratoria (una por sesión). */
+  respiratorySample: RespiratorySample | undefined;
 }
 
-export const emptyKtrDetail: KtrDetail = { techniques: [], aspirated: undefined, secretionAmount: undefined, secretionCharacter: undefined };
+export const emptyKtrDetail: KtrDetail = { techniques: [], aspirated: undefined, secretionAmount: undefined, secretionCharacter: undefined, respiratorySample: undefined };
 
 /** Campos del detalle listos para enviar a la API (solo lo indicado). */
 export function ktrDetailPayload(detail: KtrDetail) {
@@ -20,6 +22,7 @@ export function ktrDetailPayload(detail: KtrDetail) {
     aspirated: detail.aspirated,
     secretionAmount: detail.secretionAmount,
     secretionCharacter: detail.secretionCharacter,
+    respiratorySample: detail.respiratorySample,
   };
 }
 
@@ -46,7 +49,7 @@ function Group({ title, hint, children }: { title: string; hint?: string; childr
 }
 
 /**
- * Técnicas, aspiración y secreciones (cantidad y calidad) de un KTR. Tocar de
+ * Técnicas, aspiración, secreciones (cantidad y calidad) y toma de muestra respiratoria de un KTR. Tocar de
  * nuevo una opción elegida la deselecciona. Aspiración y secreciones son
  * independientes (p. ej. "sin aspiración, secreciones moderadas").
  */
@@ -98,6 +101,19 @@ export function KtrDetailFields({ value, onChange }: { value: KtrDetail; onChang
             className={chip(value.secretionCharacter === c)}
           >
             {capitalize(secretionCharacterLabels[c])}
+          </button>
+        ))}
+      </Group>
+
+      <Group title="Toma de muestra respiratoria" hint="Opcional, una por sesión">
+        {respiratorySampleOptions.map((o) => (
+          <button
+            key={o.value}
+            type="button"
+            onClick={() => onChange({ ...value, respiratorySample: value.respiratorySample === o.value ? undefined : o.value })}
+            className={chip(value.respiratorySample === o.value)}
+          >
+            {o.label}
           </button>
         ))}
       </Group>

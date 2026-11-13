@@ -16,7 +16,7 @@ import { cannulaFitOptions } from '../../utils/hfncEducation';
 import { pveReasonLabel } from '../../components/PveDecisionForm';
 import { nivModeShort, nivUsageShort } from '../../utils/nivEducation';
 import type { GeneralHandoffPatientInput } from './generalHandoffText';
-import { describeAspiration, describeSecretions, mrcStatusLabels, narrateTraqueostomiaForPase } from './clinicalNarrative';
+import { describeAspiration, describeRespiratorySample, describeSecretions, mrcStatusLabels, narrateTraqueostomiaForPase } from './clinicalNarrative';
 
 /** Negrita de WhatsApp. El texto no puede empezar ni terminar con espacio ni contener '*'. */
 export const bold = (text: string): string => `*${text.replace(/\*/g, '').trim()}*`;
@@ -155,7 +155,8 @@ function prestacionesLine(prestaciones: Prestacion[], mrc: MrcAssessment | undef
     const aspiration = describeAspiration(ktr)?.replace('con aspiración de secreciones', 'c/ aspiración').replace('sin aspiración de secreciones', 's/ aspiración');
     const secretions = describeSecretions(ktr);
     const oxygen = [...new Set(ktr.filter((p) => p.oxygenDevice).map((p) => `${oxygenDeviceLabels[p.oxygenDevice!].toLowerCase()}${p.oxygenLiters != null ? ` ${p.oxygenLiters} L/min` : ''}`))];
-    const detail = [...techniques, aspiration, secretions, ...oxygen].filter(Boolean).join(', ');
+    const sample = describeRespiratorySample(ktr, 'colon')?.replace('toma de muestra respiratoria', 'muestra resp.');
+    const detail = [...techniques, aspiration, secretions, sample, ...oxygen].filter(Boolean).join(', ');
     items.push(`KTR${times(ktr.length)}${detail ? ` (${detail})` : ''}`);
   }
   const ktm = by('kinesioterapia-motora');

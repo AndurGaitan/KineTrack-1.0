@@ -19,6 +19,7 @@ import {
   SpontaneousVentilationNarrativeInput,
   TrachNarrativeInput,
   describeAspiration,
+  describeRespiratorySample,
   describeSecretions,
   mrcStatusLabels,
   narrateSpontaneousVentilation,
@@ -284,7 +285,8 @@ function prestacionesSentences(input: NarrativeHandoffInput): string[] {
     const aspiration = describeAspiration(ktr);
     const secretions = describeSecretions(ktr);
     const oxygen = [...new Set(ktr.filter((p) => p.oxygenDevice).map((p) => `${oxygenDeviceLabels[p.oxygenDevice!].toLowerCase()}${p.oxygenLiters != null ? ` a ${p.oxygenLiters} l/min` : ''}`))];
-    const detail = [...techniques, aspiration?.replace(/^con /, ''), secretions].filter((x): x is string => !!x);
+    const sample = describeRespiratorySample(ktr);
+    const detail = [...techniques, aspiration?.replace(/^con /, ''), secretions, sample].filter((x): x is string => !!x);
     items.push(`kinesioterapia respiratoria${sessions(ktr.length)}${detail.length > 0 ? ` con ${joinEs(detail)}` : ''}${oxygen.length > 0 ? `, con aporte de oxígeno por ${joinEs(oxygen)}` : ''}`);
   }
   const ktm = by('kinesioterapia-motora');

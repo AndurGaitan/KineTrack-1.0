@@ -6,6 +6,7 @@ import type {
   OxygenDeviceType,
   Prestacion,
   PrestacionType,
+  RespiratorySample,
   TrachSecretionAmount,
   TrachSecretionCharacter,
 } from '../types';
@@ -23,6 +24,7 @@ export type CreatePrestacionInput = {
   secretionAmount?: TrachSecretionAmount;
   secretionCharacter?: TrachSecretionCharacter;
   techniques?: KtrTechnique[];
+  respiratorySample?: RespiratorySample;
   ktmTypes?: KtmType[];
 };
 

@@ -1,4 +1,15 @@
-import type { KtmType, KtrTechnique, OxygenDeviceType } from '../types';
+import type { KtmType, KtrTechnique, OxygenDeviceType, RespiratorySample } from '../types';
+
+/** Toma de muestra respiratoria de un KTR (una por sesión). */
+export const respiratorySampleLabels: Record<RespiratorySample, string> = {
+  esputo: 'Esputo',
+  aspirado: 'Aspirado traqueal',
+  minibal: 'Minibal',
+};
+
+export const respiratorySampleOptions: { value: RespiratorySample; label: string }[] = (
+  Object.entries(respiratorySampleLabels) as [RespiratorySample, string][]
+).map(([value, label]) => ({ value, label }));
 
 export const oxygenDeviceLabels: Record<OxygenDeviceType, string> = {
   'canula-nasal-simple': 'Cánula nasal simple',

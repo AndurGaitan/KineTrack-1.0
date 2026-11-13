@@ -530,6 +530,8 @@ export interface Prestacion {
   secretionAmount?: TrachSecretionAmount;
   secretionCharacter?: TrachSecretionCharacter;
   techniques?: KtrTechnique[];
+  // Solo KTR: toma de muestra respiratoria hecha en la sesión (una por sesión; undefined = no se tomó).
+  respiratorySample?: RespiratorySample;
   // Solo para kinesioterapia motora (KTM): tipo de kinesioterapia realizada.
   ktmTypes?: KtmType[];
 }
@@ -550,6 +552,9 @@ export type KtrTechnique =
   | 'drenaje-postural'
   | 'vibracion-percusion'
   | 'nebulizacion';
+
+/** Toma de muestra respiratoria: esputo, aspirado traqueal o minibal (mini-BAL). */
+export type RespiratorySample = 'esputo' | 'aspirado' | 'minibal';
 
 export type MrcStatus = 'evaluable' | 'no-evaluable' | 'parcial' | 'desconocido';
 export interface MrcScores {

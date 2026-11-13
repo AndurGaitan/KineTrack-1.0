@@ -10,7 +10,7 @@ import {
   ventilatorySupportLabels,
 } from '../../domain/services/trachDecannulation';
 import type { Prestacion, TrachOverview, TrachRecord } from '../../types';
-import { describeAspiration, describeSecretions } from '../../domain/services/clinicalNarrative';
+import { describeAspiration, describeRespiratorySample, describeSecretions } from '../../domain/services/clinicalNarrative';
 import { ktrTechniqueLabels } from '../../utils/prestacionLabels';
 import { ActivityIcon, DumbbellIcon, DropletsIcon, FlagIcon, PencilIcon, StethoscopeIcon, TimerIcon, ClipboardCheckIcon } from 'lucide-react';
 
@@ -83,6 +83,7 @@ export function TrachTimeline({
             p.techniques && p.techniques.length > 0 ? p.techniques.map((t) => ktrTechniqueLabels[t]).join(', ') : undefined,
             describeAspiration([p]),
             describeSecretions([p]),
+            describeRespiratorySample([p]),
             p.notes,
           ]
             .filter(Boolean)

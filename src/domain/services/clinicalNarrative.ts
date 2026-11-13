@@ -26,7 +26,7 @@ import {
 } from '../../types';
 import { calculateEpisodeDuration } from './episodeService';
 import { cannulaFitOptions } from '../../utils/hfncEducation';
-import { ktmTypeLabels, ktrTechniqueLabels, oxygenDeviceLabels } from '../../utils/prestacionLabels';
+import { ktmTypeLabels, ktrTechniqueLabels, oxygenDeviceLabels, respiratorySampleLabels } from '../../utils/prestacionLabels';
 import { formatSVHours, svInterruptionReasonLabels, svModalityShortLabels } from '../../utils/spontaneousVentilation';
 import { interfaceTypes, nivModes, nivUsageText, skinIntegrityOptions } from '../../utils/nivEducation';
 import { formatRass, mobilizationLevels, rassLevels, ventModes, weaningStatuses } from '../../utils/vmiEducation';
@@ -395,6 +395,19 @@ export function describeAspiration(list: Prestacion[]): string | undefined {
   return `aspiración en ${withAspiration} de ${list.length} sesiones`;
 }
 
+/**
+ * "toma de muestra respiratoria (esputo)" / "(aspirado traqueal ×2 y minibal)" — solo de las sesiones
+ * donde se tomó muestra; si no hubo ninguna, undefined.
+ */
+export function describeRespiratorySample(list: Prestacion[], style: 'paren' | 'colon' = 'paren'): string | undefined {
+  const counts = new Map<string, number>();
+  for (const p of list) if (p.respiratorySample) counts.set(p.respiratorySample, (counts.get(p.respiratorySample) ?? 0) + 1);
+  if (counts.size === 0) return undefined;
+  const parts = [...counts].map(([sample, n]) => `${respiratorySampleLabels[sample as keyof typeof respiratorySampleLabels].toLowerCase()}${n > 1 ? ` ×${n}` : ''}`);
+  // "colon" se usa dentro de otro paréntesis para no anidarlos.
+  return style === 'colon' ? `toma de muestra respiratoria: ${joinEs(parts)}` : `toma de muestra respiratoria (${joinEs(parts)})`;
+}
+
 /** "secreciones moderadas mucopurulentas" — cantidad y calidad distintas, sin repetir. */
 export function describeSecretions(list: Prestacion[]): string | undefined {
   const amounts = [...new Set(list.map((p) => p.secretionAmount).filter((a): a is NonNullable<typeof a> => !!a))];
@@ -437,6 +450,9 @@ function describePrestacionGroup(type: PrestacionType, list: Prestacion[]): stri
 
     const secretionText = describeSecretions(list);
     if (secretionText) details.push(secretionText);
+
+    const sampleText = describeRespiratorySample(list, 'colon');
+    if (sampleText) details.push(sampleText);
 
     const oxygen = [
       ...new Set(
