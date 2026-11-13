@@ -17,11 +17,15 @@ export const pveContraindicationReasons: { value: string; label: string }[] = [
   { value: 'otra', label: 'Otra' },
 ];
 
-export const pveNotDoneReasons: { value: string; label: string }[] = [
-  { value: 'decision-medica', label: 'Decisión médica' },
-  { value: 'falta-de-tiempo', label: 'Falta de tiempo / personal' },
-  { value: 'otra', label: 'Otra' },
-];
+/**
+ * "Cumple criterios y no se realizó": el motivo ahora es texto libre. Estas etiquetas
+ * son solo para mostrar los registros viejos, que guardaban un código.
+ */
+const pveNotDoneLegacyReasons: Record<string, string> = {
+  'decision-medica': 'Decisión médica',
+  'falta-de-tiempo': 'Falta de tiempo / personal',
+  otra: 'Otra',
+};
 
 export const pveSbtTypes: { value: PveSbtType; label: string; short: string }[] = [
   { value: 'psv', label: 'Presión de soporte (PSV)', short: 'PSV' },
@@ -36,8 +40,8 @@ export const pveDecisionLabels: Record<PveDecisionKind, string> = {
 };
 
 export function pveReasonLabel(decision: PveDecisionKind, reason?: string): string | undefined {
-  const list = decision === 'contraindicada' ? pveContraindicationReasons : pveNotDoneReasons;
-  return list.find((r) => r.value === reason)?.label ?? reason;
+  if (decision === 'contraindicada') return pveContraindicationReasons.find((r) => r.value === reason)?.label ?? reason;
+  return (reason && pveNotDoneLegacyReasons[reason]) || reason;
 }
 
 export interface PveDraft {
@@ -54,7 +58,7 @@ export const emptyPveDraft: PveDraft = { decision: '', reason: '', sbtType: '', 
 export function pveDraftError(d: PveDraft): string | null {
   if (!d.decision) return null;
   if (d.decision === 'realizada') return d.sbtType ? null : 'Indicá la modalidad de la PVE';
-  return d.reason ? null : d.decision === 'contraindicada' ? 'Indicá por qué no cumple criterios' : 'Indicá por qué no se realizó';
+  return d.reason.trim() ? null : d.decision === 'contraindicada' ? 'Indicá por qué no cumple criterios' : 'Indicá por qué no se realizó';
 }
 
 export function pveDraftToInput(d: PveDraft, patientId: string, timestamp?: string): CreatePveDecisionInput | null {
@@ -69,7 +73,7 @@ export function pveDraftToInput(d: PveDraft, patientId: string, timestamp?: stri
       failureReason: d.sbtResult === 'failure' && d.failureReason.trim() ? d.failureReason.trim() : undefined,
     };
   }
-  return { patientId, timestamp, decision: d.decision, reason: d.reason };
+  return { patientId, timestamp, decision: d.decision, reason: d.reason.trim() };
 }
 
 const options: { value: PveDecisionKind; label: string; hint: string; active: string }[] = [
@@ -97,7 +101,6 @@ export function PveDecisionForm({
   /** Permite volver a "sin decisión" (en la monitorización es opcional). */
   allowClear?: boolean;
 }) {
-  const reasons = value.decision === 'contraindicada' ? pveContraindicationReasons : pveNotDoneReasons;
   const error = pveDraftError(value);
 
   return (
@@ -189,16 +192,26 @@ export function PveDecisionForm({
           <label className="block text-sm font-medium text-gray-700 mb-1">
             {value.decision === 'contraindicada' ? 'Motivo por el que no cumple criterios' : 'Motivo por el que no se realizó'}
           </label>
-          <select className={fieldClass} value={value.reason} onChange={(e) => onChange({ ...value, reason: e.target.value })}>
-            <option value="">Seleccionar...</option>
-            {reasons.map((r) => (
-              <option key={r.value} value={r.value}>
-                {r.label}
-              </option>
-            ))}
-          </select>
-          {value.decision === 'contraindicada' && (
-            <p className="text-xs text-gray-500 mt-1">Un día en que no cumple criterios no cuenta como día elegible en el indicador de PVE.</p>
+          {value.decision === 'contraindicada' ? (
+            <>
+              <select className={fieldClass} value={value.reason} onChange={(e) => onChange({ ...value, reason: e.target.value })}>
+                <option value="">Seleccionar...</option>
+                {pveContraindicationReasons.map((r) => (
+                  <option key={r.value} value={r.value}>
+                    {r.label}
+                  </option>
+                ))}
+              </select>
+              <p className="text-xs text-gray-500 mt-1">Un día en que no cumple criterios no cuenta como día elegible en el indicador de PVE.</p>
+            </>
+          ) : (
+            <input
+              className={fieldClass}
+              placeholder="Escribí el motivo"
+              maxLength={200}
+              value={value.reason}
+              onChange={(e) => onChange({ ...value, reason: e.target.value })}
+            />
           )}
         </div>
       )}
