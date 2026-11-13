@@ -1,10 +1,10 @@
 import { useCallback, useMemo, useState } from 'react';
-import { HandoffPeriod, PeriodPreset, resolvePeriod } from '../domain/services/handoffData';
+import { HandoffPeriod, PeriodPreset, currentShiftPreset, resolvePeriod } from '../domain/services/handoffData';
 import { toLocalDateTimeInputValue } from '../utils/dateInput';
 
 /** Estado del selector de período + alcance (solo lo mío / todo el equipo). */
 export function useHandoffPeriod() {
-  const [preset, setPreset] = useState<PeriodPreset>('hoy');
+  const [preset, setPreset] = useState<PeriodPreset>(() => currentShiftPreset());
   const [day, setDay] = useState(() => toLocalDateTimeInputValue(new Date()).slice(0, 10));
   const [customFrom, setCustomFrom] = useState(() => {
     const d = new Date();

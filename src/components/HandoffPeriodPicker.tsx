@@ -1,10 +1,12 @@
 import { Card } from './ui/Card';
 import type { HandoffPeriodState } from '../hooks/useHandoffPeriod';
-import type { PeriodPreset } from '../domain/services/handoffData';
+import { SHIFTS, type PeriodPreset } from '../domain/services/handoffData';
 import { toLocalDateTimeInputValue } from '../utils/dateInput';
 import { RefreshCwIcon } from 'lucide-react';
 
 const PRESETS: { value: PeriodPreset; label: string }[] = [
+  { value: 'manana', label: SHIFTS.manana.label },
+  { value: 'tarde', label: SHIFTS.tarde.label },
   { value: 'hoy', label: 'Hoy' },
   { value: '12h', label: 'Últimas 12 h' },
   { value: '24h', label: 'Últimas 24 h' },
@@ -19,7 +21,7 @@ const chip = (active: boolean) =>
 
 const dateInput = 'border-2 border-gray-200 rounded-lg px-2 py-2 text-sm bg-white';
 
-/** Selector de período (hoy / 12 h / 24 h / otro día / personalizado) y alcance (mío / equipo). */
+/** Selector de período (turno mañana / turno tarde / hoy / 12 h / 24 h / otro día / personalizado) y alcance (mío / equipo). */
 export function HandoffPeriodPicker({ state }: { state: HandoffPeriodState }) {
   const { preset, setPreset, day, setDay, customFrom, setCustomFrom, customTo, setCustomTo, mineOnly, setMineOnly, refresh } = state;
   return (

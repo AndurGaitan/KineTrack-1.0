@@ -41,7 +41,22 @@ export function appendPlan(text: string, plan: string, options?: { whatsapp?: bo
   return `${text.trimEnd()}\n\n${options?.whatsapp ? '*Plan / pendientes:*' : 'Plan / pendientes:'} ${trimmed}`;
 }
 
-export type PeriodPreset = 'hoy' | '12h' | '24h' | 'dia' | 'custom';
+export type PeriodPreset = 'manana' | 'tarde' | 'hoy' | '12h' | '24h' | 'dia' | 'custom';
+
+/**
+ * Turnos de trabajo (lunes a viernes). La ventana de cada turno incluye el rato posterior
+ * en que se evoluciona: la mañana se trabaja de 8 a 12 y se evoluciona hasta ~14; la tarde
+ * se trabaja de 14 a 16 y se evoluciona hasta ~19. Para cambiar los horarios, solo editar acá.
+ */
+export const SHIFTS = {
+  manana: { label: 'Turno mañana', fromHour: 8, toHour: 14, phrase: 'Durante el turno de la mañana', short: 'turno mañana' },
+  tarde: { label: 'Turno tarde', fromHour: 14, toHour: 19, phrase: 'Durante el turno de la tarde', short: 'turno tarde' },
+} as const;
+
+/** Turno que corresponde por hora: antes de las 14 la mañana, desde las 14 la tarde. */
+export function currentShiftPreset(now: Date = new Date()): 'manana' | 'tarde' {
+  return now.getHours() < SHIFTS.tarde.fromHour ? 'manana' : 'tarde';
+}
 
 export interface HandoffPeriod {
   from: Date;
@@ -86,6 +101,16 @@ function sameDay(a: Date, b: Date): boolean {
 
 /** Resuelve las opciones del selector a un rango concreto; si son inválidas cae a "hoy". */
 export function resolvePeriod(input: PeriodInput, now: Date = new Date()): HandoffPeriod {
+  if (input.preset === 'manana' || input.preset === 'tarde') {
+    const shift = SHIFTS[input.preset];
+    const from = new Date(now);
+    from.setHours(shift.fromHour, 0, 0, 0);
+    const to = new Date(now);
+    to.setHours(shift.toHour, 0, 0, 0);
+    to.setMilliseconds(-1); // hasta las 13:59:59.999 / 18:59:59.999, para que el turno siguiente empiece limpio
+    return { from, to, phrase: shift.phrase, title: `${fmtDate(now.toISOString())} · ${shift.short}` };
+  }
+
   if (input.preset === '12h' || input.preset === '24h') {
     const hours = input.preset === '12h' ? 12 : 24;
     return {
