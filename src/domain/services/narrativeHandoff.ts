@@ -231,10 +231,11 @@ function hfncSentences(r: HFNCRecord, dur: string | undefined): string[] {
   ];
 }
 
-function oxygenSentences(r: OxygenRecord, dur: string | undefined): string[] {
+// En oxígeno convencional no se informa desde cuándo: no es un dato relevante para la evolución.
+function oxygenSentences(r: OxygenRecord): string[] {
   const extras = [r.fio2 != null ? `al ${r.fio2}%` : undefined, `a ${num(r.flow)} l/min`].filter(Boolean).join(' ');
   const vitals = [r.spo2 != null ? `SpO₂ de ${r.spo2}%` : undefined, r.respiratoryRate != null ? `frecuencia respiratoria de ${r.respiratoryRate} rpm` : undefined].filter((x): x is string => !!x);
-  return [`Se encuentra con oxígeno convencional${dur ? ` ${dur}` : ''}, por ${oxygenDeviceLabels[r.device].toLowerCase()} ${extras}${vitals.length > 0 ? `, con ${joinEs(vitals)}` : ''}.${r.notes ? ` ${r.notes}.` : ''}`.replace('..', '.')];
+  return [`Se encuentra con oxígeno convencional, por ${oxygenDeviceLabels[r.device].toLowerCase()} ${extras}${vitals.length > 0 ? `, con ${joinEs(vitals)}` : ''}.${r.notes ? ` ${r.notes}.` : ''}`.replace('..', '.')];
 }
 
 function supportSentences(input: NarrativeHandoffInput, now: Date): string[] {
@@ -246,9 +247,11 @@ function supportSentences(input: NarrativeHandoffInput, now: Date): string[] {
   if (latest?.type === 'imv') return imvSentences(latest.record, dur, pveDecisions);
   if (latest?.type === 'niv') return nivSentences(latest.record, dur);
   if (latest?.type === 'hfnc') return hfncSentences(latest.record, dur);
-  if (oxygenRecord) return oxygenSentences(oxygenRecord, dur);
+  if (oxygenRecord) return oxygenSentences(oxygenRecord);
   // Sin registro de parámetros en el período: se informa el soporte actual y, en VMI, las decisiones de PVE.
-  const out = [`Se encuentra en ${supportPlain[patient.supportType]}${dur ? ` ${dur}` : ''}.`];
+  // En oxígeno convencional no se informa desde cuándo.
+  const showDuration = patient.supportType !== 'conventional-oxygen';
+  const out = [`Se encuentra en ${supportPlain[patient.supportType]}${showDuration && dur ? ` ${dur}` : ''}.`];
   if (patient.supportType === 'imv' && pveDecisions.length > 0) out.push(`${pveSentences(pveDecisions).join('; ').replace(/^./, (c) => c.toUpperCase())}.`);
   return out;
 }
