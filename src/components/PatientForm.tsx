@@ -15,6 +15,8 @@ interface PatientFormProps {
   prefilledBedId?: string;
   onSubmit: (data: Omit<Patient, 'id' | 'createdAt' | 'status' | 'episodes'> & { admissionDate?: string }) => void;
   onCancel: () => void;
+  /** Mientras se guarda: el botón queda bloqueado para que no se envíe dos veces. */
+  saving?: boolean;
 }
 export function PatientForm({
   sectors,
@@ -22,7 +24,8 @@ export function PatientForm({
   prefilledSectorId,
   prefilledBedId,
   onSubmit,
-  onCancel
+  onCancel,
+  saving = false
 }: PatientFormProps) {
   const { features } = useApp();
   const isEdit = !!initialData;
@@ -228,8 +231,8 @@ export function PatientForm({
         <Button type="button" variant="secondary" onClick={onCancel} fullWidth>
           Cancelar
         </Button>
-        <Button type="submit" fullWidth>
-          Guardar
+        <Button type="submit" fullWidth disabled={saving}>
+          {saving ? 'Guardando…' : 'Guardar'}
         </Button>
       </div>
     </form>;

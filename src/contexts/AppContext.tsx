@@ -53,8 +53,8 @@ interface AppContextType extends AppState {
   updateProfile: (name: string) => Promise<void>;
   addPatient: (
     patient: Omit<Patient, 'id' | 'createdAt' | 'status' | 'episodes'> & { admissionDate?: string }
-  ) => Promise<void>;
-  updatePatient: (id: string, patient: Partial<Patient>) => Promise<void>;
+  ) => Promise<boolean>;
+  updatePatient: (id: string, patient: Partial<Patient>) => Promise<boolean>;
   deletePatient: (id: string) => Promise<void>;
   closePatient: (id: string, closure: PatientClosure) => Promise<void>;
   changeSupportType: (
@@ -263,8 +263,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
         admissionDate: patientData.admissionDate,
       });
       setState((prev) => ({ ...prev, patients: [...prev.patients, patient] }));
+      return true;
     } catch (error) {
       reportError('crear paciente', error);
+      return false;
     }
   };
 
@@ -284,8 +286,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
         tracheostomyDate: updates.tracheostomyDate,
       });
       setState((prev) => ({ ...prev, patients: prev.patients.map((p) => (p.id === id ? patient : p)) }));
+      return true;
     } catch (error) {
       reportError('actualizar paciente', error);
+      return false;
     }
   };
 
