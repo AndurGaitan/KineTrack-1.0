@@ -232,9 +232,10 @@ export function buildCompactPatientBlock(input: GeneralHandoffPatientInput, now:
   else if (type === 'niv') lines.push(...withDuration(nivLines(latestSupportRecord!.record as NIVRecord)));
   else if (type === 'hfnc') lines.push(...withDuration(hfncLines(latestSupportRecord!.record as HFNCRecord)));
   else if (patient.supportType === 'traqueostomia' && trach) lines.push(`${bold('TQT')}${duration ? `${SEP}${duration}` : ''} ${narrateTraqueostomiaForPase(trach)}`);
-  else if (oxygenRecord) lines.push(...withDuration(oxygenLines(oxygenRecord)));
-  else if (patient.supportType === 'conventional-oxygen') lines.push(`${bold('O₂')}${duration ? `${SEP}${duration}` : ''} convencional`);
-  else if (patient.supportType === 'room-air') lines.push(`${bold('Aire ambiente')}${duration ? `${SEP}${duration}` : ''}`);
+  // En oxígeno convencional y aire ambiente no se informa desde cuándo (no es un dato relevante).
+  else if (oxygenRecord) lines.push(...oxygenLines(oxygenRecord));
+  else if (patient.supportType === 'conventional-oxygen') lines.push(`${bold('O₂')} convencional`);
+  else if (patient.supportType === 'room-air') lines.push(bold('Aire ambiente'));
   else lines.push(`${bold(supportShort[patient.supportType])}${duration ? `${SEP}${duration}` : ''}`);
 
   // Dejó la VNI hace poco: se informa cuántos días lleva sin ella.
