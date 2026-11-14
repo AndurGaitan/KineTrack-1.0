@@ -408,6 +408,29 @@ export function describeRespiratorySample(list: Prestacion[], style: 'paren' | '
   return style === 'colon' ? `toma de muestra respiratoria: ${joinEs(parts)}` : `toma de muestra respiratoria (${joinEs(parts)})`;
 }
 
+/**
+ * Cantidad y calidad de las secreciones para la evolución, sin repetir la palabra "secreciones":
+ * `traits` = "de moderada cantidad y calidad mucosa" (o solo "de moderada cantidad" / "de calidad mucosa"),
+ * para colgarlo de "secreciones …". `none` = solo se indicó "sin secreciones".
+ */
+export function describeSecretionTraits(list: Prestacion[]): { traits?: string; none: boolean } {
+  const amounts = [...new Set(list.map((p) => p.secretionAmount).filter((a): a is NonNullable<typeof a> => !!a))];
+  const characters = [...new Set(list.map((p) => p.secretionCharacter).filter((c): c is NonNullable<typeof c> => !!c))];
+  if (amounts.length === 0 && characters.length === 0) return { none: false };
+  if (amounts.length === 1 && amounts[0] === 'ausente' && characters.length === 0) return { none: true };
+  const amountWords: Record<string, string> = { ausente: 'nula', escasa: 'escasa', moderada: 'moderada', abundante: 'abundante' };
+  const severity = ['ausente', 'escasa', 'moderada', 'abundante'];
+  const sortedAmounts = [...amounts].sort((a, b) => severity.indexOf(a) - severity.indexOf(b)).map((a) => amountWords[a]);
+  // Dos cantidades distintas se informan como rango ("de moderada a abundante cantidad").
+  const amountText = sortedAmounts.length === 2 ? `${sortedAmounts[0]} a ${sortedAmounts[1]}` : joinEs(sortedAmounts);
+  const amountPart = amounts.length > 0 ? `de ${amountText} cantidad` : undefined;
+  const qualityPart = characters.length > 0 ? `calidad ${joinEs(characters)}` : undefined;
+  if (!amountPart || !qualityPart) return { traits: amountPart ?? `de ${qualityPart}`, none: false };
+  // Con varios valores en alguna de las dos, se separa con coma para que las "y" no se confundan.
+  const multiple = amounts.length > 1 || characters.length > 1;
+  return { traits: `${amountPart}${multiple ? ', ' : ' y '}${qualityPart}`, none: false };
+}
+
 /** "secreciones moderadas mucopurulentas" — cantidad y calidad distintas, sin repetir. */
 export function describeSecretions(list: Prestacion[]): string | undefined {
   const amounts = [...new Set(list.map((p) => p.secretionAmount).filter((a): a is NonNullable<typeof a> => !!a))];

@@ -20,7 +20,7 @@ import {
   TrachNarrativeInput,
   describeAspiration,
   describeRespiratorySample,
-  describeSecretions,
+  describeSecretionTraits,
   mrcStatusLabels,
   narrateSpontaneousVentilation,
   narrateSupport,
@@ -283,11 +283,26 @@ function prestacionesSentences(input: NarrativeHandoffInput): string[] {
   if (ktr.length > 0) {
     const techniques = [...new Set(ktr.flatMap((p) => p.techniques ?? []))].map((t) => ktrTechniqueLabels[t].toLowerCase());
     const aspiration = describeAspiration(ktr);
-    const secretions = describeSecretions(ktr);
+    const { traits, none } = describeSecretionTraits(ktr);
     const oxygen = [...new Set(ktr.filter((p) => p.oxygenDevice).map((p) => `${oxygenDeviceLabels[p.oxygenDevice!].toLowerCase()}${p.oxygenLiters != null ? ` a ${p.oxygenLiters} l/min` : ''}`))];
     const sample = describeRespiratorySample(ktr);
-    const detail = [...techniques, aspiration?.replace(/^con /, ''), secretions, sample].filter((x): x is string => !!x);
-    items.push(`kinesioterapia respiratoria${sessions(ktr.length)}${detail.length > 0 ? ` con ${joinEs(detail)}` : ''}${oxygen.length > 0 ? `, con aporte de oxígeno por ${joinEs(oxygen)}` : ''}`);
+    // Con aspiración en todas las sesiones, la cantidad y la calidad se cuelgan de la aspiración
+    // ("aspiración de secreciones de moderada cantidad y calidad mucosa"): sin repetir "secreciones".
+    let aspirationItem = aspiration?.replace(/^con /, '');
+    let observed: string | undefined;
+    if (traits) {
+      if (aspiration === 'con aspiración de secreciones') aspirationItem = `aspiración de secreciones ${traits}`;
+      else observed = `observándose secreciones ${traits}`;
+    } else if (none) {
+      // "sin aspiración de secreciones" + "sin secreciones" se dice una sola vez.
+      if (aspiration === 'sin aspiración de secreciones') aspirationItem = 'sin aspiración ni secreciones';
+      else observed = 'sin secreciones';
+    }
+    // Si se describen las secreciones a continuación, alcanza con "sin aspiración" (no se repite "de secreciones").
+    if (observed && aspirationItem === 'sin aspiración de secreciones') aspirationItem = 'sin aspiración';
+    // La aspiración va al final de la lista para que su "y" interna no se confunda con el cierre de la enumeración.
+    const detail = [...techniques, sample, aspirationItem].filter((x): x is string => !!x);
+    items.push(`kinesioterapia respiratoria${sessions(ktr.length)}${detail.length > 0 ? ` con ${joinEs(detail)}` : ''}${observed ? `, ${observed}` : ''}${oxygen.length > 0 ? `, con aporte de oxígeno por ${joinEs(oxygen)}` : ''}`);
   }
   const ktm = by('kinesioterapia-motora');
   if (ktm.length > 0) {
