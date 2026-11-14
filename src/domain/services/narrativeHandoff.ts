@@ -249,8 +249,8 @@ function supportSentences(input: NarrativeHandoffInput, now: Date): string[] {
   if (latest?.type === 'hfnc') return hfncSentences(latest.record, dur);
   if (oxygenRecord) return oxygenSentences(oxygenRecord);
   // Sin registro de parámetros en el período: se informa el soporte actual y, en VMI, las decisiones de PVE.
-  // En oxígeno convencional no se informa desde cuándo.
-  const showDuration = patient.supportType !== 'conventional-oxygen';
+  // En oxígeno convencional y aire ambiente no se informa desde cuándo.
+  const showDuration = patient.supportType !== 'conventional-oxygen' && patient.supportType !== 'room-air';
   const out = [`Se encuentra en ${supportPlain[patient.supportType]}${showDuration && dur ? ` ${dur}` : ''}.`];
   if (patient.supportType === 'imv' && pveDecisions.length > 0) out.push(`${pveSentences(pveDecisions).join('; ').replace(/^./, (c) => c.toUpperCase())}.`);
   return out;
