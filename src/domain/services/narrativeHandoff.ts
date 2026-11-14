@@ -147,7 +147,7 @@ function imvSentences(r: VMIRecord, dur: string | undefined, decisions: PveDecis
           ? ` con presión de soporte de ${r.supportPressure} cmH₂O`
           : '';
   const params = [`PEEP ${r.peep}`, `FiO₂ ${r.fio2}%`];
-  if (r.respiratoryRate != null) params.push(`frecuencia respiratoria de ${r.respiratoryRate}`);
+  if (r.respiratoryRate != null) params.push(`frecuencia respiratoria de ${r.respiratoryRate} rpm`);
   if (r.spo2 != null) params.push(`SpO₂ de ${r.spo2}%`);
   out.push(`Se encuentra en ventilación mecánica invasiva${dur ? ` ${dur}` : ''}, en modo ${mode}${setParam}, ${joinEs(params)}.`);
 
@@ -209,7 +209,7 @@ function nivSentences(r: NIVRecord, dur: string | undefined): string[] {
     r.interfaceType === 'other' ? (r.interfaceOther ?? 'otra') : ({ 'full-face': 'máscara facial total', oronasal: 'máscara oronasal', nasal: 'máscara nasal', helmet: 'helmet' } as Record<string, string>)[r.interfaceType];
   const params = r.mode === 'cpap' ? [`CPAP de ${r.peep} cmH₂O`, `FiO₂ ${r.fio2}%`] : [`presión de soporte de ${r.supportPressure} cmH₂O`, `PEEP ${r.peep}`, `FiO₂ ${r.fio2}%`];
   if (r.leak != null) params.push(`fuga de ${r.leak} l/min`);
-  params.push(`frecuencia respiratoria de ${r.respiratoryRate}`);
+  params.push(`frecuencia respiratoria de ${r.respiratoryRate} rpm`);
   if (r.spo2 != null) params.push(`SpO₂ de ${r.spo2}%`);
   out.push(`Se encuentra en ventilación mecánica no invasiva${dur ? ` ${dur}` : ''}, en modo ${mode} con ${iface}, ${joinEs(params)}.`);
   if (r.hacorScore != null && r.hacorRisk) out.push(`HACOR ${r.hacorScore} (riesgo ${r.hacorRisk === 'low' ? 'bajo' : r.hacorRisk === 'medium' ? 'medio' : 'alto'}).`);
@@ -226,14 +226,14 @@ function hfncSentences(r: HFNCRecord, dur: string | undefined): string[] {
   const risk = r.roxRisk === 'low' ? 'bajo riesgo de fracaso' : r.roxRisk === 'medium' ? 'riesgo moderado de fracaso' : 'alto riesgo de fracaso';
   const fit = cannulaFitOptions.find((c) => c.value === r.cannulaFit)?.label.toLowerCase() ?? r.cannulaFit;
   return [
-    `Se encuentra con cánula nasal de alto flujo${dur ? ` ${dur}` : ''}, a ${r.flow} l/min con FiO₂ ${r.fio2}%${r.temperature != null ? ` y temperatura de ${num(r.temperature)} °C` : ''}, SpO₂ de ${r.spo2}% y frecuencia respiratoria de ${r.respiratoryRate}, con índice ROX de ${num(r.roxIndex)} (${risk}).`,
+    `Se encuentra con cánula nasal de alto flujo${dur ? ` ${dur}` : ''}, a ${r.flow} l/min con FiO₂ ${r.fio2}%${r.temperature != null ? ` y temperatura de ${num(r.temperature)} °C` : ''}, SpO₂ de ${r.spo2}% y frecuencia respiratoria de ${r.respiratoryRate} rpm, con índice ROX de ${num(r.roxIndex)} (${risk}).`,
     `La cánula se encuentra ${fit}${r.cannulaNotes ? ` (${r.cannulaNotes})` : ''} y la humidificación ${r.humidificationWorking ? 'funciona correctamente' : `presenta un problema${r.humidificationIssue ? ` (${r.humidificationIssue})` : ''}`}.`,
   ];
 }
 
 function oxygenSentences(r: OxygenRecord, dur: string | undefined): string[] {
   const extras = [r.fio2 != null ? `al ${r.fio2}%` : undefined, `a ${num(r.flow)} l/min`].filter(Boolean).join(' ');
-  const vitals = [r.spo2 != null ? `SpO₂ de ${r.spo2}%` : undefined, r.respiratoryRate != null ? `frecuencia respiratoria de ${r.respiratoryRate}` : undefined].filter((x): x is string => !!x);
+  const vitals = [r.spo2 != null ? `SpO₂ de ${r.spo2}%` : undefined, r.respiratoryRate != null ? `frecuencia respiratoria de ${r.respiratoryRate} rpm` : undefined].filter((x): x is string => !!x);
   return [`Se encuentra con oxígeno convencional${dur ? ` ${dur}` : ''}, por ${oxygenDeviceLabels[r.device].toLowerCase()} ${extras}${vitals.length > 0 ? `, con ${joinEs(vitals)}` : ''}.${r.notes ? ` ${r.notes}.` : ''}`.replace('..', '.')];
 }
 
