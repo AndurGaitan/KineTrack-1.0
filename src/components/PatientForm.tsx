@@ -8,12 +8,23 @@ import { useApp } from '../contexts/AppContext';
 
 const clamp = (n: number, min: number, max: number) => Math.min(max, Math.max(min, n));
 
+/** "de la VMI", "de la VMNI"…: para el rótulo de la fecha de inicio del soporte. */
+const supportStartLabel = (supportType: string): string =>
+  ({
+    imv: 'de la VMI',
+    niv: 'de la VMNI',
+    hfnc: 'de la CAFO',
+    traqueostomia: 'de la traqueostomía',
+    'conventional-oxygen': 'del oxígeno convencional',
+    'room-air': 'del aire ambiente',
+  } as Record<string, string>)[supportType] ?? 'del soporte';
+
 interface PatientFormProps {
   sectors: Sector[];
   initialData?: Patient;
   prefilledSectorId?: string;
   prefilledBedId?: string;
-  onSubmit: (data: Omit<Patient, 'id' | 'createdAt' | 'status' | 'episodes'> & { admissionDate?: string }) => void;
+  onSubmit: (data: Omit<Patient, 'id' | 'createdAt' | 'status' | 'episodes'> & { admissionDate?: string; supportStartAt?: string }) => void;
   onCancel: () => void;
   /** Mientras se guarda: el botón queda bloqueado para que no se envíe dos veces. */
   saving?: boolean;
@@ -29,6 +40,7 @@ export function PatientForm({
 }: PatientFormProps) {
   const { features } = useApp();
   const isEdit = !!initialData;
+  const activeEpisode = initialData?.episodes?.find(ep => !ep.endAt);
   const now = new Date();
   const [formData, setFormData] = useState({
     alias: initialData?.alias || '',
@@ -42,8 +54,11 @@ export function PatientForm({
     heightCm: initialData?.heightCm ?? undefined as number | undefined,
     // Solo se usa al crear — para pacientes que ya estaban internados y hoy
     // recién se cargan al sistema. Por defecto, ahora mismo.
-    admissionDate: toLocalDateTimeInputValue(now)
+    admissionDate: toLocalDateTimeInputValue(now),
+    // Solo al editar: cuándo empezó el soporte actual (se puede corregir si se cargó al paciente después).
+    supportStartAt: activeEpisode ? toLocalDateTimeInputValue(new Date(activeEpisode.startAt)) : ''
   });
+  const initialSupportStartAt = activeEpisode ? toLocalDateTimeInputValue(new Date(activeEpisode.startAt)) : '';
   const nowInputValue = toLocalDateTimeInputValue(now);
   const [newAntecedente, setNewAntecedente] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -75,7 +90,8 @@ export function PatientForm({
     if (!formData.sectorId) newErrors.sectorId = 'Requerido';
     if (!formData.bedId) newErrors.bedId = 'Requerido';
     if (!formData.supportType) newErrors.supportType = 'Requerido';
-    if (!isEdit && formData.admissionDate && new Date(formData.admissionDate).getTime() > Date.now()) {
+    const startValue = isEdit ? formData.supportStartAt : formData.admissionDate;
+    if (startValue && new Date(startValue).getTime() > Date.now()) {
       newErrors.admissionDate = 'No puede ser una fecha futura';
     }
     if (Object.keys(newErrors).length > 0) {
@@ -93,7 +109,9 @@ export function PatientForm({
       sex: formData.sex || undefined,
       heightCm: formData.heightCm,
       predictedBodyWeight,
-      admissionDate: !isEdit && formData.admissionDate ? new Date(formData.admissionDate).toISOString() : undefined
+      admissionDate: !isEdit && formData.admissionDate ? new Date(formData.admissionDate).toISOString() : undefined,
+      // Solo si la corrigieron: así editar otro dato no toca las fechas.
+      supportStartAt: isEdit && activeEpisode && formData.supportStartAt && formData.supportStartAt !== initialSupportStartAt ? new Date(formData.supportStartAt).toISOString() : undefined
     });
   };
   return <form onSubmit={handleSubmit} className="space-y-6">
@@ -101,21 +119,6 @@ export function PatientForm({
       ...formData,
       alias: e.target.value
     })} placeholder="Ej: PAC-001" error={errors.alias} />
-
-      {!isEdit && <Input
-        label="Fecha y hora de ingreso"
-        type="datetime-local"
-        value={formData.admissionDate}
-        max={nowInputValue}
-        onChange={e => setFormData({
-          ...formData,
-          admissionDate: e.target.value
-        })}
-        error={errors.admissionDate}
-      />}
-      {!isEdit && <p className="text-xs text-gray-500 -mt-4">
-        Si el paciente ya estaba internado, colocá la fecha real de ingreso.
-      </p>}
 
       <Select label="Sector" value={formData.sectorId} onChange={e => setFormData({
       ...formData,
@@ -153,6 +156,26 @@ export function PatientForm({
       value: 'room-air',
       label: 'Aire Ambiente'
     }]} error={errors.supportType} />
+
+      {/* Inicio del soporte: de acá salen los días de VMI/VMNI/... de la evolución y la ventana de 72 h de movilización. */}
+      {(!isEdit || activeEpisode) && <>
+        <Input
+          label={`Fecha y hora de inicio ${supportStartLabel(formData.supportType)}`}
+          type="datetime-local"
+          value={isEdit ? formData.supportStartAt : formData.admissionDate}
+          max={nowInputValue}
+          onChange={e => setFormData({
+            ...formData,
+            ...(isEdit ? { supportStartAt: e.target.value } : { admissionDate: e.target.value })
+          })}
+          error={errors.admissionDate}
+        />
+        <p className="text-xs text-gray-500 -mt-4">
+          {isEdit
+            ? 'Corregí cuándo empezó este soporte si cargaste al paciente después. De ahí salen los días de soporte de la evolución y la ventana de 72 h de movilización precoz.'
+            : 'Si ya estaba con este soporte antes de cargarlo, poné cuándo empezó. De ahí salen los días de soporte de la evolución y la ventana de 72 h de movilización precoz.'}
+        </p>
+      </>}
 
       <div className="pt-2 space-y-6">
         <h2 className="text-lg font-bold text-gray-900 -mb-2">Contexto Clínico (opcional)</h2>

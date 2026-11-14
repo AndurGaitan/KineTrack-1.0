@@ -54,7 +54,7 @@ interface AppContextType extends AppState {
   addPatient: (
     patient: Omit<Patient, 'id' | 'createdAt' | 'status' | 'episodes'> & { admissionDate?: string }
   ) => Promise<boolean>;
-  updatePatient: (id: string, patient: Partial<Patient>) => Promise<boolean>;
+  updatePatient: (id: string, patient: Partial<Patient> & { supportStartAt?: string }) => Promise<boolean>;
   deletePatient: (id: string) => Promise<void>;
   closePatient: (id: string, closure: PatientClosure) => Promise<void>;
   changeSupportType: (
@@ -270,7 +270,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const updatePatient = async (id: string, updates: Partial<Patient>) => {
+  const updatePatient = async (id: string, updates: Partial<Patient> & { supportStartAt?: string }) => {
     try {
       const patient = await patientsApi.updatePatient(id, {
         alias: updates.alias,
@@ -284,6 +284,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         heightCm: updates.heightCm,
         airwayType: updates.airwayType,
         tracheostomyDate: updates.tracheostomyDate,
+        supportStartAt: updates.supportStartAt,
       });
       setState((prev) => ({ ...prev, patients: prev.patients.map((p) => (p.id === id ? patient : p)) }));
       return true;

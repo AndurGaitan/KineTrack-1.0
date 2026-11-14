@@ -28,6 +28,8 @@ export type UpdatePatientInput = Partial<{
   heightCm: number | null;
   airwayType: 'tot' | 'traqueostomia' | null;
   tracheostomyDate: string | null;
+  /** Corrige cuándo empezó el soporte actual (de ahí salen los días de VMI de la evolución). */
+  supportStartAt: string;
 }>;
 
 export type ClosePatientInput = {
