@@ -264,9 +264,15 @@ export interface NIVRecord {
   // Uso de la VNI en las últimas 24 h (seguimiento del destete de VNI)
   usage24h?: NIVUsage;
 
+  // Valoración de la mecánica ventilatoria (opcional)
+  ventilatoryMechanics?: VentilatoryMechanics;
+
   // Alerts
   alerts: string[];
 }
+
+// Valoración de la mecánica ventilatoria (VMNI, CAFO y oxígeno convencional): mala, regular o buena.
+export type VentilatoryMechanics = 'mala' | 'regular' | 'buena';
 
 // HFNC (High-Flow Nasal Cannula) Types
 export type CannulaFit = 'well-adapted' | 'discomfort' | 'significant-leak';
@@ -294,6 +300,9 @@ export interface HFNCRecord {
   roxIndex: number;
   roxRisk: RiskLevel;
 
+  // Valoración de la mecánica ventilatoria (opcional)
+  ventilatoryMechanics?: VentilatoryMechanics;
+
   // Alerts
   alerts: string[];
 }
@@ -317,6 +326,8 @@ export interface OxygenRecord {
   spo2?: number;
   respiratoryRate?: number;
   notes?: string;
+  // Valoración de la mecánica ventilatoria (opcional)
+  ventilatoryMechanics?: VentilatoryMechanics;
   alerts: string[];
 }
 

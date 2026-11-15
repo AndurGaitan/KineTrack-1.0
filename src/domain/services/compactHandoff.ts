@@ -124,6 +124,7 @@ function nivLines(r: NIVRecord): (string | undefined)[] {
     line('Piel:', skinShort[r.skinIntegrity] ?? r.skinIntegrity, r.skinNotes),
     r.usage24h ? line('Uso:', r.usage24h === 'continuous' ? 'continuo' : `${nivUsageShort[r.usage24h]} en 24 h`) : undefined,
     r.previousIMVDays ? line('VMI previa:', `${r.previousIMVDays} d`) : undefined,
+    r.ventilatoryMechanics ? line('Mec. vent.:', r.ventilatoryMechanics) : undefined,
   ];
 }
 
@@ -133,12 +134,14 @@ function hfncLines(r: HFNCRecord): (string | undefined)[] {
   return [
     line('CAFO', `${r.flow} L/min`, `FiO₂ ${r.fio2}%`, `SpO₂ ${r.spo2}%`, `FR ${r.respiratoryRate}`, `ROX ${num(r.roxIndex)} (${risk})${r.roxRisk === 'high' ? ' ⚠️' : ''}`, r.temperature != null ? `${num(r.temperature)} °C` : undefined),
     line('Cánula:', fit, r.cannulaNotes, r.humidificationWorking ? undefined : `humidificación con problema${r.humidificationIssue ? ` (${r.humidificationIssue})` : ''}`),
+    r.ventilatoryMechanics ? line('Mec. vent.:', r.ventilatoryMechanics) : undefined,
   ];
 }
 
 function oxygenLines(r: OxygenRecord): (string | undefined)[] {
   return [
     line('O₂', oxygenDeviceLabels[r.device].toLowerCase(), r.fio2 != null ? `${r.fio2}%` : undefined, `${num(r.flow)} L/min`, r.spo2 != null ? `SpO₂ ${r.spo2}%` : undefined, r.respiratoryRate != null ? `FR ${r.respiratoryRate}` : undefined),
+    r.ventilatoryMechanics ? line('Mec. vent.:', r.ventilatoryMechanics) : undefined,
     r.notes ? line('Nota:', r.notes) : undefined,
   ];
 }

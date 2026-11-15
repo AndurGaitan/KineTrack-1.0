@@ -10,7 +10,8 @@ import { AlertPanel } from '../components/AlertPanel';
 import { RecordDateField } from '../components/RecordDateField';
 import { PrefillNotice } from '../components/PrefillNotice';
 import { useRecordTimestamp } from '../hooks/useRecordTimestamp';
-import { NIVInterfaceType, SkinIntegrityStatus, NIVMode, NIVUsage, Patient } from '../types';
+import { NIVInterfaceType, SkinIntegrityStatus, NIVMode, NIVUsage, Patient, VentilatoryMechanics } from '../types';
+import { ventilatoryMechanicsOptions } from '../utils/ventilatoryMechanics';
 import { calculateHACORForNIV, generateNIVAlerts } from '../utils/nivCalculations';
 import { interfaceTypes, skinIntegrityOptions, lesionLocations, nivModes, nivUsageOptions } from '../utils/nivEducation';
 
@@ -52,6 +53,8 @@ export function NIVEntryForm({ patient, onDone, onCancel }: { patient: Patient; 
     fio2: last?.fio2 as number | undefined,
     leak: last?.leak as number | undefined,
     usage24h: (last?.usage24h ?? '') as NIVUsage | '',
+    // La valoración de la mecánica ventilatoria no se precarga: se elige en cada registro.
+    ventilatoryMechanics: '' as VentilatoryMechanics | '',
     // HACOR (solo con gasometría, etapa 2)
     heartRate: last?.heartRate ?? 80,
     ph: last?.ph ?? 7.4,
@@ -89,6 +92,7 @@ export function NIVEntryForm({ patient, onDone, onCancel }: { patient: Patient; 
       skinIntegrity: formData.skinIntegrity || undefined,
       mode: formData.mode || undefined,
       usage24h: formData.usage24h || undefined,
+      ventilatoryMechanics: formData.ventilatoryMechanics || undefined,
       hacorScore: features.gasometry ? calc.hacorScore : undefined,
       hacorRisk: features.gasometry ? calc.hacorRisk : undefined
     }));
@@ -142,6 +146,7 @@ export function NIVEntryForm({ patient, onDone, onCancel }: { patient: Patient; 
       respiratoryRate: formData.respiratoryRate!,
       previousIMVDays: formData.previousIMVDays || undefined,
       usage24h: formData.usage24h || undefined,
+      ventilatoryMechanics: formData.ventilatoryMechanics || undefined,
       alerts
     });
     setSaving(false);
@@ -173,6 +178,8 @@ export function NIVEntryForm({ patient, onDone, onCancel }: { patient: Patient; 
       </div>}
 
       <ChoiceChips label="Uso de la VNI en las últimas 24 h (opcional)" options={usageOptions} value={formData.usage24h} onChange={v => set({ usage24h: v })} allowClear columns={2} />
+
+      <ChoiceChips label="Mecánica ventilatoria (opcional)" options={ventilatoryMechanicsOptions} value={formData.ventilatoryMechanics} onChange={v => set({ ventilatoryMechanics: v })} allowClear columns={3} />
 
       <ChoiceChips label="Estado de la piel" options={skinOptions} value={formData.skinIntegrity} onChange={v => set({ skinIntegrity: v })} />
       {hasSkinIssue && <div className="space-y-3">

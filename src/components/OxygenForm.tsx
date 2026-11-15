@@ -8,7 +8,8 @@ import { RecordDateField } from './RecordDateField';
 import { PrefillNotice } from './PrefillNotice';
 import { useRecordTimestamp } from '../hooks/useRecordTimestamp';
 import { oxygenDeviceOptions } from '../utils/prestacionLabels';
-import type { OxygenDeviceType, Patient } from '../types';
+import { ventilatoryMechanicsOptions } from '../utils/ventilatoryMechanics';
+import type { OxygenDeviceType, Patient, VentilatoryMechanics } from '../types';
 
 const venturiFio2 = [24, 28, 31, 35, 40, 50];
 
@@ -46,6 +47,8 @@ export function OxygenForm({ patient, onDone }: { patient: Patient; onDone: () =
   const [spo2, setSpo2] = useState<number | undefined>(last?.spo2);
   const [rr, setRr] = useState<number | undefined>(last?.respiratoryRate);
   const [notes, setNotes] = useState('');
+  // No se precarga: la valoración de la mecánica ventilatoria se elige en cada registro.
+  const [mechanics, setMechanics] = useState<VentilatoryMechanics | ''>('');
 
   const canSave = !!device && flow !== undefined && flow > 0 && !recordedAt.isFuture;
   const alerts = device ? previewAlerts(device, flow, spo2, rr) : [];
@@ -64,10 +67,12 @@ export function OxygenForm({ patient, onDone }: { patient: Patient; onDone: () =
       spo2,
       respiratoryRate: rr,
       notes: notes.trim() || undefined,
+      ventilatoryMechanics: mechanics || undefined,
     });
     setSaving(false);
     if (ok) {
       setNotes('');
+      setMechanics('');
       onDone();
     }
   };
@@ -94,6 +99,8 @@ export function OxygenForm({ patient, onDone }: { patient: Patient; onDone: () =
           allowClear
         />
       )}
+
+      <ChoiceChips label="Mecánica ventilatoria (opcional)" options={ventilatoryMechanicsOptions} value={mechanics} onChange={setMechanics} allowClear columns={3} />
 
       <VMIField label="Nota (opcional)" placeholder="Ej: se baja el flujo, buena tolerancia" maxLength={500} value={notes} onChange={e => setNotes(e.target.value)} />
 

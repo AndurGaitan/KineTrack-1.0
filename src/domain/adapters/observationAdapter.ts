@@ -143,6 +143,7 @@ export function nivRecordToObservation(record: NIVRecord): NIVObservation {
     respiratoryRate: record.respiratoryRate,
     previousIMVDays: record.previousIMVDays,
     usage24h: record.usage24h,
+    ventilatoryMechanics: record.ventilatoryMechanics,
     calculated: {
       hacorScore: record.hacorScore,
       hacorRisk: record.hacorRisk
@@ -184,6 +185,7 @@ export function observationToNIVRecord(obs: NIVObservation): NIVRecord {
     respiratoryRate: obs.respiratoryRate,
     previousIMVDays: obs.previousIMVDays,
     usage24h: obs.usage24h,
+    ventilatoryMechanics: obs.ventilatoryMechanics,
     hacorScore: obs.calculated.hacorScore,
     hacorRisk: obs.calculated.hacorRisk,
     alerts: obs.alerts
@@ -209,6 +211,7 @@ export function hfncRecordToObservation(record: HFNCRecord): HFNCObservation {
     humidificationIssue: record.humidificationIssue,
     spo2: record.spo2,
     respiratoryRate: record.respiratoryRate,
+    ventilatoryMechanics: record.ventilatoryMechanics,
     calculated: {
       roxIndex: record.roxIndex,
       roxRisk: record.roxRisk
@@ -236,6 +239,7 @@ export function observationToHFNCRecord(obs: HFNCObservation): HFNCRecord {
     humidificationIssue: obs.humidificationIssue,
     spo2: obs.spo2,
     respiratoryRate: obs.respiratoryRate,
+    ventilatoryMechanics: obs.ventilatoryMechanics,
     roxIndex: obs.calculated.roxIndex,
     roxRisk: obs.calculated.roxRisk,
     alerts: obs.alerts

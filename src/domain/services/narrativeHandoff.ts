@@ -10,6 +10,7 @@
  */
 import { AirwayEvent, HFNCRecord, MobilizationContraindication, MobilizationStart, MrcAssessment, NIVRecord, OxygenRecord, Patient, Prestacion, PveDecision, SupportEpisode, VMIRecord } from '../../types';
 import { oxygenDeviceLabels, ktrTechniqueLabels, ktmTypeLabels } from '../../utils/prestacionLabels';
+import { ventilatoryMechanicsSentence } from '../../utils/ventilatoryMechanics';
 import { cannulaFitOptions } from '../../utils/hfncEducation';
 import { formatRass, mobilizationLevels, rassLevels } from '../../utils/vmiEducation';
 import { pveReasonLabel } from '../../components/PveDecisionForm';
@@ -219,6 +220,7 @@ function nivSentences(r: NIVRecord, dur: string | undefined): string[] {
   out.push(`La piel se encuentra ${skin ?? r.skinIntegrity}${r.skinNotes ? ` (${r.skinNotes})` : ''}.`);
   if (r.previousIMVDays) out.push(`Cuenta con ${r.previousIMVDays} ${r.previousIMVDays === 1 ? 'día' : 'días'} previos de ventilación mecánica invasiva.`);
   if (r.usage24h) out.push(`Utiliza la ventilación no invasiva ${nivUsageText[r.usage24h]}.`);
+  if (r.ventilatoryMechanics) out.push(ventilatoryMechanicsSentence(r.ventilatoryMechanics));
   return out;
 }
 
@@ -228,6 +230,7 @@ function hfncSentences(r: HFNCRecord, dur: string | undefined): string[] {
   return [
     `Se encuentra con cánula nasal de alto flujo${dur ? ` ${dur}` : ''}, a ${r.flow} l/min con FiO₂ ${r.fio2}%${r.temperature != null ? ` y temperatura de ${num(r.temperature)} °C` : ''}, SpO₂ de ${r.spo2}% y frecuencia respiratoria de ${r.respiratoryRate} rpm, con índice ROX de ${num(r.roxIndex)} (${risk}).`,
     `La cánula se encuentra ${fit}${r.cannulaNotes ? ` (${r.cannulaNotes})` : ''} y la humidificación ${r.humidificationWorking ? 'funciona correctamente' : `presenta un problema${r.humidificationIssue ? ` (${r.humidificationIssue})` : ''}`}.`,
+    ...(r.ventilatoryMechanics ? [ventilatoryMechanicsSentence(r.ventilatoryMechanics)] : []),
   ];
 }
 
@@ -235,7 +238,10 @@ function hfncSentences(r: HFNCRecord, dur: string | undefined): string[] {
 function oxygenSentences(r: OxygenRecord): string[] {
   const extras = [r.fio2 != null ? `al ${r.fio2}%` : undefined, `a ${num(r.flow)} l/min`].filter(Boolean).join(' ');
   const vitals = [r.spo2 != null ? `SpO₂ de ${r.spo2}%` : undefined, r.respiratoryRate != null ? `frecuencia respiratoria de ${r.respiratoryRate} rpm` : undefined].filter((x): x is string => !!x);
-  return [`Se encuentra con oxígeno convencional, por ${oxygenDeviceLabels[r.device].toLowerCase()} ${extras}${vitals.length > 0 ? `, con ${joinEs(vitals)}` : ''}.${r.notes ? ` ${r.notes}.` : ''}`.replace('..', '.')];
+  return [
+    `Se encuentra con oxígeno convencional, por ${oxygenDeviceLabels[r.device].toLowerCase()} ${extras}${vitals.length > 0 ? `, con ${joinEs(vitals)}` : ''}.${r.notes ? ` ${r.notes}.` : ''}`.replace('..', '.'),
+    ...(r.ventilatoryMechanics ? [ventilatoryMechanicsSentence(r.ventilatoryMechanics)] : []),
+  ];
 }
 
 function supportSentences(input: NarrativeHandoffInput, now: Date): string[] {

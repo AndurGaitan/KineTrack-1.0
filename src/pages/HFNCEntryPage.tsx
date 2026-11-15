@@ -9,7 +9,8 @@ import { AlertPanel } from '../components/AlertPanel';
 import { RecordDateField } from '../components/RecordDateField';
 import { PrefillNotice } from '../components/PrefillNotice';
 import { useRecordTimestamp } from '../hooks/useRecordTimestamp';
-import { CannulaFit, Patient } from '../types';
+import { CannulaFit, Patient, VentilatoryMechanics } from '../types';
+import { ventilatoryMechanicsOptions } from '../utils/ventilatoryMechanics';
 import { calculateROXForHFNC, generateHFNCAlerts } from '../utils/hfncCalculations';
 import { cannulaFitOptions } from '../utils/hfncEducation';
 
@@ -34,7 +35,9 @@ export function HFNCEntryForm({ patient, onDone, onCancel }: { patient: Patient;
     humidificationWorking: last?.humidificationWorking ?? true,
     humidificationIssue: last?.humidificationIssue ?? '',
     spo2: last?.spo2 ?? 95,
-    respiratoryRate: last?.respiratoryRate ?? 24
+    respiratoryRate: last?.respiratoryRate ?? 24,
+    // La valoración de la mecánica ventilatoria no se precarga: se elige en cada registro.
+    ventilatoryMechanics: '' as VentilatoryMechanics | ''
   }));
   const [calculations, setCalculations] = useState(calculateROXForHFNC({
     spo2: formData.spo2,
@@ -53,7 +56,8 @@ export function HFNCEntryForm({ patient, onDone, onCancel }: { patient: Patient;
       ...formData,
       roxIndex: calc.roxIndex,
       roxRisk: calc.roxRisk,
-      cannulaFit: formData.cannulaFit
+      cannulaFit: formData.cannulaFit,
+      ventilatoryMechanics: formData.ventilatoryMechanics || undefined
     }));
   }, [formData]);
   const handleSubmit = async (e: FormEvent) => {
@@ -73,6 +77,7 @@ export function HFNCEntryForm({ patient, onDone, onCancel }: { patient: Patient;
       humidificationIssue: formData.humidificationWorking ? undefined : formData.humidificationIssue || undefined,
       spo2: formData.spo2,
       respiratoryRate: formData.respiratoryRate,
+      ventilatoryMechanics: formData.ventilatoryMechanics || undefined,
       roxIndex: calculations.roxIndex,
       roxRisk: calculations.roxRisk,
       alerts
@@ -115,6 +120,8 @@ export function HFNCEntryForm({ patient, onDone, onCancel }: { patient: Patient;
       {!formData.humidificationWorking && <VMIField label="Problema detectado" educationKey="humidification" placeholder="Ej: agua fría, condensación, nivel bajo" value={formData.humidificationIssue} onChange={e => set({ humidificationIssue: e.target.value })} />}
 
       <VMIField label="Temperatura" unit="°C" type="number" step="0.1" inputMode="decimal" value={formData.temperature} onChange={e => set({ temperature: Number(e.target.value) })} />
+
+      <ChoiceChips label="Mecánica ventilatoria (opcional)" options={ventilatoryMechanicsOptions} value={formData.ventilatoryMechanics} onChange={v => set({ ventilatoryMechanics: v })} allowClear columns={3} />
 
       {alerts.length > 0 && <AlertPanel alerts={alerts} />}
 
