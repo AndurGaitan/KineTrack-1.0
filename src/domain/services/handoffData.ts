@@ -46,11 +46,14 @@ export type PeriodPreset = 'manana' | 'tarde' | 'hoy' | '12h' | '24h' | 'dia' | 
 /**
  * Turnos de trabajo (lunes a viernes). La ventana de cada turno incluye el rato posterior
  * en que se evoluciona: la mañana se trabaja de 8 a 12 y se evoluciona hasta ~14; la tarde
- * se trabaja de 14 a 16 y se evoluciona hasta ~19. Para cambiar los horarios, solo editar acá.
+ * se trabaja de 14 a 16 y se evoluciona hasta ~19. Los bordes son anchos a propósito: la mañana
+ * arranca a las 0 h y la tarde llega hasta el final del día, para que no queden afuera cargas
+ * hechas antes de las 8 ni evoluciones que se terminan pasadas las 19 (el corte entre turnos
+ * sigue siendo las 14). Para cambiar los horarios, solo editar acá.
  */
 export const SHIFTS = {
-  manana: { label: 'Turno mañana', fromHour: 8, toHour: 14, phrase: 'Durante el turno de la mañana', short: 'turno mañana' },
-  tarde: { label: 'Turno tarde', fromHour: 14, toHour: 19, phrase: 'Durante el turno de la tarde', short: 'turno tarde' },
+  manana: { label: 'Turno mañana', fromHour: 0, toHour: 14, phrase: 'Durante el turno de la mañana', short: 'turno mañana' },
+  tarde: { label: 'Turno tarde', fromHour: 14, toHour: 24, phrase: 'Durante el turno de la tarde', short: 'turno tarde' },
 } as const;
 
 /** Turno que corresponde por hora: antes de las 14 la mañana, desde las 14 la tarde. */
@@ -107,7 +110,7 @@ export function resolvePeriod(input: PeriodInput, now: Date = new Date()): Hando
     from.setHours(shift.fromHour, 0, 0, 0);
     const to = new Date(now);
     to.setHours(shift.toHour, 0, 0, 0);
-    to.setMilliseconds(-1); // hasta las 13:59:59.999 / 18:59:59.999, para que el turno siguiente empiece limpio
+    to.setMilliseconds(-1); // hasta las 13:59:59.999 / 23:59:59.999, para que el turno siguiente empiece limpio
     return { from, to, phrase: shift.phrase, title: `${fmtDate(now.toISOString())} · ${shift.short}` };
   }
 
