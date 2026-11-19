@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Card } from './ui/Card';
 import { useApp } from '../contexts/AppContext';
 import { toLocalDateTimeInputValue } from '../utils/dateInput';
+import { calendarDaysBetween, daysAgoText } from '../utils/supportDays';
 import {
   MOBILIZATION_WINDOW_HOURS,
   formatSpan,
@@ -51,7 +52,6 @@ export function MobilizationCard({ patientId, now }: { patientId: string; now: D
   );
   const open = contraindications.find((c) => !c.endAt);
   const deadline = mobilizationDeadline(episodeStart, contraindications, now);
-  const hoursOfVmi = (now.getTime() - episodeStart.getTime()) / 3600000;
   const remainingMs = deadline.getTime() - now.getTime();
   const paused = contraindications.some((c) => new Date(c.startAt).getTime() < deadline.getTime());
 
@@ -98,7 +98,7 @@ export function MobilizationCard({ patientId, now }: { patientId: string; now: D
     <Card>
       <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 mb-3">
         <h2 className="text-lg font-bold text-gray-900">Movilización precoz</h2>
-        <span className="text-xs text-gray-500">VMI hace {formatSpan(hoursOfVmi * 3600000)} · ventana de {MOBILIZATION_WINDOW_HOURS} h</span>
+        <span className="text-xs text-gray-500">VMI {daysAgoText(calendarDaysBetween(episodeStart, now))} · ventana de {MOBILIZATION_WINDOW_HOURS} h</span>
       </div>
 
       {start ? (

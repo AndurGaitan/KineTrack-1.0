@@ -25,6 +25,7 @@ import {
   VMIRecord,
 } from '../../types';
 import { calculateEpisodeDuration } from './episodeService';
+import { daysAgoText } from '../../utils/supportDays';
 import { cannulaFitOptions } from '../../utils/hfncEducation';
 import { ktmTypeLabels, ktrTechniqueLabels, oxygenDeviceLabels, respiratorySampleLabels } from '../../utils/prestacionLabels';
 import { formatSVHours, svInterruptionReasonLabels, svModalityShortLabels } from '../../utils/spontaneousVentilation';
@@ -133,7 +134,7 @@ export function narrateContext(patient: Patient, activeEpisode: SupportEpisode |
   const supportLabel = supportTypeLabel(patient.supportType);
   if (activeEpisode) {
     const duration = calculateEpisodeDuration(activeEpisode.startAt);
-    parts.push(`Actualmente en ${supportLabel}, hace ${duration.label}.`);
+    parts.push(`Actualmente en ${supportLabel}, ${daysAgoText(duration.days)}.`);
   } else {
     parts.push(`Actualmente en ${supportLabel}.`);
   }

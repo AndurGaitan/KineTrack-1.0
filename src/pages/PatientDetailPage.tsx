@@ -12,6 +12,7 @@ import { ActionSheet } from '../components/ActionSheet';
 import { PatientCarePanel } from '../components/PatientCarePanel';
 import { EditIcon, BedDoubleIcon, ActivityIcon, WindIcon, DropletIcon, ChevronDownIcon, ChevronUpIcon, RepeatIcon, XCircleIcon, ClipboardPlusIcon, ClipboardListIcon, DumbbellIcon, ClipboardCheckIcon, BrainIcon, TrendingUpIcon, StethoscopeIcon } from 'lucide-react';
 import { SupportType, ClosureReason, AirwayEventInput } from '../types';
+import { calendarDaysBetween, daysSpanText } from '../utils/supportDays';
 const supportTypeLabels = {
   imv: 'VMI',
   niv: 'VMNI',
@@ -138,15 +139,7 @@ export function PatientDetailPage() {
     };
   };
   const calculateEpisodeDuration = (startAt: string, endAt?: string) => {
-    const start = new Date(startAt);
-    const end = endAt ? new Date(endAt) : new Date();
-    const diffMs = end.getTime() - start.getTime();
-    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-    const diffHours = Math.floor(diffMs % (1000 * 60 * 60 * 24) / (1000 * 60 * 60));
-    if (diffDays > 0) {
-      return `${diffDays} día${diffDays > 1 ? 's' : ''}`;
-    }
-    return `${diffHours} hora${diffHours !== 1 ? 's' : ''}`;
+    return daysSpanText(calendarDaysBetween(startAt, endAt ?? new Date()));
   };
   const handleChangeSupport = (
     newSupport: SupportType,

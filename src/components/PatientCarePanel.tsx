@@ -10,7 +10,7 @@ import { OxygenForm } from './OxygenForm';
 import { MobilizationCard } from './MobilizationCard';
 import { AirwayCard } from './AirwayCard';
 import { SpontaneousVentilationCard } from './SpontaneousVentilationCard';
-import { formatSpan } from '../utils/earlyMobilization';
+import { calendarDaysBetween, daysAgoText } from '../utils/supportDays';
 import type { Patient, SupportType } from '../types';
 
 const supportChips: { value: SupportType; label: string }[] = [
@@ -78,7 +78,14 @@ export function PatientCarePanel({ patient, onChangeSupport }: { patient: Patien
       <Card>
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-lg font-bold text-gray-900">Soporte ventilatorio</h2>
-          {episode && <span className="text-xs text-gray-500">hace {formatSpan(now.getTime() - new Date(episode.startAt).getTime())}</span>}
+          {episode && (
+            <span className="text-xs text-gray-500">
+              {daysAgoText(calendarDaysBetween(episode.startAt, now))} ·{' '}
+              <button type="button" onClick={() => navigate(`/patient/${patient.id}/edit`)} className="font-semibold text-blue-600 underline underline-offset-2">
+                Corregir inicio
+              </button>
+            </span>
+          )}
         </div>
         <div className="grid grid-cols-5 gap-2" role="radiogroup" aria-label="Soporte ventilatorio">
           {chips.slice(0, 5).map(chip => (

@@ -28,13 +28,19 @@ export const ktrTechniqueLabels: Record<KtrTechnique, string> = {
   'ejercicios-respiratorios': 'Ejercicios respiratorios',
   'tos-asistida': 'Tos asistida',
   'drenaje-postural': 'Drenaje postural',
+  // Ya no se ofrece al cargar (queda solo para mostrar registros anteriores).
   'vibracion-percusion': 'Vibración / percusión',
-  nebulizacion: 'Nebulización',
+  // Mismo valor interno que la antigua "Nebulización": los registros previos pasan a leerse como terapia broncodilatadora.
+  nebulizacion: 'Terapia broncodilatadora',
 };
 
+/** Técnicas que se pueden elegir al cargar una KTR (sin las que se dejaron de usar). */
+const ktrRetiredTechniques: KtrTechnique[] = ['vibracion-percusion'];
 export const ktrTechniqueOptions: { value: KtrTechnique; label: string }[] = (
   Object.entries(ktrTechniqueLabels) as [KtrTechnique, string][]
-).map(([value, label]) => ({ value, label }));
+)
+  .filter(([value]) => !ktrRetiredTechniques.includes(value))
+  .map(([value, label]) => ({ value, label }));
 
 /** Tipos de kinesioterapia motora que se pueden marcar en una sesión de KTM. */
 export const ktmTypeLabels: Record<KtmType, string> = {

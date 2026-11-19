@@ -8,7 +8,8 @@
  * horas de evolución.
  */
 import { MrcAssessment, NIVRecord, HFNCRecord, OxygenRecord, Patient, Prestacion, PveDecision, SupportEpisode, VMIRecord } from '../../types';
-import { earlyMobilizationStatus } from '../../utils/earlyMobilization';
+import { earlyMobilizationSummary } from '../../utils/earlyMobilization';
+import { calendarDaysBetween } from '../../utils/supportDays';
 import { oxygenDeviceLabels, ktrTechniqueLabels, ktmTypeLabels } from '../../utils/prestacionLabels';
 import { formatSVHours, svInterruptionReasonLabels, svModalityShortLabels } from '../../utils/spontaneousVentilation';
 import { formatRass, weaningStatuses } from '../../utils/vmiEducation';
@@ -29,10 +30,10 @@ const line = (label: string, ...parts: (string | undefined | false)[]): string |
 
 const num = (n: number): string => String(n).replace('.', ',');
 
-/** "2 d", "5 h": tiempo en el soporte actual, sin minutos ni horarios. */
+/** "2 d" / "hoy": días en el soporte actual (de calendario), nunca horas. */
 export function shortDuration(startAt: string, now: Date = new Date()): string {
-  const hours = Math.max(0, (now.getTime() - new Date(startAt).getTime()) / 3600000);
-  return hours < 24 ? `${Math.max(1, Math.round(hours))} h` : `${Math.floor(hours / 24)} d`;
+  const days = calendarDaysBetween(startAt, now);
+  return days <= 0 ? 'hoy' : `${days} d`;
 }
 
 const supportShort: Record<Patient['supportType'], string> = { imv: 'VMI', niv: 'VMNI', hfnc: 'CAFO', traqueostomia: 'TQT', 'conventional-oxygen': 'O₂', 'room-air': 'Aire ambiente' };
@@ -247,10 +248,9 @@ export function buildCompactPatientBlock(input: GeneralHandoffPatientInput, now:
   // Sin monitorización de VMI cargada en el período, igual se informan las decisiones de PVE.
   if (type !== 'imv' && pveDecisions.length > 0) lines.push(line('Destete:', ...pveDecisions.map(describePve)));
 
-  // Movilización precoz: estado actual de la ventana de 72 h (solo pacientes en VMI).
+  // Movilización precoz: solo si se está haciendo o no (sin horas), solo pacientes en VMI.
   if (mobilization && activeEpisode?.supportType === 'imv') {
-    const status = earlyMobilizationStatus(activeEpisode.startAt, mobilization.start, mobilization.contraindications, now);
-    lines.push(`${bold('Mov. precoz:')} ${status.pending ? '⏳ ' : ''}${status.text}`);
+    lines.push(`${bold('Mov. precoz:')} ${earlyMobilizationSummary(mobilization.start, mobilization.contraindications)}`);
   }
 
   lines.push(eventsLine(input));

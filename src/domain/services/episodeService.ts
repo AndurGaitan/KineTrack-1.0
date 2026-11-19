@@ -10,6 +10,7 @@
 
 import { SupportEpisode, Patient } from '../models';
 import { SupportType } from '../../types';
+import { calendarDaysBetween, daysSpanText } from '../../utils/supportDays';
 
 /**
  * Creates a new support episode
@@ -77,18 +78,13 @@ export function calculateEpisodeDuration(startAt: string, endAt?: string): {
   const start = new Date(startAt);
   const end = endAt ? new Date(endAt) : new Date();
   const diffMs = end.getTime() - start.getTime();
-  const days = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+  // Días de calendario (fecha local); la duración se informa siempre en días, nunca en horas.
+  const days = calendarDaysBetween(start, end);
   const hours = Math.floor(diffMs % (1000 * 60 * 60 * 24) / (1000 * 60 * 60));
-  let label: string;
-  if (days > 0) {
-    label = `${days} día${days > 1 ? 's' : ''}`;
-  } else {
-    label = `${hours} hora${hours !== 1 ? 's' : ''}`;
-  }
   return {
     days,
     hours,
-    label
+    label: daysSpanText(days)
   };
 }
 

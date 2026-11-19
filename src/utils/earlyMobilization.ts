@@ -64,6 +64,19 @@ export interface EarlyMobilizationStatus {
   pending: boolean;
 }
 
+/**
+ * Para los textos de pase y evolución: solo si la movilización precoz se está haciendo o no,
+ * sin horas ni ventana. "sí" / "no" / "no cumple criterios (motivo)".
+ */
+export function earlyMobilizationSummary(
+  start: { startedAt: string } | undefined,
+  contraindications: { reason: string; endAt?: string }[]
+): string {
+  if (start) return 'sí';
+  const open = contraindications.find((c) => !c.endAt);
+  return open ? `no cumple criterios (${mobilizationReasonLabel(open.reason).toLowerCase()})` : 'no';
+}
+
 /** Estado de la movilización precoz de un episodio de VMI, en una frase. */
 export function earlyMobilizationStatus(
   episodeStartAt: string,

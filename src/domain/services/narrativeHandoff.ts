@@ -11,6 +11,7 @@
 import { AirwayEvent, HFNCRecord, MobilizationContraindication, MobilizationStart, MrcAssessment, NIVRecord, OxygenRecord, Patient, Prestacion, PveDecision, SupportEpisode, VMIRecord } from '../../types';
 import { oxygenDeviceLabels, ktrTechniqueLabels, ktmTypeLabels } from '../../utils/prestacionLabels';
 import { ventilatoryMechanicsSentence } from '../../utils/ventilatoryMechanics';
+import { calendarDaysBetween, daysAgoText } from '../../utils/supportDays';
 import { cannulaFitOptions } from '../../utils/hfncEducation';
 import { formatRass, mobilizationLevels, rassLevels } from '../../utils/vmiEducation';
 import { pveReasonLabel } from '../../components/PveDecisionForm';
@@ -90,16 +91,10 @@ function lowerFirst(text: string): string {
   return /[A-ZÁÉÍÓÚÑ]/.test(first.slice(1)) || first === first.toUpperCase() ? text : text.charAt(0).toLowerCase() + text.slice(1);
 }
 
-/** "hace 2 días" / "hace 5 horas" */
+/** "hace 2 días" / "desde hoy": siempre en días de calendario, nunca en horas. */
 function durationText(startAt: string | undefined, now: Date): string | undefined {
   if (!startAt) return undefined;
-  const hours = Math.max(0, (now.getTime() - new Date(startAt).getTime()) / 3600000);
-  if (hours < 24) {
-    const h = Math.max(1, Math.round(hours));
-    return `hace ${h} ${h === 1 ? 'hora' : 'horas'}`;
-  }
-  const d = Math.floor(hours / 24);
-  return `hace ${d} ${d === 1 ? 'día' : 'días'}`;
+  return daysAgoText(calendarDaysBetween(startAt, now));
 }
 
 const supportPlain: Record<Patient['supportType'], string> = {
@@ -267,7 +262,7 @@ function mobilizationSentence(input: NarrativeHandoffInput): string | undefined 
   if (!m || input.activeEpisode?.supportType !== 'imv') return undefined;
   if (m.start) return 'Se está llevando a cabo la movilización precoz.';
   if (m.contraindications.some((c) => !c.endAt)) return 'El paciente no cumple criterios para movilización precoz.';
-  return undefined;
+  return 'No se está llevando a cabo la movilización precoz.';
 }
 
 function eventsSentence(input: NarrativeHandoffInput): string | undefined {
