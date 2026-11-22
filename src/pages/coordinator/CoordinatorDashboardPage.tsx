@@ -26,6 +26,23 @@ function rangeForPreset(preset: Preset): { from: string; to: string } {
   return { from: toDateInputValue(from), to };
 }
 
+// Etiquetas en castellano para el detalle de cada indicador (si aparece un campo nuevo, se muestra con el nombre genérico).
+const QI_DETAIL_LABELS: Record<string, string> = {
+  eligibleDays: 'Días elegibles',
+  eligibleDaysWithPve: 'Días con PVE',
+  episodiosElegibles: 'Episodios con ventana cumplida',
+  episodiosATiempo: 'Con movilización ≤72 h',
+  episodiosSinMovilizacion: 'Sin movilización',
+  extubacionesProgramadas: 'Extubaciones programadas',
+  reintubadas48h: 'Reintubadas ≤48 h',
+  exitosas: 'Exitosas',
+  pendientes: 'Pendientes',
+  patientsVmiMasDe7Dias: 'Pacientes con VMI >7 días',
+  daucicConfirmada: 'DAUCI confirmada',
+  protocolosPriorizados: 'Protocolos priorizados',
+  protocolosVigentes: 'Protocolos vigentes',
+};
+
 function QICard({
   title,
   formula,
@@ -53,7 +70,7 @@ function QICard({
       <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-gray-600">
         {detailEntries.map(([k, v]) => (
           <div key={k} className="flex justify-between">
-            <span className="capitalize">{k.replace(/([A-Z])/g, ' $1')}</span>
+            <span className={QI_DETAIL_LABELS[k] ? '' : 'capitalize'}>{QI_DETAIL_LABELS[k] ?? k.replace(/([A-Z])/g, ' $1')}</span>
             <span className="font-semibold text-gray-900">{v}</span>
           </div>
         ))}
