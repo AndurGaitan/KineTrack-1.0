@@ -10,6 +10,7 @@ import { OxygenForm } from './OxygenForm';
 import { MobilizationCard } from './MobilizationCard';
 import { AirwayCard } from './AirwayCard';
 import { SpontaneousVentilationCard } from './SpontaneousVentilationCard';
+import { OffVmiDaysCard } from './trach/OffVmiDaysCard';
 import { calendarDaysBetween, daysAgoText } from '../utils/supportDays';
 import type { Patient, SupportType } from '../types';
 
@@ -135,13 +136,17 @@ export function PatientCarePanel({ patient, onChangeSupport }: { patient: Patien
       )}
 
       {current === 'traqueostomia' && features.tracheostomy && (
-        <Card>
-          <h3 className="text-lg font-bold text-gray-900 mb-1">Seguimiento de traqueostomía</h3>
-          <p className="text-sm text-gray-700 mb-3">Estado, decanulación y ventilación espontánea.</p>
-          <button onClick={() => navigate(`/patient/${patient.id}/traqueostomia`)} className="w-full min-h-[52px] rounded-xl bg-indigo-600 text-white font-semibold active:bg-indigo-700">
-            Abrir seguimiento de traqueostomía
-          </button>
-        </Card>
+        <>
+          <OffVmiDaysCard episode={episode} now={now} />
+          <SpontaneousVentilationCard patientId={patient.id} episodeId={episode?.id} />
+          <Card>
+            <h3 className="text-lg font-bold text-gray-900 mb-1">Traqueostomía</h3>
+            <p className="text-sm text-gray-700 mb-3">Estado de la cánula, decanulación y línea de tiempo.</p>
+            <button onClick={() => navigate(`/patient/${patient.id}/traqueostomia`)} className="w-full min-h-[52px] rounded-xl bg-indigo-600 text-white font-semibold active:bg-indigo-700">
+              Estado y decanulación
+            </button>
+          </Card>
+        </>
       )}
     </div>
   );
