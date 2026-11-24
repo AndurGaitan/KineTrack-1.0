@@ -4,7 +4,7 @@ import { Card } from '../ui/Card';
 import { useApp } from '../../contexts/AppContext';
 import * as dashboardApi from '../../api/dashboardApi';
 import type { AirwayGroup, WeaningTests } from '../../types';
-import { svInterruptionReasonLabels, formatSVHours } from '../../utils/spontaneousVentilation';
+import { svInterruptionReasonLabels, formatSVDuration } from '../../utils/spontaneousVentilation';
 import {
   AIRWAY_GROUPS,
   Granularity,
@@ -213,7 +213,7 @@ export function WeaningTrendsSection({ range }: { range: { from: string; to: str
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
                   <div className="bg-blue-50 rounded-xl p-3">
                     <div className="text-xs text-gray-600">Horas totales</div>
-                    <div className="text-xl font-bold text-blue-900">{formatSVHours(svTotals.hours)} h</div>
+                    <div className="text-xl font-bold text-blue-900">{formatSVDuration(svTotals.hours)}</div>
                   </div>
                   <div className="bg-gray-50 rounded-xl p-3">
                     <div className="text-xs text-gray-600">Pacientes</div>

@@ -45,8 +45,12 @@ export type AirwayEventInput =
   | { type: 'destete-vni' }
   | { type: 'destete-hfnc' };
 export type AirwayType = 'tot' | 'traqueostomia';
-export type SVModality = 'aire-ambiente' | 'oxigeno' | 'ventilador';
+// 'aire-ambiente' y 'oxigeno' son de registros viejos; hoy se cargan 'hme-o2', 'tubo-t' y 'ventilador'.
+export type SVModality = 'aire-ambiente' | 'oxigeno' | 'ventilador' | 'hme-o2' | 'tubo-t';
 export type SVInterruptionReason =
+  | 'trabajo-ventilatorio'
+  | 'deterioro-sensorio'
+  | 'hipercapnia'
   | 'taquipnea'
   | 'desaturacion'
   | 'fatiga'
