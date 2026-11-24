@@ -6,6 +6,8 @@ import { toLocalDateTimeInputValue } from '../utils/dateInput';
 import {
   computeSpontaneousVentilationSummary,
   formatSVDuration,
+  isStaleOpenPeriod,
+  openPeriodHours,
   currentSVModality,
   svInterruptionReasonLabels,
   svInterruptionReasonOptions,
@@ -89,11 +91,18 @@ export function SpontaneousVentilationCard({ patientId, episodeId }: Spontaneous
   const periods = getPatientSVPeriods(patientId);
   const summary = computeSpontaneousVentilationSummary(periods);
   const maxHours = Math.max(4, ...summary.days.map((d) => d.hours));
+  const today = summary.days[summary.days.length - 1];
+  const stale = isStaleOpenPeriod(summary.active);
 
   const [modality, setModality] = useState<SVModality>(currentSVModality(periods[0]?.modality));
   const [finishing, setFinishing] = useState(false);
   const [finishTolerated, setFinishTolerated] = useState<boolean | undefined>(undefined);
   const [finishReason, setFinishReason] = useState<SVInterruptionReason | undefined>(undefined);
+  // Hora real de fin: solo se pide cuando la prueba quedó abierta de más.
+  const [finishEnd, setFinishEnd] = useState(() => toLocalDateTimeInputValue(new Date()));
+  const finishEndDate = new Date(finishEnd);
+  const finishEndInvalid =
+    stale && !!summary.active && (!(finishEndDate.getTime() > new Date(summary.active.startAt).getTime()) || finishEndDate.getTime() > Date.now() + 60_000);
 
   const [showRetro, setShowRetro] = useState(false);
   const [retroStart, setRetroStart] = useState(() => toLocalDateTimeInputValue(new Date(Date.now() - 3 * 60 * 60 * 1000)));
@@ -104,8 +113,12 @@ export function SpontaneousVentilationCard({ patientId, episodeId }: Spontaneous
   const [retroNotes, setRetroNotes] = useState('');
 
   const handleFinish = async () => {
-    if (!summary.active || finishTolerated === undefined) return;
-    await closeSVPeriod(summary.active.id, { tolerated: finishTolerated, interruptionReason: finishReason });
+    if (!summary.active || finishTolerated === undefined || finishEndInvalid) return;
+    await closeSVPeriod(summary.active.id, {
+      tolerated: finishTolerated,
+      interruptionReason: finishReason,
+      endAt: stale ? finishEndDate.toISOString() : undefined,
+    });
     setFinishing(false);
     setFinishTolerated(undefined);
     setFinishReason(undefined);
@@ -135,8 +148,25 @@ export function SpontaneousVentilationCard({ patientId, episodeId }: Spontaneous
       <p className="text-xs text-gray-500 mb-4">Pruebas fuera del ventilador con filtro HME + O₂ o tubo en T. La duración cambia cada día: puede ser de minutos, de horas o no haber tolerancia.</p>
 
       <div className="p-4 rounded-xl bg-blue-50 mb-4">
-        <div className="text-xs text-gray-600 mb-1">Últimas 24 h</div>
-        <div className="text-2xl font-bold text-blue-900">{formatSVDuration(summary.hoursLast24h)}</div>
+        <div className="text-xs font-semibold text-blue-900 mb-2">Hoy</div>
+        <div className="grid grid-cols-3 gap-3">
+          <div>
+            <div className="text-2xl font-bold text-blue-900">{today.periods === 0 ? '—' : formatSVDuration(today.hours)}</div>
+            <div className="text-xs text-gray-600">Tiempo</div>
+          </div>
+          <div>
+            <div className="text-2xl font-bold text-blue-900">{today.tolerated}</div>
+            <div className="text-xs text-gray-600">{today.tolerated === 1 ? 'Tolerada' : 'Toleradas'}</div>
+          </div>
+          <div>
+            <div className={`text-2xl font-bold ${today.notTolerated > 0 ? 'text-amber-600' : 'text-blue-900'}`}>{today.notTolerated}</div>
+            <div className="text-xs text-gray-600">{today.notTolerated === 1 ? 'No tolerada' : 'No toleradas'}</div>
+          </div>
+        </div>
+        <div className="text-xs text-blue-800 mt-3">
+          {summary.active ? `En curso · ${svModalityLabels[summary.active.modality]} · lleva ${formatSVDuration(openPeriodHours(summary.active))}` : today.periods === 0 ? 'Hoy todavía no se hizo ninguna prueba.' : 'Sin prueba en curso.'}
+          {' · '}Últimas 24 h: {formatSVDuration(summary.hoursLast24h)}
+        </div>
       </div>
 
       <div className="mb-4">
@@ -159,6 +189,20 @@ export function SpontaneousVentilationCard({ patientId, episodeId }: Spontaneous
         <p className="text-[11px] text-gray-400 mt-1">Tiempo por día · cantidad de períodos · ⚠ períodos no tolerados</p>
       </div>
 
+      {summary.active && stale && (
+        <div className="bg-amber-50 border-2 border-amber-300 rounded-xl p-4 mb-4 text-sm text-amber-900" role="alert">
+          <div className="font-semibold">Prueba abierta hace {formatSVDuration(openPeriodHours(summary.active))}</div>
+          <p className="mt-1">
+            Empezó el {formatDateTime(summary.active.startAt)} y sigue en curso. Si ya terminó, cerrala con la hora real para que no sume tiempo de más.
+          </p>
+          {!finishing && (
+            <Button type="button" onClick={() => { setFinishEnd(toLocalDateTimeInputValue(new Date())); setFinishing(true); }} className="mt-3 bg-amber-600">
+              Cerrar con la hora real
+            </Button>
+          )}
+        </div>
+      )}
+
       {summary.active ? (
         <div className="bg-blue-50 border-2 border-blue-200 rounded-xl p-4 mb-4">
           <div className="flex items-center justify-between">
@@ -176,12 +220,19 @@ export function SpontaneousVentilationCard({ patientId, episodeId }: Spontaneous
           </div>
           {finishing && (
             <div className="mt-3 space-y-3">
+              {stale && (
+                <label className="block text-xs font-medium text-gray-700">
+                  Hora real de fin
+                  <input type="datetime-local" value={finishEnd} onChange={(e) => setFinishEnd(e.target.value)} className={`${dateInput} mt-1`} />
+                  {finishEndInvalid && <span className="text-red-600">Tiene que ser posterior al inicio y no futura.</span>}
+                </label>
+              )}
               <ToleranceFields tolerated={finishTolerated} reason={finishReason} onTolerated={setFinishTolerated} onReason={setFinishReason} />
               <div className="flex gap-2">
                 <Button type="button" variant="secondary" onClick={() => setFinishing(false)} fullWidth>
                   Cancelar
                 </Button>
-                <Button type="button" onClick={handleFinish} disabled={finishTolerated === undefined} fullWidth>
+                <Button type="button" onClick={handleFinish} disabled={finishTolerated === undefined || finishEndInvalid} fullWidth>
                   Finalizar período
                 </Button>
               </div>
