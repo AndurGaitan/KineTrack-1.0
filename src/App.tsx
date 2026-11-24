@@ -36,6 +36,7 @@ import { VMIPatientsListPage } from './pages/coordinator/VMIPatientsListPage';
 import { BulkPrestacionPage } from './pages/coordinator/BulkPrestacionPage';
 import { StagePage } from './pages/coordinator/StagePage';
 import { QualityShadowPage } from './pages/coordinator/QualityShadowPage';
+import { ProtocolLibraryPage } from './pages/coordinator/ProtocolLibraryPage';
 import { UpdateNotice } from './components/UpdateNotice';
 
 // Recharts (and the Recharts-only VMITrendsPage) is code-split out of the
@@ -186,6 +187,9 @@ function AppRoutes() {
           </ProtectedRoute>} />
       <Route path="/coordinator/etapa" element={<ProtectedRoute requireCoordinador>
             <StagePage />
+          </ProtectedRoute>} />
+      <Route path="/coordinator/biblioteca" element={<ProtectedRoute requireCoordinador>
+            <ProtocolLibraryPage />
           </ProtectedRoute>} />
       <Route path="/coordinator/calidad-sombra" element={<ProtectedRoute requireCoordinador>
             <QualityShadowPage />
