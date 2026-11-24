@@ -1,4 +1,5 @@
 import { useNavigate, useLocation } from 'react-router-dom';
+import { useApp } from '../contexts/AppContext';
 
 // Secondary nav for the admin cluster (config screens, not everyday
 // navigation). Dashboard/Cronograma live in the bottom tab bar instead —
@@ -15,11 +16,14 @@ const tabs = [
 export function CoordinatorNav() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { qualityIndicatorsV2 } = useApp();
+  // La pestaña de calidad v2 (modo sombra) solo aparece con la flag activa.
+  const visibleTabs = qualityIndicatorsV2 ? [...tabs, { path: '/coordinator/calidad-sombra', label: 'Calidad v2' }] : tabs;
 
   return (
     <div className="max-w-4xl mx-auto px-4 pt-4 overflow-x-auto">
       <div className="flex gap-2 pb-2">
-        {tabs.map((tab) => (
+        {visibleTabs.map((tab) => (
           <button
             key={tab.path}
             onClick={() => navigate(tab.path)}

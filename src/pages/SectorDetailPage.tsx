@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useApp } from '../contexts/AppContext';
 import { Header } from '../components/ui/Header';
 import { BedGrid } from '../components/BedGrid';
+import { PveV2PendingNotice } from '../components/PveV2PendingNotice';
 import { filterPatientsBySector } from '../domain/services/patientService';
 import { Bed, Patient } from '../types';
 export function SectorDetailPage() {
@@ -36,6 +37,7 @@ export function SectorDetailPage() {
       <Header title={sector.name} showBack />
 
       <main className="max-w-2xl mx-auto p-4 pb-24 space-y-6">
+        <PveV2PendingNotice />
         <div>
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-bold text-gray-900">
