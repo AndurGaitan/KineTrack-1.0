@@ -115,6 +115,7 @@ export function PaseDeGuardiaPage() {
       mrcAssessment: activity?.mrcAssessment,
       trach: activity?.trach,
       daysSinceNiv: activity?.daysSinceNiv,
+      vmiOff: activity?.vmiOff,
       airwayEvents: activity?.airwayEvents,
       episodeChanges: activity?.episodeChanges,
       spontaneousVentilation: activity?.spontaneousVentilation,

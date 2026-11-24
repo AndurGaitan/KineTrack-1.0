@@ -41,7 +41,12 @@ export function OxygenForm({ patient, onDone }: { patient: Patient; onDone: () =
   const activeEpisode = getActiveEpisode(patient.id);
   const last = getPatientOxygenRecords(patient.id, activeEpisode?.id)[0];
   const [saving, setSaving] = useState(false);
-  const [device, setDevice] = useState<OxygenDeviceType | ''>(last?.device ?? '');
+  const isTrach = patient.airwayType === 'traqueostomia';
+  const [device, setDevice] = useState<OxygenDeviceType | ''>(last?.device ?? (isTrach ? 'filtro-hme-o2' : ''));
+  // El filtro HME y el tubo en T son de la traqueostomía: van primero con ella y no se ofrecen sin ella.
+  const deviceOptions = isTrach
+    ? [...oxygenDeviceOptions.filter((o) => o.value === 'filtro-hme-o2' || o.value === 'tubo-t'), ...oxygenDeviceOptions.filter((o) => o.value !== 'filtro-hme-o2' && o.value !== 'tubo-t')]
+    : oxygenDeviceOptions.filter((o) => o.value !== 'filtro-hme-o2' && o.value !== 'tubo-t');
   const [flow, setFlow] = useState<number | undefined>(last?.flow);
   const [fio2, setFio2] = useState<number | undefined>(last?.fio2);
   const [spo2, setSpo2] = useState<number | undefined>(last?.spo2);
@@ -81,7 +86,7 @@ export function OxygenForm({ patient, onDone }: { patient: Patient; onDone: () =
     <form onSubmit={handleSubmit} className="space-y-4">
       {last && <PrefillNotice timestamp={last.timestamp} />}
 
-      <ChoiceChips label="Dispositivo" options={oxygenDeviceOptions} value={device} onChange={setDevice} columns={2} />
+      <ChoiceChips label="Dispositivo" options={deviceOptions} value={device} onChange={setDevice} columns={2} />
 
       <div className="grid grid-cols-3 gap-3">
         <VMIField label="Flujo" unit="L/min" type="number" step="0.5" inputMode="decimal" value={flow ?? ''} onChange={e => setFlow(toNum(e.target.value))} required />
