@@ -28,7 +28,7 @@ import { calculateEpisodeDuration } from './episodeService';
 import { daysAgoText } from '../../utils/supportDays';
 import { cannulaFitOptions } from '../../utils/hfncEducation';
 import { ktmTypeLabels, ktrTechniqueLabels, oxygenDeviceLabels, respiratorySampleLabels } from '../../utils/prestacionLabels';
-import { formatSVHours, svInterruptionReasonLabels, svModalityShortLabels } from '../../utils/spontaneousVentilation';
+import { formatSVDuration, svInterruptionReasonLabels, svModalityShortLabels } from '../../utils/spontaneousVentilation';
 import { interfaceTypes, nivModes, nivUsageText, skinIntegrityOptions } from '../../utils/nivEducation';
 import { formatRass, mobilizationLevels, rassLevels, ventModes, weaningStatuses } from '../../utils/vmiEducation';
 import {
@@ -532,7 +532,7 @@ export function narrateSpontaneousVentilation(input: SpontaneousVentilationNarra
   const modalities = [...new Set(periods.map((p) => svModalityShortLabels[p.modality]))];
   const count = periods.length;
   const parts = [
-    `${periodPhrase} realizó ${formatSVHours(hours)} h de ventilación espontánea por traqueostomía (${count} ${count === 1 ? 'período' : 'períodos'}: ${joinEs(modalities)}).`,
+    `${periodPhrase} realizó ${formatSVDuration(hours)} de ventilación espontánea por traqueostomía (${count} ${count === 1 ? 'período' : 'períodos'}: ${joinEs(modalities)}).`,
   ];
 
   const notTolerated = periods.filter((p) => p.tolerated === false);

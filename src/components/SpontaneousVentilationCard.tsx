@@ -5,7 +5,8 @@ import { useApp } from '../contexts/AppContext';
 import { toLocalDateTimeInputValue } from '../utils/dateInput';
 import {
   computeSpontaneousVentilationSummary,
-  formatSVHours,
+  formatSVDuration,
+  currentSVModality,
   svInterruptionReasonLabels,
   svInterruptionReasonOptions,
   svModalityLabels,
@@ -34,7 +35,7 @@ function formatDateTime(iso: string) {
 function durationLabel(p: SpontaneousVentilationPeriod): string {
   const end = p.endAt ? new Date(p.endAt).getTime() : Date.now();
   const minutes = Math.max(0, Math.round((end - new Date(p.startAt).getTime()) / 60000));
-  return minutes >= 60 ? `${formatSVHours(minutes / 60)} h` : `${minutes} min`;
+  return formatSVDuration(minutes / 60);
 }
 
 /** Tolerancia: ¿toleró? y, si no, el motivo de interrupción. */
@@ -64,7 +65,7 @@ function ToleranceFields({
       </div>
       {tolerated === false && (
         <div>
-          <div className="text-sm font-semibold text-gray-900 mb-2">Motivo de interrupción</div>
+          <div className="text-sm font-semibold text-gray-900 mb-2">Motivo de suspensión</div>
           <div className="flex flex-wrap gap-2">
             {svInterruptionReasonOptions.map((o) => (
               <button key={o.value} type="button" onClick={() => onReason(reason === o.value ? undefined : o.value)} className={chip(reason === o.value)}>
@@ -89,7 +90,7 @@ export function SpontaneousVentilationCard({ patientId, episodeId }: Spontaneous
   const summary = computeSpontaneousVentilationSummary(periods);
   const maxHours = Math.max(4, ...summary.days.map((d) => d.hours));
 
-  const [modality, setModality] = useState<SVModality>(periods[0]?.modality ?? 'aire-ambiente');
+  const [modality, setModality] = useState<SVModality>(currentSVModality(periods[0]?.modality));
   const [finishing, setFinishing] = useState(false);
   const [finishTolerated, setFinishTolerated] = useState<boolean | undefined>(undefined);
   const [finishReason, setFinishReason] = useState<SVInterruptionReason | undefined>(undefined);
@@ -97,7 +98,7 @@ export function SpontaneousVentilationCard({ patientId, episodeId }: Spontaneous
   const [showRetro, setShowRetro] = useState(false);
   const [retroStart, setRetroStart] = useState(() => toLocalDateTimeInputValue(new Date(Date.now() - 3 * 60 * 60 * 1000)));
   const [retroEnd, setRetroEnd] = useState(() => toLocalDateTimeInputValue(new Date()));
-  const [retroModality, setRetroModality] = useState<SVModality>('aire-ambiente');
+  const [retroModality, setRetroModality] = useState<SVModality>(currentSVModality(periods[0]?.modality));
   const [retroTolerated, setRetroTolerated] = useState<boolean | undefined>(undefined);
   const [retroReason, setRetroReason] = useState<SVInterruptionReason | undefined>(undefined);
   const [retroNotes, setRetroNotes] = useState('');
@@ -131,11 +132,11 @@ export function SpontaneousVentilationCard({ patientId, episodeId }: Spontaneous
   return (
     <Card>
       <h3 className="text-lg font-bold text-gray-900 mb-1">Ventilación espontánea</h3>
-      <p className="text-xs text-gray-500 mb-4">Períodos fuera del ventilador o con asistencia mínima (traqueostomía).</p>
+      <p className="text-xs text-gray-500 mb-4">Pruebas fuera del ventilador con filtro HME + O₂ o tubo en T. La duración cambia cada día: puede ser de minutos, de horas o no haber tolerancia.</p>
 
       <div className="p-4 rounded-xl bg-blue-50 mb-4">
         <div className="text-xs text-gray-600 mb-1">Últimas 24 h</div>
-        <div className="text-2xl font-bold text-blue-900">{formatSVHours(summary.hoursLast24h)} h</div>
+        <div className="text-2xl font-bold text-blue-900">{formatSVDuration(summary.hoursLast24h)}</div>
       </div>
 
       <div className="mb-4">
@@ -148,14 +149,14 @@ export function SpontaneousVentilationCard({ patientId, episodeId }: Spontaneous
                 <div className="h-4 bg-blue-500 rounded" style={{ width: `${Math.min(100, (day.hours / maxHours) * 100)}%` }} />
               </div>
               <div className="w-24 text-right text-gray-700 flex-shrink-0">
-                {formatSVHours(day.hours)} h
+                {day.periods === 0 ? <span className="text-gray-400">sin pruebas</span> : formatSVDuration(day.hours)}
                 {day.periods > 0 && <span className="text-gray-400"> · {day.periods}</span>}
                 {day.notTolerated > 0 && <span className="text-amber-600"> ⚠{day.notTolerated}</span>}
               </div>
             </div>
           ))}
         </div>
-        <p className="text-[11px] text-gray-400 mt-1">Horas por día · cantidad de períodos · ⚠ períodos no tolerados</p>
+        <p className="text-[11px] text-gray-400 mt-1">Tiempo por día · cantidad de períodos · ⚠ períodos no tolerados</p>
       </div>
 
       {summary.active ? (

@@ -11,7 +11,7 @@ import { MrcAssessment, NIVRecord, HFNCRecord, OxygenRecord, Patient, Prestacion
 import { earlyMobilizationSummary } from '../../utils/earlyMobilization';
 import { calendarDaysBetween } from '../../utils/supportDays';
 import { oxygenDeviceLabels, ktrTechniqueLabels, ktmTypeLabels } from '../../utils/prestacionLabels';
-import { formatSVHours, svInterruptionReasonLabels, svModalityShortLabels } from '../../utils/spontaneousVentilation';
+import { formatSVDuration, svInterruptionReasonLabels, svModalityShortLabels } from '../../utils/spontaneousVentilation';
 import { formatRass, weaningStatuses } from '../../utils/vmiEducation';
 import { cannulaFitOptions } from '../../utils/hfncEducation';
 import { pveReasonLabel } from '../../components/PveDecisionForm';
@@ -204,7 +204,7 @@ function svLine(input: GeneralHandoffPatientInput): string | undefined {
   const reasons = [...new Set(notTolerated.map((p) => p.interruptionReason).filter((r): r is NonNullable<typeof r> => !!r))].map((r) => svInterruptionReasonLabels[r].toLowerCase());
   return line(
     'Vent. espontánea:',
-    `${formatSVHours(sv.hours)} h`,
+    formatSVDuration(sv.hours),
     `${sv.periods.length} ${sv.periods.length === 1 ? 'período' : 'períodos'} (${modalities})`,
     notTolerated.length > 0 ? `${notTolerated.length} no tolerado${notTolerated.length === 1 ? '' : 's'}${reasons.length > 0 ? ` (${reasons.join(', ')})` : ''}` : sv.periods.every((p) => p.tolerated === true) ? 'tolerados' : undefined,
     sv.periods.some((p) => !p.endAt) ? 'en curso' : undefined
