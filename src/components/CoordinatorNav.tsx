@@ -7,6 +7,7 @@ import { useApp } from '../contexts/AppContext';
 const tabs = [
   { path: '/coordinator/sectors', label: 'Sectores' },
   { path: '/coordinator/protocols', label: 'Protocolos' },
+  { path: '/coordinator/biblioteca', label: 'Biblioteca' },
   { path: '/coordinator/users', label: 'Usuarios' },
   { path: '/coordinator/vmi', label: 'VMI' },
   { path: '/coordinator/carga-masiva', label: 'Carga Masiva' },
