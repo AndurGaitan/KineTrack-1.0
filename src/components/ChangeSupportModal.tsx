@@ -4,7 +4,6 @@ import { Button } from './ui/Button';
 import { SectorBedPicker } from './SectorBedPicker';
 import { AirwayEventInput, AirwayEventType, Patient, Sector, SupportType } from '../types';
 import { toLocalDateTimeInputValue } from '../utils/dateInput';
-import { useApp } from '../contexts/AppContext';
 interface ChangeSupportModalProps {
   currentSupport: SupportType;
   /** Soporte ya elegido al abrir (cuando se llega tocando un soporte en la ficha). */
@@ -50,9 +49,11 @@ const reasonOptions = ['Extubación programada', 'Extubación no programada', 'T
  */
 function getAirwayQuestion(
   current: SupportType,
-  next: SupportType | ''
+  next: SupportType | '',
+  airwayType?: Patient['airwayType']
 ): { type: AirwayEventType; question: string } | undefined {
-  if (current === 'imv' && next !== 'traqueostomia') {
+  // Con traqueostomía no hay tubo que sacar: salir de la VMI no es una extubación.
+  if (current === 'imv' && next !== 'traqueostomia' && airwayType !== 'traqueostomia') {
     return { type: 'extubacion', question: '¿Este cambio fue una extubación?' };
   }
   if (current === 'niv') return { type: 'destete-vni', question: '¿Este cambio fue un destete de VNI?' };
@@ -68,14 +69,13 @@ export function ChangeSupportModal({
   onClose,
   onConfirm
 }: ChangeSupportModalProps) {
-  const { features } = useApp();
-  // Etapa 1: sin traqueostomía como destino (si ya está en ella, igual puede cambiar).
-  const selectableOptions = supportOptions.filter(opt => features.tracheostomy || opt.value !== 'traqueostomia' || currentSupport === 'traqueostomia');
+  // La traqueostomía es la vía aérea, no un soporte: ya no se ofrece como destino (los registros viejos se siguen mostrando).
+  const selectableOptions = supportOptions.filter(opt => opt.value !== 'traqueostomia');
   const [newSupport, setNewSupport] = useState<SupportType | ''>(initialSupport ?? '');
   const [reason, setReason] = useState('');
   const [customReason, setCustomReason] = useState('');
   const [date, setDate] = useState(() => toLocalDateTimeInputValue(new Date()));
-  const airwayQuestion = getAirwayQuestion(currentSupport, newSupport);
+  const airwayQuestion = getAirwayQuestion(currentSupport, newSupport, patient.airwayType);
   const [wasAirwayEvent, setWasAirwayEvent] = useState<'' | 'si' | 'no'>('');
   const [classification, setClassification] = useState<'programada' | 'accidental' | ''>('');
 

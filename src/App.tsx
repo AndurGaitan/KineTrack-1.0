@@ -43,6 +43,7 @@ import { UpdateNotice } from './components/UpdateNotice';
 // main bundle — it roughly doubles the app's gzip size and only
 // coordinadores viewing VMI trends ever need it.
 const VMITrendsPage = lazy(() => import('./pages/coordinator/VMITrendsPage').then((m) => ({ default: m.VMITrendsPage })));
+const SpontaneousVentilationPage = lazy(() => import('./pages/coordinator/SpontaneousVentilationPage').then((m) => ({ default: m.SpontaneousVentilationPage })));
 const ClinicalCasesPage = lazy(() => import('./pages/coordinator/ClinicalCasesPage').then((m) => ({ default: m.ClinicalCasesPage })));
 
 function ProtectedRoute({
@@ -188,6 +189,11 @@ function AppRoutes() {
           </ProtectedRoute>} />
       <Route path="/coordinator/etapa" element={<ProtectedRoute requireCoordinador>
             <StagePage />
+          </ProtectedRoute>} />
+      <Route path="/coordinator/pruebas-ventilacion" element={<ProtectedRoute requireCoordinador>
+            <Suspense fallback={<div className="min-h-screen flex items-center justify-center text-gray-500">Cargando...</div>}>
+              <SpontaneousVentilationPage />
+            </Suspense>
           </ProtectedRoute>} />
       <Route path="/coordinator/casos" element={<ProtectedRoute requireCoordinador>
             <Suspense fallback={<div className="min-h-screen flex items-center justify-center text-gray-500">Cargando...</div>}>

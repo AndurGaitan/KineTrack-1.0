@@ -10,7 +10,6 @@ import { OxygenForm } from './OxygenForm';
 import { MobilizationCard } from './MobilizationCard';
 import { AirwayCard } from './AirwayCard';
 import { SpontaneousVentilationCard } from './SpontaneousVentilationCard';
-import { OffVmiDaysCard } from './trach/OffVmiDaysCard';
 import { calendarDaysBetween, daysAgoText } from '../utils/supportDays';
 import type { Patient, SupportType } from '../types';
 
@@ -20,7 +19,6 @@ const supportChips: { value: SupportType; label: string }[] = [
   { value: 'hfnc', label: 'CAFO' },
   { value: 'conventional-oxygen', label: 'O₂' },
   { value: 'room-air', label: 'Aire' },
-  { value: 'traqueostomia', label: 'TQT' },
 ];
 
 const monitoringTitle: Partial<Record<SupportType, string>> = {
@@ -71,7 +69,9 @@ export function PatientCarePanel({ patient, onChangeSupport }: { patient: Patien
     return () => window.clearTimeout(t);
   }, [saved]);
 
-  const chips = supportChips.filter(c => c.value !== 'traqueostomia' || features.tracheostomy || current === 'traqueostomia');
+  const chips = supportChips;
+  // La traqueostomía es la vía aérea (no un soporte): se muestra en VMI o cuando el paciente ya la tiene.
+  const isTrach = patient.airwayType === 'traqueostomia';
   const done = () => setSaved(true);
 
   return (
@@ -89,19 +89,15 @@ export function PatientCarePanel({ patient, onChangeSupport }: { patient: Patien
           )}
         </div>
         <div className="grid grid-cols-5 gap-2" role="radiogroup" aria-label="Soporte ventilatorio">
-          {chips.slice(0, 5).map(chip => (
+          {chips.map(chip => (
             <SupportChip key={chip.value} chip={chip} active={current === chip.value} onPick={() => chip.value !== current && onChangeSupport(chip.value)} />
           ))}
         </div>
-        {chips.length > 5 && (
-          <div className="grid grid-cols-5 gap-2 mt-2">
-            {chips.slice(5).map(chip => (
-              <SupportChip key={chip.value} chip={chip} active={current === chip.value} onPick={() => chip.value !== current && onChangeSupport(chip.value)} />
-            ))}
-          </div>
-        )}
         <p className="text-xs text-gray-500 mt-2">Tocá otro soporte para cambiarlo.</p>
       </Card>
+
+      {features.tracheostomy && (current === 'imv' || isTrach) && <AirwayCard patient={patient} />}
+      {features.tracheostomy && isTrach && <SpontaneousVentilationCard patientId={patient.id} episodeId={episode?.id} />}
 
       <ActivityCard patientId={patient.id} prestaciones={prestaciones} now={now} />
 
@@ -126,27 +122,6 @@ export function PatientCarePanel({ patient, onChangeSupport }: { patient: Patien
         <Card>
           <p className="text-sm text-gray-600">Sin soporte: no hay planilla de monitorización. Registrá la kinesioterapia o la evaluación MRC arriba.</p>
         </Card>
-      )}
-
-      {current === 'imv' && (
-        <>
-          {features.tracheostomy && <AirwayCard patient={patient} />}
-          {features.tracheostomy && patient.airwayType === 'traqueostomia' && <SpontaneousVentilationCard patientId={patient.id} episodeId={episode?.id} />}
-        </>
-      )}
-
-      {current === 'traqueostomia' && features.tracheostomy && (
-        <>
-          <OffVmiDaysCard episode={episode} now={now} />
-          <SpontaneousVentilationCard patientId={patient.id} episodeId={episode?.id} />
-          <Card>
-            <h3 className="text-lg font-bold text-gray-900 mb-1">Traqueostomía</h3>
-            <p className="text-sm text-gray-700 mb-3">Estado de la cánula, decanulación y línea de tiempo.</p>
-            <button onClick={() => navigate(`/patient/${patient.id}/traqueostomia`)} className="w-full min-h-[52px] rounded-xl bg-indigo-600 text-white font-semibold active:bg-indigo-700">
-              Estado y decanulación
-            </button>
-          </Card>
-        </>
       )}
     </div>
   );
