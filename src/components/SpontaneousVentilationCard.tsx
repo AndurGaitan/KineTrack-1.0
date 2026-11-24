@@ -1,4 +1,4 @@
-import { FormEvent, useState } from 'react';
+import { FormEvent, useEffect, useState } from 'react';
 import { Card } from './ui/Card';
 import { Button } from './ui/Button';
 import { useApp } from '../contexts/AppContext';
@@ -12,15 +12,18 @@ import {
   svInterruptionReasonLabels,
   svInterruptionReasonOptions,
   svModalityLabels,
+  svModalityShortLabels,
   svModalityOptions,
 } from '../utils/spontaneousVentilation';
 import type { SpontaneousVentilationPeriod, SVInterruptionReason, SVModality } from '../types';
-import { CheckIcon, PlayIcon, PlusIcon, SquareIcon, Trash2Icon, XIcon } from 'lucide-react';
+import { CheckIcon, PlayIcon, PlusIcon, SquareIcon, Trash2Icon, Undo2Icon, XIcon } from 'lucide-react';
 
 interface SpontaneousVentilationCardProps {
   patientId: string;
   episodeId?: string;
 }
+
+const UNDO_SECONDS = 8;
 
 const chip = (active: boolean) =>
   `px-3 py-2 rounded-xl text-sm font-semibold border-2 transition-colors ${
@@ -87,7 +90,7 @@ function ToleranceFields({
  * evolución de las horas por día de la última semana.
  */
 export function SpontaneousVentilationCard({ patientId, episodeId }: SpontaneousVentilationCardProps) {
-  const { getPatientSVPeriods, startSVPeriod, closeSVPeriod, addManualSVPeriod, deleteSVPeriod } = useApp();
+  const { getPatientSVPeriods, startSVPeriod, closeSVPeriod, reopenSVPeriod, addManualSVPeriod, deleteSVPeriod } = useApp();
   const periods = getPatientSVPeriods(patientId);
   const summary = computeSpontaneousVentilationSummary(periods);
   const maxHours = Math.max(4, ...summary.days.map((d) => d.hours));
@@ -99,6 +102,13 @@ export function SpontaneousVentilationCard({ patientId, episodeId }: Spontaneous
   // Cierre rápido (prueba que no quedó abierta de más): un toque en "Toleró" o "No toleró" + motivo.
   const [quickNo, setQuickNo] = useState(false);
   const [closing, setClosing] = useState(false);
+  // Último cierre rápido, para poder deshacerlo unos segundos.
+  const [undo, setUndo] = useState<{ id: string; text: string } | null>(null);
+  useEffect(() => {
+    if (!undo) return;
+    const t = window.setTimeout(() => setUndo(null), UNDO_SECONDS * 1000);
+    return () => window.clearTimeout(t);
+  }, [undo]);
   const [finishTolerated, setFinishTolerated] = useState<boolean | undefined>(undefined);
   const [finishReason, setFinishReason] = useState<SVInterruptionReason | undefined>(undefined);
   // Hora real de fin: solo se pide cuando la prueba quedó abierta de más.
@@ -130,9 +140,18 @@ export function SpontaneousVentilationCard({ patientId, episodeId }: Spontaneous
   const quickClose = async (tolerated: boolean, interruptionReason?: SVInterruptionReason) => {
     if (!summary.active || closing) return;
     setClosing(true);
-    await closeSVPeriod(summary.active.id, { tolerated, interruptionReason });
+    const { id, modality: closedModality } = summary.active;
+    await closeSVPeriod(id, { tolerated, interruptionReason });
     setClosing(false);
     setQuickNo(false);
+    setUndo({ id, text: `Prueba cerrada: ${svModalityShortLabels[closedModality]} · ${tolerated ? 'toleró' : 'no toleró'}` });
+  };
+
+  const handleUndo = async () => {
+    if (!undo) return;
+    const { id } = undo;
+    setUndo(null);
+    await reopenSVPeriod(id);
   };
 
   const handleRetro = async (e: FormEvent) => {
@@ -211,6 +230,15 @@ export function SpontaneousVentilationCard({ patientId, episodeId }: Spontaneous
               Cerrar con la hora real
             </Button>
           )}
+        </div>
+      )}
+
+      {undo && !summary.active && (
+        <div className="flex items-center justify-between gap-3 bg-gray-900 text-white rounded-xl px-4 py-3 mb-3 text-sm" role="status">
+          <span>{undo.text}</span>
+          <button type="button" onClick={handleUndo} className="flex items-center gap-1 font-bold text-blue-300 whitespace-nowrap">
+            <Undo2Icon className="w-4 h-4" /> Deshacer
+          </button>
         </div>
       )}
 
