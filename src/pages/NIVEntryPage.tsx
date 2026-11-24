@@ -55,11 +55,12 @@ export function NIVEntryForm({ patient, onDone, onCancel }: { patient: Patient; 
     usage24h: (last?.usage24h ?? '') as NIVUsage | '',
     // La valoración de la mecánica ventilatoria no se precarga: se elige en cada registro.
     ventilatoryMechanics: '' as VentilatoryMechanics | '',
-    // HACOR (solo con gasometría, etapa 2)
-    heartRate: last?.heartRate ?? 80,
-    ph: last?.ph ?? 7.4,
-    consciousness: last?.consciousness ?? 15,
-    pao2: last?.pao2 ?? 80,
+    // HACOR (solo con gasometría, etapa 2). Arrancan vacíos y no se precargan del registro anterior:
+    // una gasometría es de un momento puntual y, sin estos datos, el HACOR no se calcula.
+    heartRate: undefined as number | undefined,
+    ph: undefined as number | undefined,
+    consciousness: undefined as number | undefined,
+    pao2: undefined as number | undefined,
     respiratoryRate: last?.respiratoryRate as number | undefined,
     paco2: undefined as number | undefined,
     hco3: undefined as number | undefined,
@@ -67,25 +68,15 @@ export function NIVEntryForm({ patient, onDone, onCancel }: { patient: Patient; 
     baseExcess: undefined as number | undefined,
     previousIMVDays: last?.previousIMVDays ?? 0
   }));
-  const [calculations, setCalculations] = useState(calculateHACORForNIV({
-    heartRate: formData.heartRate,
-    ph: formData.ph,
-    consciousness: formData.consciousness,
-    pao2: formData.pao2,
-    fio2: formData.fio2 ?? 0,
-    respiratoryRate: formData.respiratoryRate ?? 0
-  }));
+  // El HACOR solo se calcula con los cinco datos cargados (FC, pH, Glasgow, PaO₂/FiO₂ y FR).
+  const computeHacor = (d: typeof formData) =>
+    d.heartRate != null && d.ph != null && d.consciousness != null && d.pao2 != null && d.fio2 != null && d.fio2 > 0 && d.respiratoryRate != null
+      ? calculateHACORForNIV({ heartRate: d.heartRate, ph: d.ph, consciousness: d.consciousness, pao2: d.pao2, fio2: d.fio2, respiratoryRate: d.respiratoryRate })
+      : null;
+  const calculations = computeHacor(formData);
   const [alerts, setAlerts] = useState<string[]>([]);
   useEffect(() => {
-    const calc = calculateHACORForNIV({
-      heartRate: formData.heartRate,
-      ph: formData.ph,
-      consciousness: formData.consciousness,
-      pao2: formData.pao2,
-      fio2: formData.fio2 ?? 0,
-      respiratoryRate: formData.respiratoryRate ?? 0
-    });
-    setCalculations(calc);
+    const calc = computeHacor(formData);
     setAlerts(generateNIVAlerts({
       ...formData,
       interfaceType: formData.interfaceType || undefined,
@@ -93,8 +84,8 @@ export function NIVEntryForm({ patient, onDone, onCancel }: { patient: Patient; 
       mode: formData.mode || undefined,
       usage24h: formData.usage24h || undefined,
       ventilatoryMechanics: formData.ventilatoryMechanics || undefined,
-      hacorScore: features.gasometry ? calc.hacorScore : undefined,
-      hacorRisk: features.gasometry ? calc.hacorRisk : undefined
+      hacorScore: features.gasometry ? calc?.hacorScore : undefined,
+      hacorRisk: features.gasometry ? calc?.hacorRisk : undefined
     }));
   }, [formData, features.gasometry]);
   const set = (patch: Partial<typeof formData>) => setFormData(prev => ({ ...prev, ...patch }));
@@ -139,8 +130,8 @@ export function NIVEntryForm({ patient, onDone, onCancel }: { patient: Patient; 
         paco2: formData.paco2,
         hco3: formData.hco3,
         baseExcess: formData.baseExcess,
-        hacorScore: calculations.hacorScore,
-        hacorRisk: calculations.hacorRisk
+        hacorScore: calculations?.hacorScore,
+        hacorRisk: calculations?.hacorRisk
       } : {}),
       spo2: formData.spo2,
       respiratoryRate: formData.respiratoryRate!,
@@ -196,15 +187,15 @@ export function NIVEntryForm({ patient, onDone, onCancel }: { patient: Patient; 
       {features.gasometry && <CollapsibleSection title="Gasometría Arterial y Score HACOR" subtitle="Panel de ABG completo y predicción de fracaso de VNI" defaultOpen={false}>
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
-              <NIVField label="pH" educationKey="hacorNIV" type="number" step="0.01" value={formData.ph} onChange={e => set({ ph: Number(e.target.value) })} required />
+              <NIVField label="pH" educationKey="hacorNIV" type="number" step="0.01" value={formData.ph ?? ''} onChange={e => set({ ph: toNumberOrUndefined(e.target.value) })} />
               <NIVField label="PaCO₂" educationKey="gasometriaNIV" unit="mmHg" type="number" value={formData.paco2 ?? ''} onChange={e => set({ paco2: toNumberOrUndefined(e.target.value) })} />
-              <NIVField label="PaO₂" educationKey="hacorNIV" unit="mmHg" type="number" value={formData.pao2} onChange={e => set({ pao2: Number(e.target.value) })} required />
+              <NIVField label="PaO₂" educationKey="hacorNIV" unit="mmHg" type="number" value={formData.pao2 ?? ''} onChange={e => set({ pao2: toNumberOrUndefined(e.target.value) })} />
               <NIVField label="HCO₃" educationKey="gasometriaNIV" unit="mEq/L" type="number" step="0.1" value={formData.hco3 ?? ''} onChange={e => set({ hco3: toNumberOrUndefined(e.target.value) })} />
               <NIVField label="Exceso de Bases (BE)" educationKey="gasometriaNIV" unit="mEq/L" type="number" step="0.1" value={formData.baseExcess ?? ''} onChange={e => set({ baseExcess: toNumberOrUndefined(e.target.value) })} />
-              <NIVField label="Frecuencia Cardíaca" educationKey="hacorNIV" unit="lpm" type="number" value={formData.heartRate} onChange={e => set({ heartRate: Number(e.target.value) })} required />
-              <NIVField label="Glasgow (Conciencia)" educationKey="hacorNIV" type="number" value={formData.consciousness} onChange={e => set({ consciousness: Number(e.target.value) })} placeholder="3-15" required />
+              <NIVField label="Frecuencia Cardíaca" educationKey="hacorNIV" unit="lpm" type="number" value={formData.heartRate ?? ''} onChange={e => set({ heartRate: toNumberOrUndefined(e.target.value) })} />
+              <NIVField label="Glasgow (Conciencia)" educationKey="hacorNIV" type="number" value={formData.consciousness ?? ''} onChange={e => set({ consciousness: toNumberOrUndefined(e.target.value) })} placeholder="3-15" />
             </div>
-            <div className={`p-4 rounded-xl ${calculations.hacorScore > 5 ? 'bg-red-50' : calculations.hacorScore >= 3 ? 'bg-yellow-50' : 'bg-green-50'}`}>
+            {calculations ? <div className={`p-4 rounded-xl ${calculations.hacorScore > 5 ? 'bg-red-50' : calculations.hacorScore >= 3 ? 'bg-yellow-50' : 'bg-green-50'}`}>
               <div className="text-sm text-gray-600 mb-1">Score HACOR</div>
               <div className={`text-5xl font-bold ${calculations.hacorScore > 5 ? 'text-red-600' : calculations.hacorScore >= 3 ? 'text-yellow-600' : 'text-green-600'}`}>
                 {calculations.hacorScore}
@@ -214,7 +205,9 @@ export function NIVEntryForm({ patient, onDone, onCancel }: { patient: Patient; 
                 {calculations.hacorScore >= 3 && calculations.hacorScore <= 5 && 'Riesgo moderado'}
                 {calculations.hacorScore < 3 && 'Bajo riesgo de fracaso'}
               </div>
-            </div>
+            </div> : <div className="p-4 rounded-xl bg-gray-50 text-sm text-gray-600">
+              Para calcular el HACOR cargá pH, PaO₂, FC, Glasgow, FiO₂ y FR. Sin esos datos no se calcula ni se copia a la evolución.
+            </div>}
           </div>
         </CollapsibleSection>}
 
