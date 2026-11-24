@@ -36,6 +36,8 @@ export interface AppFeatures {
 interface AppContextType extends AppState {
   features: AppFeatures;
   setStage: (stage: AppStage) => Promise<void>;
+  /** Enciende o apaga los indicadores de calidad v2 (modo sombra). Solo coordinador. */
+  setQualityV2Enabled: (enabled: boolean) => Promise<boolean>;
   addPveDecision: (input: CreatePveDecisionInput) => Promise<boolean>;
   deletePveDecision: (id: string) => Promise<void>;
   getPatientPveDecisions: (patientId: string) => PveDecision[];
@@ -159,7 +161,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     ]);
 
     const patientIds = patients.map((p) => p.id);
-    const settings = await settingsApi.getSettings().catch(() => ({ stage: 1 as AppStage }));
+    const settings = await settingsApi.getSettings().catch(() => ({ stage: 1 as AppStage, qualityIndicatorsV2: false }));
     const emptyMobilization: mobilizationApi.MobilizationData = { starts: [], contraindications: [] };
     const [observations, scores, prestaciones, spontaneousVentilation, pveDecisions, mobilization] =
       patientIds.length === 0
@@ -178,6 +180,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setState({
       user,
       stage: settings.stage,
+      qualityIndicatorsV2: settings.qualityIndicatorsV2 === true,
       pveDecisions: pveDecisions as PveDecision[],
       mobilizationStarts: (mobilization as mobilizationApi.MobilizationData).starts,
       mobilizationContraindications: (mobilization as mobilizationApi.MobilizationData).contraindications,
@@ -550,6 +553,17 @@ export function AppProvider({ children }: { children: ReactNode }) {
       .sort((a, b) => new Date(b.startAt).getTime() - new Date(a.startAt).getTime());
   };
 
+  const setQualityV2Enabled = async (enabled: boolean) => {
+    try {
+      const result = await settingsApi.setQualityIndicatorsV2(enabled);
+      setState((prev) => ({ ...prev, qualityIndicatorsV2: result.qualityIndicatorsV2 }));
+      return true;
+    } catch (error) {
+      console.error('No se pudo cambiar el modo sombra de los indicadores v2:', error);
+      return false;
+    }
+  };
+
   // Etapa de uso (la cambia el coordinador). Las pantallas leen `features`.
   const setStage = async (stage: AppStage) => {
     try {
@@ -666,6 +680,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         ...state,
         features,
         setStage,
+        setQualityV2Enabled,
         addPveDecision,
         deletePveDecision,
         getPatientPveDecisions,

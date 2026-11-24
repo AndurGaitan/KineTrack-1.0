@@ -498,6 +498,8 @@ export type AppStage = 1 | 2;
 export interface AppState {
   user: User | null;
   stage: AppStage;
+  /** Indicadores de calidad v2 (fase 1, modo sombra): flag del servidor, apagada por defecto. */
+  qualityIndicatorsV2?: boolean;
   pveDecisions: PveDecision[];
   mobilizationStarts: MobilizationStart[];
   mobilizationContraindications: MobilizationContraindication[];
