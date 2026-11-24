@@ -575,9 +575,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
   };
 
   // La gasometría se oculta en la etapa 1, salvo para el coordinador, que puede cargarla siempre.
+  // Traqueostomía y ventilación espontánea están habilitadas en las dos etapas.
   const features: AppFeatures =
     state.stage === 1
-      ? { gasometry: state.user?.role === 'coordinador', mobilizationLevel: false, tracheostomy: false, schedule: false }
+      ? { gasometry: state.user?.role === 'coordinador', mobilizationLevel: false, tracheostomy: true, schedule: false }
       : { gasometry: true, mobilizationLevel: true, tracheostomy: true, schedule: true };
 
   // Decisiones de PVE (realizada / contraindicada / no realizada).
