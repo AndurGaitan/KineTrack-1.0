@@ -12,6 +12,7 @@ import { AirwayEvent, HFNCRecord, MobilizationContraindication, MobilizationStar
 import { oxygenDeviceLabels, ktrTechniqueLabels, ktmTypeLabels } from '../../utils/prestacionLabels';
 import { ventilatoryMechanicsSentence } from '../../utils/ventilatoryMechanics';
 import { calendarDaysBetween, daysAgoText } from '../../utils/supportDays';
+import { dayWithWeekday } from '../../utils/vmiDays';
 import { cannulaFitOptions } from '../../utils/hfncEducation';
 import { formatRass, mobilizationLevels, rassLevels } from '../../utils/vmiEducation';
 import { pveReasonLabel } from '../../components/PveDecisionForm';
@@ -38,6 +39,7 @@ export interface NarrativeHandoffInput {
   mrcAssessment?: MrcAssessment;
   trach?: TrachNarrativeInput;
   daysSinceNiv?: number;
+  vmiOff?: { days: number; endedAt: string };
   airwayEvents?: AirwayEvent[];
   episodeChanges?: SupportEpisode[];
   spontaneousVentilation?: SpontaneousVentilationNarrativeInput;
@@ -257,6 +259,12 @@ function supportSentences(input: NarrativeHandoffInput, now: Date): string[] {
   return out;
 }
 
+/** "Lleva 3 días sin ventilación mecánica invasiva, desde el sábado 21/11." */
+function vmiOffSentence(off: { days: number; endedAt: string }): string {
+  if (off.days === 0) return 'Se desvinculó hoy de la ventilación mecánica invasiva.';
+  return `Lleva ${off.days === 1 ? '1 día' : `${off.days} días`} sin ventilación mecánica invasiva, desde el ${dayWithWeekday(off.endedAt, true)}.`;
+}
+
 function mobilizationSentence(input: NarrativeHandoffInput): string | undefined {
   const m = input.mobilization;
   if (!m || input.activeEpisode?.supportType !== 'imv') return undefined;
@@ -337,6 +345,7 @@ export function buildNarrativeEvolution(input: NarrativeHandoffInput, now: Date 
   const sentences = [
     ...introSentences(input.patient),
     ...supportSentences(input, now),
+    ...(input.vmiOff ? [vmiOffSentence(input.vmiOff)] : []),
     ...(input.daysSinceNiv != null ? [`Sin ventilación no invasiva desde hace ${input.daysSinceNiv === 0 ? 'menos de un día' : input.daysSinceNiv === 1 ? '1 día' : `${input.daysSinceNiv} días`}.`] : []),
     mobilizationSentence(input),
     eventsSentence(input),

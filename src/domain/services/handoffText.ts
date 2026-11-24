@@ -28,6 +28,8 @@ export interface HandoffInput {
   mrcAssessment?: MrcAssessment;
   /** Días sin VNI (si dejó la VNI hace poco). */
   daysSinceNiv?: number;
+  /** Días sin VMI y cuándo terminó (si salió de la VMI hace poco). */
+  vmiOff?: { days: number; endedAt: string };
   /** Estado + aspiraciones + proceso de decanulación del período, si el soporte actual es traqueostomía. */
   trach?: TrachNarrativeInput;
   airwayEvents?: AirwayEvent[];

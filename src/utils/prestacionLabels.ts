@@ -16,6 +16,8 @@ export const oxygenDeviceLabels: Record<OxygenDeviceType, string> = {
   'mascara-simple': 'Máscara simple',
   'mascara-venturi': 'Máscara Venturi',
   'mascara-no-reinhalacion': 'Máscara de no reinhalación',
+  'filtro-hme-o2': 'Filtro HME con O₂',
+  'tubo-t': 'Tubo en T',
 };
 
 export const oxygenDeviceOptions: { value: OxygenDeviceType; label: string }[] = (

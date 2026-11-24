@@ -23,6 +23,8 @@ export interface GeneralHandoffPatientInput {
   trach?: TrachNarrativeInput;
   /** Días sin VNI (si dejó la VNI hace poco). */
   daysSinceNiv?: number;
+  /** Días sin VMI y cuándo terminó (si salió de la VMI hace poco). */
+  vmiOff?: { days: number; endedAt: string };
   airwayEvents?: AirwayEvent[];
   episodeChanges?: SupportEpisode[];
   spontaneousVentilation?: SpontaneousVentilationNarrativeInput;

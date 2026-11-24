@@ -12,6 +12,7 @@ import {
   svModalityShortLabels,
 } from '../utils/spontaneousVentilation';
 import { calendarDaysBetween, daysSpanText } from '../utils/supportDays';
+import { dayWithWeekday, lastVmiEnd } from '../utils/vmiDays';
 import type { SpontaneousVentilationPeriod, SVInterruptionReason, SVModality } from '../types';
 import { ChevronRightIcon } from 'lucide-react';
 
@@ -83,12 +84,10 @@ export function SpontaneousVentilationCard({ patientId, episodeId }: { patientId
   const local = (iso: string) => toLocalDateTimeInputValue(new Date(iso));
   const iso = (v: string) => new Date(v).toISOString();
 
-  // Días desde que el paciente salió de la VMI (solo si hoy no está en ventilador).
-  const offVentDays = (() => {
-    if (!patient || patient.supportType === 'imv') return undefined;
-    const ends = patient.episodes.filter((e) => e.supportType === 'imv' && e.endAt).map((e) => new Date(e.endAt as string).getTime());
-    return ends.length > 0 ? calendarDaysBetween(new Date(Math.max(...ends)), now) : undefined;
-  })();
+  // Si el paciente ya salió de la VMI (hoy no está en ventilador), las pruebas dejan de aplicar:
+  // se muestra desde cuándo está desvinculado, calculado del historial de soportes.
+  const vmiEnd = patient ? lastVmiEnd(patient.episodes, patient.supportType) : undefined;
+  const offVent = !!vmiEnd;
 
   const stale = isStaleOpenPeriod(active, now);
   const startMs = new Date(start).getTime();
@@ -238,23 +237,28 @@ export function SpontaneousVentilationCard({ patientId, episodeId }: { patientId
       {/* Sin prueba en curso */}
       {!active && !sheet && (
         <>
-          {offVentDays !== undefined && (
+          {offVent && vmiEnd && (
             <div className="text-center space-y-1">
-              <div className="text-xs text-gray-500">Sin ventilador hace</div>
-              <div className="text-4xl font-bold text-gray-900">{daysSpanText(offVentDays)}</div>
+              <div className="text-xs text-gray-500">Desvinculado de la VMI hace</div>
+              <div className="text-4xl font-bold text-gray-900">{daysSpanText(calendarDaysBetween(vmiEnd, now))}</div>
+              <div className="text-sm text-gray-500">Desde el {dayWithWeekday(vmiEnd, true)}</div>
             </div>
           )}
-          <button type="button" onClick={() => startSVPeriod(patientId, modality, episodeId)} className={primary}>
-            Iniciar prueba
-          </button>
+          {!offVent && (
+            <button type="button" onClick={() => startSVPeriod(patientId, modality, episodeId)} className={primary}>
+              Iniciar prueba
+            </button>
+          )}
 
-          <button type="button" onClick={() => setPickDevice((v) => !v)} className="w-full flex items-center justify-between text-sm py-1">
-            <span className="text-gray-500">Dispositivo</span>
-            <span className="font-semibold text-gray-900 flex items-center gap-1">
-              {deviceName(modality)} <ChevronRightIcon className="w-4 h-4 text-gray-400" />
-            </span>
-          </button>
-          {pickDevice && (
+          {!offVent && (
+            <button type="button" onClick={() => setPickDevice((v) => !v)} className="w-full flex items-center justify-between text-sm py-1">
+              <span className="text-gray-500">Dispositivo</span>
+              <span className="font-semibold text-gray-900 flex items-center gap-1">
+                {deviceName(modality)} <ChevronRightIcon className="w-4 h-4 text-gray-400" />
+              </span>
+            </button>
+          )}
+          {!offVent && pickDevice && (
             <div className="flex flex-wrap gap-2">
               {svModalityOptions.map((o) => (
                 <button
@@ -282,9 +286,11 @@ export function SpontaneousVentilationCard({ patientId, episodeId }: { patientId
               <span className="text-blue-700 font-semibold"> · Editar</span>
             </button>
           )}
-          <button type="button" onClick={() => open({ kind: 'new' })} className="text-sm font-semibold text-blue-700">
-            Agregar una prueba anterior
-          </button>
+          {!offVent && (
+            <button type="button" onClick={() => open({ kind: 'new' })} className="text-sm font-semibold text-blue-700">
+              Agregar una prueba anterior
+            </button>
+          )}
         </>
       )}
 

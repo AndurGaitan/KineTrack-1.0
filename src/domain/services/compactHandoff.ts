@@ -10,6 +10,7 @@
 import { MrcAssessment, NIVRecord, HFNCRecord, OxygenRecord, Patient, Prestacion, PveDecision, SupportEpisode, VMIRecord } from '../../types';
 import { earlyMobilizationSummary } from '../../utils/earlyMobilization';
 import { calendarDaysBetween } from '../../utils/supportDays';
+import { dayWithWeekday } from '../../utils/vmiDays';
 import { oxygenDeviceLabels, ktrTechniqueLabels, ktmTypeLabels } from '../../utils/prestacionLabels';
 import { formatSVDuration, svInterruptionReasonLabels, svModalityShortLabels } from '../../utils/spontaneousVentilation';
 import { formatRass, weaningStatuses } from '../../utils/vmiEducation';
@@ -241,6 +242,9 @@ export function buildCompactPatientBlock(input: GeneralHandoffPatientInput, now:
   else if (patient.supportType === 'conventional-oxygen') lines.push(`${bold('O₂')} convencional`);
   else if (patient.supportType === 'room-air') lines.push(bold('Aire ambiente'));
   else lines.push(`${bold(supportShort[patient.supportType])}${duration ? `${SEP}${duration}` : ''}`);
+
+  // Salió de la VMI hace poco: se informa cuántos días lleva sin ella y desde cuándo.
+  if (input.vmiOff) lines.push(line('Sin VMI:', input.vmiOff.days === 0 ? 'menos de 1 d' : `${input.vmiOff.days} d`, `desde ${dayWithWeekday(input.vmiOff.endedAt)}`));
 
   // Dejó la VNI hace poco: se informa cuántos días lleva sin ella.
   if (input.daysSinceNiv != null) lines.push(line('Sin VMNI:', input.daysSinceNiv === 0 ? 'menos de 1 d' : `${input.daysSinceNiv} d`));

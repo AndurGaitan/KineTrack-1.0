@@ -526,7 +526,8 @@ export interface AppState {
 export type PrestacionType = 'kinesioterapia-respiratoria' | 'kinesioterapia-motora' | 'evaluacion' | 'progresion';
 // Dispositivo de entrega de O2 — solo aplica a prestaciones de kinesioterapia
 // respiratoria en pacientes con soporte 'conventional-oxygen'.
-export type OxygenDeviceType = 'canula-nasal-simple' | 'mascara-simple' | 'mascara-venturi' | 'mascara-no-reinhalacion';
+// 'filtro-hme-o2' y 'tubo-t' son para pacientes traqueostomizados que ya no están en VMI.
+export type OxygenDeviceType = 'canula-nasal-simple' | 'mascara-simple' | 'mascara-venturi' | 'mascara-no-reinhalacion' | 'filtro-hme-o2' | 'tubo-t';
 export interface Prestacion {
   id: string;
   patientId: string;
