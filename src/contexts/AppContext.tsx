@@ -93,6 +93,8 @@ interface AppContextType extends AppState {
   getPatientPrestaciones: (patientId: string) => Prestacion[];
   startSVPeriod: (patientId: string, modality: SVModality, episodeId?: string) => Promise<void>;
   closeSVPeriod: (id: string, result: { tolerated: boolean; interruptionReason?: SVInterruptionReason; endAt?: string }) => Promise<void>;
+  /** Deshace un cierre: la prueba vuelve a estar en curso. Devuelve si pudo reabrirla. */
+  reopenSVPeriod: (id: string) => Promise<boolean>;
   addManualSVPeriod: (period: Omit<SpontaneousVentilationPeriod, 'id'>) => Promise<void>;
   deleteSVPeriod: (id: string) => Promise<void>;
   getPatientSVPeriods: (patientId: string) => SpontaneousVentilationPeriod[];
@@ -529,6 +531,17 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const reopenSVPeriod = async (id: string) => {
+    try {
+      const period = await spontaneousVentilationApi.updateSVPeriod(id, { endAt: null });
+      setState((prev) => ({ ...prev, spontaneousVentilation: prev.spontaneousVentilation.map((s) => (s.id === id ? period : s)) }));
+      return true;
+    } catch (error) {
+      reportError('deshacer el cierre del período', error);
+      return false;
+    }
+  };
+
   const addManualSVPeriod = async (input: Omit<SpontaneousVentilationPeriod, 'id'>) => {
     try {
       const period = await spontaneousVentilationApi.createSVPeriod(input);
@@ -726,6 +739,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         getPatientPrestaciones,
         startSVPeriod,
         closeSVPeriod,
+        reopenSVPeriod,
         addManualSVPeriod,
         deleteSVPeriod,
         getPatientSVPeriods,

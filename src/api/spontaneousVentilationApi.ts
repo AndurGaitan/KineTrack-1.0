@@ -14,7 +14,8 @@ export type CreateSVPeriodInput = {
 
 export type UpdateSVPeriodInput = Partial<{
   startAt: string;
-  endAt: string;
+  /** null = reabrir la prueba (deshacer un cierre). */
+  endAt: string | null;
   modality: SVModality;
   tolerated: boolean;
   interruptionReason: SVInterruptionReason;
