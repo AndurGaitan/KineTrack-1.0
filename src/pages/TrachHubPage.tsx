@@ -8,7 +8,7 @@ import { ActivityCard } from '../components/ActivityCard';
 import { DecannulationPanel } from '../components/trach/DecannulationPanel';
 import { TrachTimeline } from '../components/trach/TrachTimeline';
 import { SpontaneousVentilationCard } from '../components/SpontaneousVentilationCard';
-import { calendarDaysBetween, daysSpanText } from '../utils/supportDays';
+import { OffVmiDaysCard } from '../components/trach/OffVmiDaysCard';
 import { useTrachData } from '../hooks/useTrachData';
 import type { TrachContext } from '../domain/services/trachDecannulation';
 import { WindIcon } from 'lucide-react';
@@ -47,9 +47,6 @@ export function TrachHubPage() {
     );
   }
 
-  // Días de calendario desde que pasó a "Traqueostomía - respiración espontánea" (ya sin VMI).
-  const daysOffVmi = activeEpisode?.supportType === 'traqueostomia' ? calendarDaysBetween(activeEpisode.startAt, now) : undefined;
-
   const goToUpdateState = () => navigate(`/patient/${patient.id}/traqueostomia/new`);
 
   return (
@@ -79,13 +76,7 @@ export function TrachHubPage() {
           </div>
         )}
 
-        {daysOffVmi !== undefined && (
-          <div className="bg-indigo-50 border border-indigo-100 rounded-2xl p-4">
-            <div className="text-xs text-indigo-700">Ventilación espontánea sin VMI</div>
-            <div className="text-xl font-bold text-indigo-900">{daysSpanText(daysOffVmi)}</div>
-            <div className="text-xs text-indigo-700 mt-0.5">Desde {new Date(activeEpisode!.startAt).toLocaleDateString('es-AR')}</div>
-          </div>
-        )}
+        <OffVmiDaysCard episode={activeEpisode} now={now} />
 
         <TrachStatusCard patientId={patient.id} ctx={ctx} onUpdateState={goToUpdateState} onChanged={reload} />
 
