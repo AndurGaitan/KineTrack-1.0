@@ -4,7 +4,6 @@ import { Button } from './ui/Button';
 import { Patient, Sector, SupportType } from '../types';
 import { calculatePBWKg, Sex } from '../utils/vmiCalculations';
 import { toLocalDateTimeInputValue } from '../utils/dateInput';
-import { useApp } from '../contexts/AppContext';
 
 const clamp = (n: number, min: number, max: number) => Math.min(max, Math.max(min, n));
 
@@ -38,7 +37,6 @@ export function PatientForm({
   onCancel,
   saving = false
 }: PatientFormProps) {
-  const { features } = useApp();
   const isEdit = !!initialData;
   const activeEpisode = initialData?.episodes?.find(ep => !ep.endAt);
   const now = new Date();
@@ -146,9 +144,10 @@ export function PatientForm({
     }, {
       value: 'hfnc',
       label: 'CAFO - Cánula Nasal de Alto Flujo'
-    }, ...(features.tracheostomy || initialData?.supportType === 'traqueostomia' ? [{
+    }, ...(initialData?.supportType === 'traqueostomia' ? [{
+      // Solo para registros viejos: la traqueostomía ahora es la vía aérea, no un soporte.
       value: 'traqueostomia',
-      label: 'Traqueostomía - Respiración Espontánea'
+      label: 'Traqueostomía (registro anterior)'
     }] : []), {
       value: 'conventional-oxygen',
       label: 'Oxígeno Convencional'

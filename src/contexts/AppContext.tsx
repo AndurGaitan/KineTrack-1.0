@@ -95,6 +95,8 @@ interface AppContextType extends AppState {
   closeSVPeriod: (id: string, result: { tolerated: boolean; interruptionReason?: SVInterruptionReason; endAt?: string }) => Promise<void>;
   /** Deshace un cierre: la prueba vuelve a estar en curso. Devuelve si pudo reabrirla. */
   reopenSVPeriod: (id: string) => Promise<boolean>;
+  /** Corrige una prueba (desde, hasta, resultado, dispositivo). Devuelve si pudo guardarla. */
+  updateSVPeriod: (id: string, patch: spontaneousVentilationApi.UpdateSVPeriodInput) => Promise<boolean>;
   addManualSVPeriod: (period: Omit<SpontaneousVentilationPeriod, 'id'>) => Promise<void>;
   deleteSVPeriod: (id: string) => Promise<void>;
   getPatientSVPeriods: (patientId: string) => SpontaneousVentilationPeriod[];
@@ -531,6 +533,17 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const updateSVPeriod = async (id: string, patch: spontaneousVentilationApi.UpdateSVPeriodInput) => {
+    try {
+      const period = await spontaneousVentilationApi.updateSVPeriod(id, patch);
+      setState((prev) => ({ ...prev, spontaneousVentilation: prev.spontaneousVentilation.map((s) => (s.id === id ? period : s)) }));
+      return true;
+    } catch (error) {
+      reportError('guardar la prueba de ventilación espontánea', error);
+      return false;
+    }
+  };
+
   const reopenSVPeriod = async (id: string) => {
     try {
       const period = await spontaneousVentilationApi.updateSVPeriod(id, { endAt: null });
@@ -740,6 +753,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         startSVPeriod,
         closeSVPeriod,
         reopenSVPeriod,
+        updateSVPeriod,
         addManualSVPeriod,
         deleteSVPeriod,
         getPatientSVPeriods,

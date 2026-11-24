@@ -1,389 +1,331 @@
-import { FormEvent, useEffect, useState } from 'react';
-import { Card } from './ui/Card';
-import { Button } from './ui/Button';
+import { useEffect, useState } from 'react';
 import { useApp } from '../contexts/AppContext';
 import { toLocalDateTimeInputValue } from '../utils/dateInput';
 import {
-  computeSpontaneousVentilationSummary,
-  formatSVDuration,
+  currentSVModality,
+  formatSVElapsed,
   isStaleOpenPeriod,
   openPeriodHours,
-  currentSVModality,
   svInterruptionReasonLabels,
   svInterruptionReasonOptions,
-  svModalityLabels,
-  svModalityShortLabels,
   svModalityOptions,
+  svModalityShortLabels,
 } from '../utils/spontaneousVentilation';
+import { calendarDaysBetween, daysSpanText } from '../utils/supportDays';
 import type { SpontaneousVentilationPeriod, SVInterruptionReason, SVModality } from '../types';
-import { CheckIcon, PlayIcon, PlusIcon, SquareIcon, Trash2Icon, Undo2Icon, XIcon } from 'lucide-react';
+import { ChevronRightIcon } from 'lucide-react';
 
-interface SpontaneousVentilationCardProps {
-  patientId: string;
-  episodeId?: string;
-}
+const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+const deviceName = (m: SVModality) => cap(svModalityShortLabels[m]);
+const hm = (iso: string) => new Date(iso).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', hour12: false });
 
-const UNDO_SECONDS = 8;
-
-const chip = (active: boolean) =>
-  `px-3 py-2 rounded-xl text-sm font-semibold border-2 transition-colors ${
-    active ? 'border-blue-600 bg-blue-50 text-blue-900' : 'border-gray-200 bg-white text-gray-700'
-  }`;
-
-const dateInput = 'w-full min-h-[48px] px-3 text-sm border-2 border-gray-300 rounded-lg';
-
-function formatDateTime(iso: string) {
+function dayWord(iso: string, now: Date): string {
   const d = new Date(iso);
-  return `${d.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit' })} ${d.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}`;
+  const diff = calendarDaysBetween(d, now);
+  if (diff === 0) return 'hoy';
+  if (diff === 1) return 'ayer';
+  return d.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit' });
 }
 
-function durationLabel(p: SpontaneousVentilationPeriod): string {
-  const end = p.endAt ? new Date(p.endAt).getTime() : Date.now();
-  const minutes = Math.max(0, Math.round((end - new Date(p.startAt).getTime()) / 60000));
-  return formatSVDuration(minutes / 60);
+/** "ayer 14:00 – 16:30" · "hoy 09:10 – en curso". */
+function rangeText(p: SpontaneousVentilationPeriod, now: Date): string {
+  const sameDay = p.endAt && calendarDaysBetween(p.startAt, p.endAt) === 0;
+  const end = p.endAt ? `${sameDay ? '' : `${dayWord(p.endAt, now)} `}${hm(p.endAt)}` : 'en curso';
+  return `${dayWord(p.startAt, now)} ${hm(p.startAt)} – ${end}`;
 }
 
-/** Tolerancia: ¿toleró? y, si no, el motivo de interrupción. */
-function ToleranceFields({
-  tolerated,
-  reason,
-  onTolerated,
-  onReason,
-}: {
-  tolerated: boolean | undefined;
-  reason: SVInterruptionReason | undefined;
-  onTolerated: (v: boolean | undefined) => void;
-  onReason: (v: SVInterruptionReason | undefined) => void;
-}) {
+function resultText(p: SpontaneousVentilationPeriod): string {
+  if (p.tolerated === true) return 'terminó';
+  if (p.tolerated === false) return `se interrumpió${p.interruptionReason ? ` (${svInterruptionReasonLabels[p.interruptionReason].toLowerCase()})` : ''}`;
+  return '';
+}
+
+type Sheet = { kind: 'finish' } | { kind: 'edit'; id: string } | { kind: 'new' } | null;
+type Result = 'ok' | 'stop' | undefined;
+
+const primary = 'w-full min-h-[56px] rounded-2xl bg-blue-600 text-white text-lg font-semibold active:bg-blue-700 disabled:opacity-50';
+const option = 'min-h-[52px] rounded-2xl border border-gray-200 bg-white text-base font-semibold text-gray-900 active:bg-gray-50 disabled:opacity-50';
+const reasonChip = 'px-3 py-2 rounded-xl text-sm font-semibold border border-gray-200 bg-white text-gray-800 active:bg-gray-50 disabled:opacity-50';
+const timeInput = 'w-full min-h-[48px] px-3 text-base border border-gray-300 rounded-xl bg-white';
+const selected = '!border-blue-600 !bg-blue-50 !text-blue-900';
+
+/**
+ * Pruebas de ventilación espontánea de un paciente traqueostomizado, sin resúmenes ni gráficos: cuánto lleva sin
+ * ventilador, iniciar una prueba y cerrarla ("terminó" o "se interrumpió"), con el desde y el hasta corregibles.
+ * El seguimiento longitudinal se ve desde Coordinación.
+ */
+export function SpontaneousVentilationCard({ patientId, episodeId }: { patientId: string; episodeId?: string }) {
+  const { patients, getPatientSVPeriods, startSVPeriod, updateSVPeriod, addManualSVPeriod, deleteSVPeriod } = useApp();
+  const patient = patients.find((p) => p.id === patientId);
+  const periods = getPatientSVPeriods(patientId);
+  const active = periods.find((p) => !p.endAt);
+  const last = periods.find((p) => p.endAt);
+
+  const [nowMs, setNowMs] = useState(() => Date.now());
+  useEffect(() => {
+    if (!active) return;
+    setNowMs(Date.now());
+    const t = window.setInterval(() => setNowMs(Date.now()), 30_000);
+    return () => window.clearInterval(t);
+  }, [active?.id]);
+  const now = new Date(nowMs);
+
+  const [modality, setModality] = useState<SVModality>(currentSVModality(periods[0]?.modality));
+  const [pickDevice, setPickDevice] = useState(false);
+  const [sheet, setSheet] = useState<Sheet>(null);
+  const [start, setStart] = useState('');
+  const [end, setEnd] = useState('');
+  const [result, setResult] = useState<Result>(undefined);
+  const [reason, setReason] = useState<SVInterruptionReason | undefined>(undefined);
+  const [timesOpen, setTimesOpen] = useState(false);
+  const [busy, setBusy] = useState(false);
+
+  const local = (iso: string) => toLocalDateTimeInputValue(new Date(iso));
+  const iso = (v: string) => new Date(v).toISOString();
+
+  // Días desde que el paciente salió de la VMI (solo si hoy no está en ventilador).
+  const offVentDays = (() => {
+    if (!patient || patient.supportType === 'imv') return undefined;
+    const ends = patient.episodes.filter((e) => e.supportType === 'imv' && e.endAt).map((e) => new Date(e.endAt as string).getTime());
+    return ends.length > 0 ? calendarDaysBetween(new Date(Math.max(...ends)), now) : undefined;
+  })();
+
+  const stale = isStaleOpenPeriod(active, now);
+  const startMs = new Date(start).getTime();
+  const endMs = new Date(end).getTime();
+  const timesInvalid = !start || !end || !(endMs > startMs) || endMs > Date.now() + 60_000;
+
+  const open = (next: Sheet) => {
+    setResult(undefined);
+    setReason(undefined);
+    if (next?.kind === 'finish' && active) {
+      setStart(local(active.startAt));
+      setEnd(local(new Date().toISOString()));
+      setTimesOpen(isStaleOpenPeriod(active));
+    } else if (next?.kind === 'edit') {
+      const p = periods.find((x) => x.id === next.id);
+      if (!p) return;
+      setStart(local(p.startAt));
+      setEnd(p.endAt ? local(p.endAt) : local(new Date().toISOString()));
+      setResult(p.tolerated === true ? 'ok' : p.tolerated === false ? 'stop' : undefined);
+      setReason(p.interruptionReason);
+      setTimesOpen(true);
+    } else if (next?.kind === 'new') {
+      setStart(local(new Date(Date.now() - 60 * 60 * 1000).toISOString()));
+      setEnd(local(new Date().toISOString()));
+      setTimesOpen(true);
+    }
+    setSheet(next);
+  };
+
+  // Al cerrar la prueba en curso, sin tocar las horas el "hasta" es el momento del toque.
+  const finishBlocked = timesOpen && timesInvalid;
+  const closeActive = async (res: 'ok' | 'stop', rsn?: SVInterruptionReason) => {
+    if (!active || busy || finishBlocked) return;
+    setBusy(true);
+    await updateSVPeriod(active.id, {
+      ...(timesOpen ? { startAt: iso(start), endAt: iso(end) } : { endAt: new Date().toISOString() }),
+      tolerated: res === 'ok',
+      interruptionReason: res === 'stop' ? rsn : undefined,
+    });
+    setBusy(false);
+    setSheet(null);
+  };
+
+  const save = async () => {
+    if (busy || timesInvalid || !sheet) return;
+    setBusy(true);
+    const tolerated = result === 'ok' ? true : result === 'stop' ? false : undefined;
+    const interruptionReason = result === 'stop' ? reason : undefined;
+    if (sheet.kind === 'edit') {
+      await updateSVPeriod(sheet.id, { startAt: iso(start), endAt: iso(end), tolerated, interruptionReason });
+    } else if (sheet.kind === 'new') {
+      await addManualSVPeriod({ patientId, episodeId, startAt: iso(start), endAt: iso(end), modality, tolerated, interruptionReason });
+    }
+    setBusy(false);
+    setSheet(null);
+  };
+
+  const remove = async () => {
+    if (sheet?.kind !== 'edit' || busy) return;
+    if (!window.confirm('¿Eliminar esta prueba?')) return;
+    setBusy(true);
+    await deleteSVPeriod(sheet.id);
+    setBusy(false);
+    setSheet(null);
+  };
+
+  const times = (
+    <div className="space-y-2">
+      <label className="block text-xs font-medium text-gray-600">
+        Desde
+        <input type="datetime-local" value={start} onChange={(e) => setStart(e.target.value)} className={`${timeInput} mt-1`} />
+      </label>
+      <label className="block text-xs font-medium text-gray-600">
+        Hasta
+        <input type="datetime-local" value={end} onChange={(e) => setEnd(e.target.value)} className={`${timeInput} mt-1`} />
+      </label>
+      {timesInvalid && <p className="text-xs text-red-600">El "hasta" tiene que ser posterior al "desde" y no futuro.</p>}
+    </div>
+  );
+
+  const reasons = (onPick: (r: SVInterruptionReason) => void, current?: SVInterruptionReason) => (
+    <div className="flex flex-wrap gap-2">
+      {svInterruptionReasonOptions.map((o) => (
+        <button key={o.value} type="button" disabled={busy} onClick={() => onPick(o.value)} className={`${reasonChip} ${current === o.value ? selected : ''}`}>
+          {o.label}
+        </button>
+      ))}
+    </div>
+  );
+
   return (
-    <div className="space-y-3">
-      <div>
-        <div className="text-sm font-semibold text-gray-900 mb-2">¿Toleró?</div>
-        <div className="flex gap-2">
-          <button type="button" onClick={() => { onTolerated(tolerated === true ? undefined : true); onReason(undefined); }} className={chip(tolerated === true)}>
-            Sí, toleró
+    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 space-y-4">
+      <div className="text-sm font-semibold text-gray-500">Ventilación espontánea</div>
+
+      {/* Prueba en curso */}
+      {active && sheet?.kind !== 'finish' && (
+        <>
+          <div className="text-center space-y-1">
+            <div className="text-xs text-gray-500">Desvinculado hace</div>
+            <div className="text-4xl font-bold text-gray-900">{formatSVElapsed(openPeriodHours(active, now))}</div>
+            <div className="text-sm text-gray-500">
+              Desde {hm(active.startAt)} · {deviceName(active.modality)}
+            </div>
+            {stale && <div className="text-xs text-amber-700 pt-1">Lleva mucho abierta. Si ya terminó, cerrala con la hora real.</div>}
+          </div>
+          <button type="button" onClick={() => open({ kind: 'finish' })} className={primary}>
+            Finalizar
           </button>
-          <button type="button" onClick={() => onTolerated(tolerated === false ? undefined : false)} className={chip(tolerated === false)}>
-            No toleró
+        </>
+      )}
+
+      {/* Cierre de la prueba en curso */}
+      {active && sheet?.kind === 'finish' && (
+        <div className="space-y-3">
+          <div className="text-lg font-semibold text-gray-900">¿Cómo terminó?</div>
+          {result !== 'stop' ? (
+            <div className="grid grid-cols-2 gap-3">
+              <button type="button" disabled={busy || finishBlocked} onClick={() => closeActive('ok')} className={option}>
+                Terminó
+              </button>
+              <button type="button" disabled={busy} onClick={() => setResult('stop')} className={option}>
+                Se interrumpió
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <div className="text-sm text-gray-600">Motivo (opcional). Tocá uno para cerrar.</div>
+              {reasons((r) => closeActive('stop', r))}
+              <button type="button" disabled={busy || finishBlocked} onClick={() => closeActive('stop')} className="text-sm font-semibold text-blue-700">
+                Cerrar sin motivo
+              </button>
+            </div>
+          )}
+          <div className="text-sm text-gray-500">
+            Desde {hm(active.startAt)} · Hasta {timesOpen ? 'la hora indicada' : 'ahora'}{' '}
+            <button type="button" onClick={() => setTimesOpen((v) => !v)} className="font-semibold text-blue-700">
+              {timesOpen ? 'Listo' : 'Cambiar'}
+            </button>
+          </div>
+          {timesOpen && times}
+          <button type="button" onClick={() => setSheet(null)} className="text-sm font-semibold text-gray-500">
+            Cancelar
           </button>
         </div>
-      </div>
-      {tolerated === false && (
-        <div>
-          <div className="text-sm font-semibold text-gray-900 mb-2">Motivo de suspensión</div>
-          <div className="flex flex-wrap gap-2">
-            {svInterruptionReasonOptions.map((o) => (
-              <button key={o.value} type="button" onClick={() => onReason(reason === o.value ? undefined : o.value)} className={chip(reason === o.value)}>
-                {o.label}
+      )}
+
+      {/* Sin prueba en curso */}
+      {!active && !sheet && (
+        <>
+          {offVentDays !== undefined && (
+            <div className="text-center space-y-1">
+              <div className="text-xs text-gray-500">Sin ventilador hace</div>
+              <div className="text-4xl font-bold text-gray-900">{daysSpanText(offVentDays)}</div>
+            </div>
+          )}
+          <button type="button" onClick={() => startSVPeriod(patientId, modality, episodeId)} className={primary}>
+            Iniciar prueba
+          </button>
+
+          <button type="button" onClick={() => setPickDevice((v) => !v)} className="w-full flex items-center justify-between text-sm py-1">
+            <span className="text-gray-500">Dispositivo</span>
+            <span className="font-semibold text-gray-900 flex items-center gap-1">
+              {deviceName(modality)} <ChevronRightIcon className="w-4 h-4 text-gray-400" />
+            </span>
+          </button>
+          {pickDevice && (
+            <div className="flex flex-wrap gap-2">
+              {svModalityOptions.map((o) => (
+                <button
+                  key={o.value}
+                  type="button"
+                  onClick={() => {
+                    setModality(o.value);
+                    setPickDevice(false);
+                  }}
+                  className={`${reasonChip} ${modality === o.value ? selected : ''}`}
+                >
+                  {o.label}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {last && (
+            <button type="button" onClick={() => open({ kind: 'edit', id: last.id })} className="w-full text-left text-sm border-t border-gray-100 pt-3">
+              <span className="text-gray-500">Última: </span>
+              <span className="text-gray-900">
+                {rangeText(last, now)}
+                {resultText(last) ? ` · ${resultText(last)}` : ''}
+              </span>
+              <span className="text-blue-700 font-semibold"> · Editar</span>
+            </button>
+          )}
+          <button type="button" onClick={() => open({ kind: 'new' })} className="text-sm font-semibold text-blue-700">
+            Agregar una prueba anterior
+          </button>
+        </>
+      )}
+
+      {/* Editar o agregar una prueba ya cerrada */}
+      {(sheet?.kind === 'edit' || sheet?.kind === 'new') && (
+        <div className="space-y-3">
+          <div className="text-lg font-semibold text-gray-900">{sheet.kind === 'edit' ? 'Editar prueba' : 'Agregar una prueba anterior'}</div>
+          {times}
+          {sheet.kind === 'new' && (
+            <div className="flex flex-wrap gap-2">
+              {svModalityOptions.map((o) => (
+                <button key={o.value} type="button" onClick={() => setModality(o.value)} className={`${reasonChip} ${modality === o.value ? selected : ''}`}>
+                  {o.label}
+                </button>
+              ))}
+            </div>
+          )}
+          <div className="grid grid-cols-2 gap-3">
+            <button type="button" onClick={() => setResult(result === 'ok' ? undefined : 'ok')} className={`${option} ${result === 'ok' ? selected : ''}`}>
+              Terminó
+            </button>
+            <button type="button" onClick={() => setResult(result === 'stop' ? undefined : 'stop')} className={`${option} ${result === 'stop' ? selected : ''}`}>
+              Se interrumpió
+            </button>
+          </div>
+          {result === 'stop' && reasons((r) => setReason(reason === r ? undefined : r), reason)}
+          <button type="button" onClick={save} disabled={busy || timesInvalid} className={primary}>
+            Guardar
+          </button>
+          <div className="flex items-center justify-between">
+            <button type="button" onClick={() => setSheet(null)} className="text-sm font-semibold text-gray-500">
+              Cancelar
+            </button>
+            {sheet.kind === 'edit' && (
+              <button type="button" onClick={remove} className="text-sm font-semibold text-red-600">
+                Eliminar
               </button>
-            ))}
+            )}
           </div>
         </div>
       )}
     </div>
-  );
-}
-
-/**
- * Períodos de ventilación espontánea de un paciente traqueostomizado en VMI:
- * iniciar / finalizar en vivo (con tolerancia), cargar uno retroactivo, y ver la
- * evolución de las horas por día de la última semana.
- */
-export function SpontaneousVentilationCard({ patientId, episodeId }: SpontaneousVentilationCardProps) {
-  const { getPatientSVPeriods, startSVPeriod, closeSVPeriod, reopenSVPeriod, addManualSVPeriod, deleteSVPeriod } = useApp();
-  const periods = getPatientSVPeriods(patientId);
-  const summary = computeSpontaneousVentilationSummary(periods);
-  const maxHours = Math.max(4, ...summary.days.map((d) => d.hours));
-  const today = summary.days[summary.days.length - 1];
-  const stale = isStaleOpenPeriod(summary.active);
-
-  const [modality, setModality] = useState<SVModality>(currentSVModality(periods[0]?.modality));
-  const [finishing, setFinishing] = useState(false);
-  // Cierre rápido (prueba que no quedó abierta de más): un toque en "Toleró" o "No toleró" + motivo.
-  const [quickNo, setQuickNo] = useState(false);
-  const [closing, setClosing] = useState(false);
-  // Último cierre rápido, para poder deshacerlo unos segundos.
-  const [undo, setUndo] = useState<{ id: string; text: string } | null>(null);
-  useEffect(() => {
-    if (!undo) return;
-    const t = window.setTimeout(() => setUndo(null), UNDO_SECONDS * 1000);
-    return () => window.clearTimeout(t);
-  }, [undo]);
-  const [finishTolerated, setFinishTolerated] = useState<boolean | undefined>(undefined);
-  const [finishReason, setFinishReason] = useState<SVInterruptionReason | undefined>(undefined);
-  // Hora real de fin: solo se pide cuando la prueba quedó abierta de más.
-  const [finishEnd, setFinishEnd] = useState(() => toLocalDateTimeInputValue(new Date()));
-  const finishEndDate = new Date(finishEnd);
-  const finishEndInvalid =
-    stale && !!summary.active && (!(finishEndDate.getTime() > new Date(summary.active.startAt).getTime()) || finishEndDate.getTime() > Date.now() + 60_000);
-
-  const [showRetro, setShowRetro] = useState(false);
-  const [retroStart, setRetroStart] = useState(() => toLocalDateTimeInputValue(new Date(Date.now() - 3 * 60 * 60 * 1000)));
-  const [retroEnd, setRetroEnd] = useState(() => toLocalDateTimeInputValue(new Date()));
-  const [retroModality, setRetroModality] = useState<SVModality>(currentSVModality(periods[0]?.modality));
-  const [retroTolerated, setRetroTolerated] = useState<boolean | undefined>(undefined);
-  const [retroReason, setRetroReason] = useState<SVInterruptionReason | undefined>(undefined);
-  const [retroNotes, setRetroNotes] = useState('');
-
-  const handleFinish = async () => {
-    if (!summary.active || finishTolerated === undefined || finishEndInvalid) return;
-    await closeSVPeriod(summary.active.id, {
-      tolerated: finishTolerated,
-      interruptionReason: finishReason,
-      endAt: stale ? finishEndDate.toISOString() : undefined,
-    });
-    setFinishing(false);
-    setFinishTolerated(undefined);
-    setFinishReason(undefined);
-  };
-
-  const quickClose = async (tolerated: boolean, interruptionReason?: SVInterruptionReason) => {
-    if (!summary.active || closing) return;
-    setClosing(true);
-    const { id, modality: closedModality } = summary.active;
-    await closeSVPeriod(id, { tolerated, interruptionReason });
-    setClosing(false);
-    setQuickNo(false);
-    setUndo({ id, text: `Prueba cerrada: ${svModalityShortLabels[closedModality]} · ${tolerated ? 'toleró' : 'no toleró'}` });
-  };
-
-  const handleUndo = async () => {
-    if (!undo) return;
-    const { id } = undo;
-    setUndo(null);
-    await reopenSVPeriod(id);
-  };
-
-  const handleRetro = async (e: FormEvent) => {
-    e.preventDefault();
-    await addManualSVPeriod({
-      patientId,
-      episodeId,
-      startAt: new Date(retroStart).toISOString(),
-      endAt: new Date(retroEnd).toISOString(),
-      modality: retroModality,
-      tolerated: retroTolerated,
-      interruptionReason: retroTolerated === false ? retroReason : undefined,
-      notes: retroNotes || undefined,
-    });
-    setShowRetro(false);
-    setRetroNotes('');
-    setRetroTolerated(undefined);
-    setRetroReason(undefined);
-  };
-
-  return (
-    <Card>
-      <h3 className="text-lg font-bold text-gray-900 mb-1">Ventilación espontánea</h3>
-      <p className="text-xs text-gray-500 mb-4">Pruebas fuera del ventilador con filtro HME + O₂ o tubo en T. La duración cambia cada día: puede ser de minutos, de horas o no haber tolerancia.</p>
-
-      <div className="p-4 rounded-xl bg-blue-50 mb-4">
-        <div className="text-xs font-semibold text-blue-900 mb-2">Hoy</div>
-        <div className="grid grid-cols-3 gap-3">
-          <div>
-            <div className="text-2xl font-bold text-blue-900">{today.periods === 0 ? '—' : formatSVDuration(today.hours)}</div>
-            <div className="text-xs text-gray-600">Tiempo</div>
-          </div>
-          <div>
-            <div className="text-2xl font-bold text-blue-900">{today.tolerated}</div>
-            <div className="text-xs text-gray-600">{today.tolerated === 1 ? 'Tolerada' : 'Toleradas'}</div>
-          </div>
-          <div>
-            <div className={`text-2xl font-bold ${today.notTolerated > 0 ? 'text-amber-600' : 'text-blue-900'}`}>{today.notTolerated}</div>
-            <div className="text-xs text-gray-600">{today.notTolerated === 1 ? 'No tolerada' : 'No toleradas'}</div>
-          </div>
-        </div>
-        <div className="text-xs text-blue-800 mt-3">
-          {summary.active ? `En curso · ${svModalityLabels[summary.active.modality]} · lleva ${formatSVDuration(openPeriodHours(summary.active))}` : today.periods === 0 ? 'Hoy todavía no se hizo ninguna prueba.' : 'Sin prueba en curso.'}
-          {' · '}Últimas 24 h: {formatSVDuration(summary.hoursLast24h)}
-        </div>
-      </div>
-
-      <div className="mb-4">
-        <div className="text-sm font-semibold text-gray-900 mb-2">Últimos 7 días</div>
-        <div className="space-y-1.5">
-          {summary.days.map((day) => (
-            <div key={day.date} className="flex items-center gap-2 text-xs">
-              <div className="w-14 text-gray-600 flex-shrink-0">{day.label}</div>
-              <div className="flex-1 h-4 bg-gray-100 rounded">
-                <div className="h-4 bg-blue-500 rounded" style={{ width: `${Math.min(100, (day.hours / maxHours) * 100)}%` }} />
-              </div>
-              <div className="w-24 text-right text-gray-700 flex-shrink-0">
-                {day.periods === 0 ? <span className="text-gray-400">sin pruebas</span> : formatSVDuration(day.hours)}
-                {day.periods > 0 && <span className="text-gray-400"> · {day.periods}</span>}
-                {day.notTolerated > 0 && <span className="text-amber-600"> ⚠{day.notTolerated}</span>}
-              </div>
-            </div>
-          ))}
-        </div>
-        <p className="text-[11px] text-gray-400 mt-1">Tiempo por día · cantidad de períodos · ⚠ períodos no tolerados</p>
-      </div>
-
-      {summary.active && stale && (
-        <div className="bg-amber-50 border-2 border-amber-300 rounded-xl p-4 mb-4 text-sm text-amber-900" role="alert">
-          <div className="font-semibold">Prueba abierta hace {formatSVDuration(openPeriodHours(summary.active))}</div>
-          <p className="mt-1">
-            Empezó el {formatDateTime(summary.active.startAt)} y sigue en curso. Si ya terminó, cerrala con la hora real para que no sume tiempo de más.
-          </p>
-          {!finishing && (
-            <Button type="button" onClick={() => { setFinishEnd(toLocalDateTimeInputValue(new Date())); setFinishing(true); }} className="mt-3 bg-amber-600">
-              Cerrar con la hora real
-            </Button>
-          )}
-        </div>
-      )}
-
-      {undo && !summary.active && (
-        <div className="flex items-center justify-between gap-3 bg-gray-900 text-white rounded-xl px-4 py-3 mb-3 text-sm" role="status">
-          <span>{undo.text}</span>
-          <button type="button" onClick={handleUndo} className="flex items-center gap-1 font-bold text-blue-300 whitespace-nowrap">
-            <Undo2Icon className="w-4 h-4" /> Deshacer
-          </button>
-        </div>
-      )}
-
-      {summary.active ? (
-        <div className="bg-blue-50 border-2 border-blue-200 rounded-xl p-4 mb-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <div className="text-sm text-blue-900 font-semibold">Período en curso</div>
-              <div className="text-xs text-blue-700">
-                desde {formatDateTime(summary.active.startAt)} · {svModalityLabels[summary.active.modality]}
-              </div>
-            </div>
-            {stale && !finishing && (
-              <Button type="button" onClick={() => { setFinishEnd(toLocalDateTimeInputValue(new Date())); setFinishing(true); }} className="bg-blue-600">
-                <SquareIcon className="w-4 h-4 mr-1 inline" /> Finalizar
-              </Button>
-            )}
-          </div>
-          {!stale && !quickNo && (
-            <div className="mt-3 grid grid-cols-2 gap-2">
-              <button type="button" disabled={closing} onClick={() => quickClose(true)} className="min-h-[56px] rounded-xl bg-green-600 text-white font-semibold text-base active:bg-green-700 disabled:opacity-60 flex items-center justify-center gap-1">
-                <CheckIcon className="w-5 h-5" /> Toleró
-              </button>
-              <button type="button" disabled={closing} onClick={() => setQuickNo(true)} className="min-h-[56px] rounded-xl bg-amber-500 text-white font-semibold text-base active:bg-amber-600 disabled:opacity-60 flex items-center justify-center gap-1">
-                <XIcon className="w-5 h-5" /> No toleró
-              </button>
-            </div>
-          )}
-          {!stale && quickNo && (
-            <div className="mt-3 space-y-2">
-              <div className="text-sm font-semibold text-gray-900">¿Por qué se suspendió? <span className="font-normal text-gray-500">(tocá uno para cerrar)</span></div>
-              <div className="flex flex-wrap gap-2">
-                {svInterruptionReasonOptions.map((o) => (
-                  <button key={o.value} type="button" disabled={closing} onClick={() => quickClose(false, o.value)} className={`${chip(false)} disabled:opacity-60`}>
-                    {o.label}
-                  </button>
-                ))}
-              </div>
-              <div className="flex gap-2 pt-1">
-                <Button type="button" variant="secondary" onClick={() => setQuickNo(false)} fullWidth>
-                  Volver
-                </Button>
-                <Button type="button" variant="secondary" disabled={closing} onClick={() => quickClose(false)} fullWidth>
-                  Cerrar sin motivo
-                </Button>
-              </div>
-            </div>
-          )}
-          {finishing && (
-            <div className="mt-3 space-y-3">
-              {stale && (
-                <label className="block text-xs font-medium text-gray-700">
-                  Hora real de fin
-                  <input type="datetime-local" value={finishEnd} onChange={(e) => setFinishEnd(e.target.value)} className={`${dateInput} mt-1`} />
-                  {finishEndInvalid && <span className="text-red-600">Tiene que ser posterior al inicio y no futura.</span>}
-                </label>
-              )}
-              <ToleranceFields tolerated={finishTolerated} reason={finishReason} onTolerated={setFinishTolerated} onReason={setFinishReason} />
-              <div className="flex gap-2">
-                <Button type="button" variant="secondary" onClick={() => setFinishing(false)} fullWidth>
-                  Cancelar
-                </Button>
-                <Button type="button" onClick={handleFinish} disabled={finishTolerated === undefined || finishEndInvalid} fullWidth>
-                  Finalizar período
-                </Button>
-              </div>
-            </div>
-          )}
-        </div>
-      ) : (
-        <div className="mb-4 space-y-3">
-          <div className="flex flex-wrap gap-2">
-            {svModalityOptions.map((o) => (
-              <button key={o.value} type="button" onClick={() => setModality(o.value)} className={chip(modality === o.value)}>
-                {o.label}
-              </button>
-            ))}
-          </div>
-          <Button type="button" onClick={() => startSVPeriod(patientId, modality, episodeId)} fullWidth className="bg-blue-600">
-            <PlayIcon className="w-4 h-4 mr-1 inline" /> Iniciar ahora · {svModalityLabels[modality]}
-          </Button>
-        </div>
-      )}
-
-      <button type="button" onClick={() => setShowRetro((v) => !v)} className="text-sm text-blue-700 font-medium flex items-center gap-1 mb-3">
-        <PlusIcon className="w-4 h-4" /> Cargar período retroactivo
-      </button>
-
-      {showRetro && (
-        <form onSubmit={handleRetro} className="space-y-3 mb-4 p-4 bg-gray-50 rounded-xl">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <label className="text-xs font-medium text-gray-700">
-              Inicio
-              <input type="datetime-local" value={retroStart} onChange={(e) => setRetroStart(e.target.value)} className={`${dateInput} mt-1`} required />
-            </label>
-            <label className="text-xs font-medium text-gray-700">
-              Fin
-              <input type="datetime-local" value={retroEnd} onChange={(e) => setRetroEnd(e.target.value)} className={`${dateInput} mt-1`} required />
-            </label>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {svModalityOptions.map((o) => (
-              <button key={o.value} type="button" onClick={() => setRetroModality(o.value)} className={chip(retroModality === o.value)}>
-                {o.label}
-              </button>
-            ))}
-          </div>
-          <ToleranceFields tolerated={retroTolerated} reason={retroReason} onTolerated={setRetroTolerated} onReason={setRetroReason} />
-          <input type="text" placeholder="Notas (opcional)" value={retroNotes} onChange={(e) => setRetroNotes(e.target.value)} className={dateInput} />
-          <div className="flex gap-2">
-            <Button type="button" variant="secondary" onClick={() => setShowRetro(false)} fullWidth>
-              Cancelar
-            </Button>
-            <Button type="submit" fullWidth>
-              Guardar
-            </Button>
-          </div>
-        </form>
-      )}
-
-      {periods.length > 0 && (
-        <div className="space-y-2">
-          {periods.slice(0, 10).map((p) => (
-            <div key={p.id} className="flex items-center justify-between text-sm border-b border-gray-100 pb-2 gap-2">
-              <div className="min-w-0">
-                <div>
-                  <span className="text-gray-900 font-medium">{formatDateTime(p.startAt)}</span>
-                  <span className="text-gray-500"> → </span>
-                  <span className="text-gray-900 font-medium">{p.endAt ? formatDateTime(p.endAt) : 'en curso'}</span>
-                  <span className="text-gray-500"> · {durationLabel(p)}</span>
-                </div>
-                <div className="text-xs text-gray-500">
-                  {svModalityLabels[p.modality]}
-                  {p.tolerated === true && ' · toleró'}
-                  {p.tolerated === false && ` · no toleró${p.interruptionReason ? ` (${svInterruptionReasonLabels[p.interruptionReason].toLowerCase()})` : ''}`}
-                  {p.notes ? ` · ${p.notes}` : ''}
-                </div>
-              </div>
-              <button type="button" onClick={() => deleteSVPeriod(p.id)} aria-label="Eliminar período" className="text-gray-400 hover:text-red-600 p-1 flex-shrink-0">
-                <Trash2Icon className="w-4 h-4" />
-              </button>
-            </div>
-          ))}
-        </div>
-      )}
-    </Card>
   );
 }

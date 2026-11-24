@@ -62,6 +62,15 @@ export function formatSVDuration(hours: number): string {
   return minutes >= 60 ? `${formatSVHours(minutes / 60)} h` : `${minutes} min`;
 }
 
+/** Tiempo transcurrido como lo lee un kinesiólogo: "45 min", "2 h", "1 h 12 min". */
+export function formatSVElapsed(hours: number): string {
+  const total = Math.max(0, Math.round(hours * 60));
+  const h = Math.floor(total / 60);
+  const m = total % 60;
+  if (h === 0) return `${m} min`;
+  return m === 0 ? `${h} h` : `${h} h ${m} min`;
+}
+
 function overlapHours(period: SpontaneousVentilationPeriod, from: Date, to: Date, now: Date): number {
   const start = new Date(period.startAt).getTime();
   const end = period.endAt ? new Date(period.endAt).getTime() : now.getTime();
@@ -137,4 +146,48 @@ export function computeSpontaneousVentilationSummary(periods: SpontaneousVentila
   }
 
   return { active, hoursLast24h: Math.round(hoursLast24h * 1000) / 1000, days };
+}
+
+export interface SVDayMinutes {
+  /** Día local, YYYY-MM-DD. */
+  date: string;
+  /** "6/10" */
+  label: string;
+  /** Minutos de pruebas que terminaron. */
+  ok: number;
+  /** Minutos de pruebas que se interrumpieron. */
+  stopped: number;
+  /** Minutos de pruebas sin resultado cargado. */
+  other: number;
+}
+
+/**
+ * Minutos de ventilación espontánea por día, para el seguimiento longitudinal del coordinador. Una prueba que cruza la
+ * medianoche se reparte entre los días; el resultado de cada prueba decide en qué serie cuenta. Desde el día de la
+ * primera prueba (como mucho `maxDays` días hacia atrás) hasta hoy; los días sin pruebas quedan en cero.
+ */
+export function dailySVMinutes(periods: SpontaneousVentilationPeriod[], now: Date = new Date(), maxDays = 45): SVDayMinutes[] {
+  if (periods.length === 0) return [];
+  const first = Math.min(...periods.map((p) => new Date(p.startAt).getTime()));
+  const firstDay = new Date(new Date(first).getFullYear(), new Date(first).getMonth(), new Date(first).getDate());
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const spanDays = Math.min(maxDays, Math.round((today.getTime() - firstDay.getTime()) / (24 * HOUR_MS)) + 1);
+  const days: SVDayMinutes[] = [];
+  for (let i = spanDays - 1; i >= 0; i--) {
+    const from = new Date(today.getFullYear(), today.getMonth(), today.getDate() - i);
+    const to = new Date(today.getFullYear(), today.getMonth(), today.getDate() - i + 1);
+    const row: SVDayMinutes = { date: localDayKey(from), label: `${from.getDate()}/${from.getMonth() + 1}`, ok: 0, stopped: 0, other: 0 };
+    for (const p of periods) {
+      const minutes = overlapHours(p, from, to, now) * 60;
+      if (minutes <= 0) continue;
+      if (p.tolerated === true) row.ok += minutes;
+      else if (p.tolerated === false) row.stopped += minutes;
+      else row.other += minutes;
+    }
+    row.ok = Math.round(row.ok);
+    row.stopped = Math.round(row.stopped);
+    row.other = Math.round(row.other);
+    days.push(row);
+  }
+  return days;
 }
