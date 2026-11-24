@@ -10,12 +10,12 @@ const stage1Includes = [
   'Evaluaciones: MRC, VMI, VNI y HFNC (CAFO) solo con parámetros',
   'Decisión diaria de PVE (realizada, no cumple criterios o cumple criterios y no se realizó)',
   'Inicio de movilización activa y períodos en que no cumple criterios (ventana de 72 h desde el inicio de la VMI)',
+  'Traqueostomía: seguimiento, decanulación y períodos de ventilación espontánea',
 ];
 
 const stage1Hides = [
   'Gasometría arterial (pH, PaO₂, PaCO₂, HCO₃, exceso de bases) y score HACOR',
   'Nivel de movilización en las monitorizaciones y en el KTM',
-  'Traqueostomía y ventilación espontánea',
   'Cronograma de personal',
 ];
 
@@ -84,8 +84,8 @@ export function StagePage() {
         <Card>
           <h3 className="font-bold text-gray-900 mb-2">Etapa 2 — registro completo</h3>
           <p className="text-sm text-gray-700">
-            Vuelve a mostrar gasometría y HACOR, nivel de movilización, traqueostomía con ventilación espontánea y
-            Cronograma. Las decisiones de PVE y la movilización precoz siguen disponibles.
+            Vuelve a mostrar gasometría y HACOR, nivel de movilización y Cronograma (la traqueostomía con
+            ventilación espontánea ya está habilitada en las dos etapas). Las decisiones de PVE y la movilización precoz siguen disponibles.
           </p>
         </Card>
       </main>
