@@ -312,7 +312,8 @@ export function collectPatientActivity(
     mrcAssessment,
     trach,
     daysSinceNiv: daysSinceNivEnded(src.episodes ?? [], patient.supportType),
-    vmiOff: daysSinceVmiEnded(src.episodes ?? [], patient.supportType),
+    // Con traqueostomía el dato se informa hasta 30 días (el destete es más largo); sin ella, 7 como la VMNI.
+    vmiOff: daysSinceVmiEnded(src.episodes ?? [], patient.supportType, new Date(), patient.airwayType === 'traqueostomia' ? 30 : 7),
     airwayEvents,
     episodeChanges,
     spontaneousVentilation,

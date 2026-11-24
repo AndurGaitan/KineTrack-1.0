@@ -27,7 +27,7 @@ import {
 import { calculateEpisodeDuration } from './episodeService';
 import { daysAgoText } from '../../utils/supportDays';
 import { cannulaFitOptions } from '../../utils/hfncEducation';
-import { ktmTypeLabels, ktrTechniqueLabels, oxygenDeviceLabels, respiratorySampleLabels } from '../../utils/prestacionLabels';
+import { ktmTypeLabels, ktrTechniqueLabels, oxygenDeviceInline, respiratorySampleLabels } from '../../utils/prestacionLabels';
 import { formatSVDuration, svInterruptionReasonLabels, svModalityShortLabels } from '../../utils/spontaneousVentilation';
 import { interfaceTypes, nivModes, nivUsageText, skinIntegrityOptions } from '../../utils/nivEducation';
 import { formatRass, mobilizationLevels, rassLevels, ventModes, weaningStatuses } from '../../utils/vmiEducation';
@@ -482,7 +482,7 @@ function describePrestacionGroup(type: PrestacionType, list: Prestacion[]): stri
       ...new Set(
         list
           .filter((p) => p.oxygenDevice)
-          .map((p) => `con ${oxygenDeviceLabels[p.oxygenDevice!].toLowerCase()}${p.oxygenLiters != null ? ` a ${p.oxygenLiters} l/min` : ''}`)
+          .map((p) => `con ${oxygenDeviceInline(p.oxygenDevice!)}${p.oxygenLiters != null ? ` a ${p.oxygenLiters} l/min` : ''}`)
       ),
     ];
     if (oxygen.length > 0) details.push(oxygen.join(' / '));
