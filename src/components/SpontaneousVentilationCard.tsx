@@ -15,7 +15,7 @@ import {
   svModalityOptions,
 } from '../utils/spontaneousVentilation';
 import type { SpontaneousVentilationPeriod, SVInterruptionReason, SVModality } from '../types';
-import { PlayIcon, PlusIcon, SquareIcon, Trash2Icon } from 'lucide-react';
+import { CheckIcon, PlayIcon, PlusIcon, SquareIcon, Trash2Icon, XIcon } from 'lucide-react';
 
 interface SpontaneousVentilationCardProps {
   patientId: string;
@@ -96,6 +96,9 @@ export function SpontaneousVentilationCard({ patientId, episodeId }: Spontaneous
 
   const [modality, setModality] = useState<SVModality>(currentSVModality(periods[0]?.modality));
   const [finishing, setFinishing] = useState(false);
+  // Cierre rápido (prueba que no quedó abierta de más): un toque en "Toleró" o "No toleró" + motivo.
+  const [quickNo, setQuickNo] = useState(false);
+  const [closing, setClosing] = useState(false);
   const [finishTolerated, setFinishTolerated] = useState<boolean | undefined>(undefined);
   const [finishReason, setFinishReason] = useState<SVInterruptionReason | undefined>(undefined);
   // Hora real de fin: solo se pide cuando la prueba quedó abierta de más.
@@ -122,6 +125,14 @@ export function SpontaneousVentilationCard({ patientId, episodeId }: Spontaneous
     setFinishing(false);
     setFinishTolerated(undefined);
     setFinishReason(undefined);
+  };
+
+  const quickClose = async (tolerated: boolean, interruptionReason?: SVInterruptionReason) => {
+    if (!summary.active || closing) return;
+    setClosing(true);
+    await closeSVPeriod(summary.active.id, { tolerated, interruptionReason });
+    setClosing(false);
+    setQuickNo(false);
   };
 
   const handleRetro = async (e: FormEvent) => {
@@ -212,12 +223,42 @@ export function SpontaneousVentilationCard({ patientId, episodeId }: Spontaneous
                 desde {formatDateTime(summary.active.startAt)} · {svModalityLabels[summary.active.modality]}
               </div>
             </div>
-            {!finishing && (
-              <Button type="button" onClick={() => setFinishing(true)} className="bg-blue-600">
+            {stale && !finishing && (
+              <Button type="button" onClick={() => { setFinishEnd(toLocalDateTimeInputValue(new Date())); setFinishing(true); }} className="bg-blue-600">
                 <SquareIcon className="w-4 h-4 mr-1 inline" /> Finalizar
               </Button>
             )}
           </div>
+          {!stale && !quickNo && (
+            <div className="mt-3 grid grid-cols-2 gap-2">
+              <button type="button" disabled={closing} onClick={() => quickClose(true)} className="min-h-[56px] rounded-xl bg-green-600 text-white font-semibold text-base active:bg-green-700 disabled:opacity-60 flex items-center justify-center gap-1">
+                <CheckIcon className="w-5 h-5" /> Toleró
+              </button>
+              <button type="button" disabled={closing} onClick={() => setQuickNo(true)} className="min-h-[56px] rounded-xl bg-amber-500 text-white font-semibold text-base active:bg-amber-600 disabled:opacity-60 flex items-center justify-center gap-1">
+                <XIcon className="w-5 h-5" /> No toleró
+              </button>
+            </div>
+          )}
+          {!stale && quickNo && (
+            <div className="mt-3 space-y-2">
+              <div className="text-sm font-semibold text-gray-900">¿Por qué se suspendió? <span className="font-normal text-gray-500">(tocá uno para cerrar)</span></div>
+              <div className="flex flex-wrap gap-2">
+                {svInterruptionReasonOptions.map((o) => (
+                  <button key={o.value} type="button" disabled={closing} onClick={() => quickClose(false, o.value)} className={`${chip(false)} disabled:opacity-60`}>
+                    {o.label}
+                  </button>
+                ))}
+              </div>
+              <div className="flex gap-2 pt-1">
+                <Button type="button" variant="secondary" onClick={() => setQuickNo(false)} fullWidth>
+                  Volver
+                </Button>
+                <Button type="button" variant="secondary" disabled={closing} onClick={() => quickClose(false)} fullWidth>
+                  Cerrar sin motivo
+                </Button>
+              </div>
+            </div>
+          )}
           {finishing && (
             <div className="mt-3 space-y-3">
               {stale && (
@@ -249,7 +290,7 @@ export function SpontaneousVentilationCard({ patientId, episodeId }: Spontaneous
             ))}
           </div>
           <Button type="button" onClick={() => startSVPeriod(patientId, modality, episodeId)} fullWidth className="bg-blue-600">
-            <PlayIcon className="w-4 h-4 mr-1 inline" /> Iniciar período ahora
+            <PlayIcon className="w-4 h-4 mr-1 inline" /> Iniciar ahora · {svModalityLabels[modality]}
           </Button>
         </div>
       )}
