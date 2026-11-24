@@ -81,6 +81,7 @@ export interface SVDay {
   label: string;
   hours: number;
   periods: number;
+  tolerated: number;
   notTolerated: number;
 }
 
@@ -89,6 +90,19 @@ export interface SVSummary {
   hoursLast24h: number;
   /** Últimos 7 días (hoy incluido), del más viejo al más nuevo. */
   days: SVDay[];
+}
+
+/** Una prueba que lleva más de esto abierta casi seguro quedó sin cerrar (las pruebas duran de minutos a pocas horas). */
+export const STALE_OPEN_PERIOD_HOURS = 8;
+
+/** Horas que lleva abierta una prueba en curso (0 si ya terminó). */
+export function openPeriodHours(period: SpontaneousVentilationPeriod | undefined, now: Date = new Date()): number {
+  if (!period || period.endAt) return 0;
+  return Math.max(0, (now.getTime() - new Date(period.startAt).getTime()) / HOUR_MS);
+}
+
+export function isStaleOpenPeriod(period: SpontaneousVentilationPeriod | undefined, now: Date = new Date()): boolean {
+  return openPeriodHours(period, now) >= STALE_OPEN_PERIOD_HOURS;
 }
 
 function localDayKey(d: Date): string {
@@ -116,6 +130,7 @@ export function computeSpontaneousVentilationSummary(periods: SpontaneousVentila
       label: `${dayStart.toLocaleDateString('es-AR', { weekday: 'short' }).replace('.', '')} ${dayStart.getDate()}/${dayStart.getMonth() + 1}`,
       hours: Math.round(svHoursInRange(periods, dayStart, nextDayStart, now) * 1000) / 1000,
       periods: overlapping.length,
+      tolerated: overlapping.filter((p) => p.tolerated === true && localDayKey(new Date(p.startAt)) === key).length,
       notTolerated: overlapping.filter((p) => p.tolerated === false && localDayKey(new Date(p.startAt)) === key).length,
     });
   }
