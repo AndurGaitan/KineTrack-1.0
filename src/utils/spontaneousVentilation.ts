@@ -28,16 +28,17 @@ export function currentSVModality(m: SVModality | undefined): SVModality {
   return m && svModalityOptions.some((o) => o.value === m) ? m : 'hme-o2';
 }
 
+// El orden es el de los botones: primero los motivos más frecuentes de suspensión.
 export const svInterruptionReasonLabels: Record<SVInterruptionReason, string> = {
   'trabajo-ventilatorio': 'Aumento del trabajo ventilatorio (mala mecánica ventilatoria)',
-  'deterioro-sensorio': 'Deterioro del estado de conciencia',
-  hipercapnia: 'Hipercapnia / acidosis',
   taquipnea: 'Taquipnea',
   desaturacion: 'Desaturación',
   fatiga: 'Fatiga',
   secreciones: 'Secreciones',
   agitacion: 'Agitación',
   'inestabilidad-hemodinamica': 'Inestabilidad hemodinámica',
+  'deterioro-sensorio': 'Deterioro del estado de conciencia',
+  hipercapnia: 'Hipercapnia / acidosis',
   otro: 'Otro',
 };
 
