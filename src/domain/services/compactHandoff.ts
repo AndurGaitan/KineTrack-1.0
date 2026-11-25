@@ -120,7 +120,7 @@ function nivLines(r: NIVRecord): (string | undefined)[] {
   const gas = [r.ph != null ? `pH ${num(r.ph)}` : undefined, r.paco2 != null ? `PaCO₂ ${num(r.paco2)}` : undefined, r.pao2 != null ? `PaO₂ ${num(r.pao2)}` : undefined, r.hco3 != null ? `HCO₃ ${num(r.hco3)}` : undefined];
   const hasGas = r.ph != null || r.paco2 != null || r.pao2 != null || r.hco3 != null;
   return [
-    line('VMNI', mode, iface, r.mode === 'cpap' ? undefined : `PS ${r.supportPressure}`, r.mode === 'cpap' ? `CPAP ${r.peep}` : `PEEP ${r.peep}`, `FiO₂ ${r.fio2}%`, r.leak != null ? `fuga ${r.leak}` : undefined, `FR ${r.respiratoryRate}`, r.spo2 != null ? `SpO₂ ${r.spo2}%` : undefined),
+    line('VMNI', r.mode === 'vni' ? undefined : mode, iface, r.mode === 'cpap' ? undefined : `PS ${r.supportPressure}`, r.mode === 'cpap' ? `CPAP ${r.peep}` : `PEEP ${r.peep}`, `FiO₂ ${r.fio2}%`, r.leak != null ? `fuga ${r.leak}` : undefined, `FR ${r.respiratoryRate}`, r.spo2 != null ? `SpO₂ ${r.spo2}%` : undefined),
     r.hacorScore != null ? line('HACOR', `${r.hacorScore}${r.hacorRisk ? ` (${r.hacorRisk === 'low' ? 'bajo' : r.hacorRisk === 'medium' ? 'medio' : 'alto'})` : ''}`) : undefined,
     hasGas ? line('GSA:', ...gas) : undefined,
     line('Piel:', skinShort[r.skinIntegrity] ?? r.skinIntegrity, r.skinNotes),

@@ -10,10 +10,10 @@ import { AlertPanel } from '../components/AlertPanel';
 import { RecordDateField } from '../components/RecordDateField';
 import { PrefillNotice } from '../components/PrefillNotice';
 import { useRecordTimestamp } from '../hooks/useRecordTimestamp';
-import { NIVInterfaceType, SkinIntegrityStatus, NIVMode, NIVUsage, Patient, VentilatoryMechanics } from '../types';
+import { NIVInterfaceType, SkinIntegrityStatus, NIVMode, Patient, VentilatoryMechanics } from '../types';
 import { ventilatoryMechanicsOptions } from '../utils/ventilatoryMechanics';
 import { calculateHACORForNIV, generateNIVAlerts } from '../utils/nivCalculations';
-import { interfaceTypes, skinIntegrityOptions, lesionLocations, nivModes, nivUsageOptions } from '../utils/nivEducation';
+import { nivEntryInterfaces, skinIntegrityOptions, lesionLocations, nivEntryModes } from '../utils/nivEducation';
 
 // Helpers: keep numbers truly empty (avoid Number('') => 0), same pattern as VMIEntryPage.
 const toNumberOrUndefined = (v: string): number | undefined => {
@@ -23,10 +23,9 @@ const toNumberOrUndefined = (v: string): number | undefined => {
   return Number.isFinite(n) ? n : undefined;
 };
 
-const interfaceOptions = interfaceTypes.map(t => ({ value: t.value as NIVInterfaceType, label: t.label }));
+const interfaceOptions = nivEntryInterfaces.map(t => ({ value: t.value as NIVInterfaceType, label: t.label }));
 const skinOptions = skinIntegrityOptions.map(o => ({ value: o.value as SkinIntegrityStatus, label: o.label }));
-const modeOptions = nivModes.map(m => ({ value: m.value as NIVMode, label: m.label, hint: m.hint }));
-const usageOptions = nivUsageOptions.map(o => ({ value: o.value as NIVUsage, label: o.label, hint: o.hint || undefined }));
+const modeOptions = nivEntryModes.map(m => ({ value: m.value as NIVMode, label: m.label, hint: m.hint }));
 
 /**
  * Carga de monitorización VNI (VMNI). Se precarga con el último registro:
@@ -39,12 +38,13 @@ export function NIVEntryForm({ patient, onDone, onCancel }: { patient: Patient; 
   const last = getPatientNIVRecords(patient.id, activeEpisode?.id)[0];
   const [saving, setSaving] = useState(false);
   const [formData, setFormData] = useState(() => ({
-    interfaceType: (last?.interfaceType ?? '') as NIVInterfaceType | '',
+    // Si el último registro usó una interfaz o un modo que ya no se ofrece, se elige de nuevo.
+    interfaceType: (interfaceOptions.some(o => o.value === last?.interfaceType) ? last?.interfaceType : '') as NIVInterfaceType | '',
     interfaceOther: last?.interfaceOther ?? '',
     skinIntegrity: (last?.skinIntegrity ?? '') as SkinIntegrityStatus | '',
     lesionLocations: (last?.lesionLocations ?? []) as string[],
     skinNotes: last?.skinNotes ?? '',
-    mode: (last?.mode ?? '') as NIVMode | '',
+    mode: (modeOptions.some(o => o.value === last?.mode) ? last?.mode : '') as NIVMode | '',
     modeOther: last?.modeOther ?? '',
     // Sin registro previo arrancan vacíos: no se guarda un valor que nadie midió.
     supportPressure: last?.supportPressure as number | undefined,
@@ -52,7 +52,6 @@ export function NIVEntryForm({ patient, onDone, onCancel }: { patient: Patient; 
     expiratorySensitivity: last?.expiratorySensitivity ?? 25,
     fio2: last?.fio2 as number | undefined,
     leak: last?.leak as number | undefined,
-    usage24h: (last?.usage24h ?? '') as NIVUsage | '',
     // La valoración de la mecánica ventilatoria no se precarga: se elige en cada registro.
     ventilatoryMechanics: '' as VentilatoryMechanics | '',
     // HACOR (solo con gasometría, etapa 2). Arrancan vacíos y no se precargan del registro anterior:
@@ -82,7 +81,6 @@ export function NIVEntryForm({ patient, onDone, onCancel }: { patient: Patient; 
       interfaceType: formData.interfaceType || undefined,
       skinIntegrity: formData.skinIntegrity || undefined,
       mode: formData.mode || undefined,
-      usage24h: formData.usage24h || undefined,
       ventilatoryMechanics: formData.ventilatoryMechanics || undefined,
       hacorScore: features.gasometry ? calc?.hacorScore : undefined,
       hacorRisk: features.gasometry ? calc?.hacorRisk : undefined
@@ -136,7 +134,6 @@ export function NIVEntryForm({ patient, onDone, onCancel }: { patient: Patient; 
       spo2: formData.spo2,
       respiratoryRate: formData.respiratoryRate!,
       previousIMVDays: formData.previousIMVDays || undefined,
-      usage24h: formData.usage24h || undefined,
       ventilatoryMechanics: formData.ventilatoryMechanics || undefined,
       alerts
     });
@@ -167,8 +164,6 @@ export function NIVEntryForm({ patient, onDone, onCancel }: { patient: Patient; 
         <NIVField label="SpO₂" unit="%" type="number" inputMode="decimal" value={formData.spo2 ?? ''} onChange={e => set({ spo2: toNumberOrUndefined(e.target.value) })} />
         <NIVField label="Fuga" unit="L/min" type="number" inputMode="decimal" value={formData.leak ?? ''} onChange={e => set({ leak: toNumberOrUndefined(e.target.value) })} />
       </div>}
-
-      <ChoiceChips label="Uso de la VNI en las últimas 24 h (opcional)" options={usageOptions} value={formData.usage24h} onChange={v => set({ usage24h: v })} allowClear columns={2} />
 
       <ChoiceChips label="Mecánica ventilatoria (opcional)" options={ventilatoryMechanicsOptions} value={formData.ventilatoryMechanics} onChange={v => set({ ventilatoryMechanics: v })} allowClear columns={3} />
 

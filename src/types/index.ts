@@ -217,7 +217,8 @@ export interface VMIRecord {
 // NIV (Non-Invasive Ventilation) Types
 export type NIVInterfaceType = 'full-face' | 'oronasal' | 'nasal' | 'helmet' | 'other';
 export type SkinIntegrityStatus = 'no-lesions' | 'mild-erythema' | 'pressure-injury-1-2' | 'severe-injury';
-export type NIVMode = 'psv' | 'cpap' | 'bipap' | 'other';
+// 'vni' es el modo vigente (PS + PEEP); 'bipap' queda solo para leer los registros viejos.
+export type NIVMode = 'vni' | 'psv' | 'cpap' | 'bipap' | 'other';
 /** Uso de la VNI en las últimas 24 h (reemplaza al registro de sesiones). */
 export type NIVUsage = 'continuous' | 'gt16' | '12-16' | '8-12' | '4-8' | 'lt4';
 export interface NIVRecord {

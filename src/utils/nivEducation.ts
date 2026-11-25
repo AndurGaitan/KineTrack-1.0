@@ -96,6 +96,10 @@ export const skinIntegrityOptions = [{
 }];
 export const lesionLocations = ['Puente nasal', 'Mejillas', 'Frente', 'Mentón', 'Región perioral', 'Orejas (por arnés)'];
 export const nivModes = [{
+  value: 'vni',
+  label: 'VNI',
+  hint: 'PS + PEEP'
+}, {
   value: 'psv',
   label: 'PSV',
   hint: 'PS + PEEP'
@@ -113,7 +117,16 @@ export const nivModes = [{
   hint: 'Especificar'
 }];
 
-/** Uso de la VNI en las últimas 24 h: un toque, sin reloj de sesiones. */
+/**
+ * Opciones que se ofrecen al cargar un registro nuevo. Quedan fuera la interfaz nasal, el helmet y el modo BiPAP:
+ * siguen definidos arriba solo para mostrar los registros ya cargados.
+ */
+const retiredInterfaces = ['nasal', 'helmet'];
+const retiredModes = ['bipap'];
+export const nivEntryInterfaces = interfaceTypes.filter(i => !retiredInterfaces.includes(i.value));
+export const nivEntryModes = nivModes.filter(m => !retiredModes.includes(m.value));
+
+/** Uso de la VNI en las últimas 24 h. Ya no se pide al cargar; se conserva para leer los registros viejos. */
 export const nivUsageOptions = [
   { value: 'continuous', label: 'Continua', hint: 'Las 24 h', short: 'de forma continua' },
   { value: 'gt16', label: 'Más de 16 h', hint: 'Casi todo el día', short: 'más de 16 horas en las últimas 24' },
@@ -127,5 +140,5 @@ export const nivUsageOptions = [
 export const nivUsageText: Record<string, string> = Object.fromEntries(nivUsageOptions.map(o => [o.value, o.short]));
 export const nivUsageShort: Record<string, string> = Object.fromEntries(nivUsageOptions.map(o => [o.value, o.value === 'continuous' ? 'continua' : o.label.replace('Más de 16 h', '>16 h').replace('Menos de 4 h', '<4 h').replace(' a ', '–')]));
 
-/** Etiqueta corta del modo para los pases (PSV, CPAP, BiPAP). */
-export const nivModeShort: Record<string, string> = { psv: 'PSV', cpap: 'CPAP', bipap: 'BiPAP' };
+/** Etiqueta corta del modo para los pases (VNI, PSV, CPAP, BiPAP). */
+export const nivModeShort: Record<string, string> = { vni: 'VNI', psv: 'PSV', cpap: 'CPAP', bipap: 'BiPAP' };

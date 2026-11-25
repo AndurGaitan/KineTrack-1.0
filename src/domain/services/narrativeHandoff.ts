@@ -216,7 +216,7 @@ function nivSentences(r: NIVRecord, dur: string | undefined): string[] {
   if (r.leak != null) params.push(`fuga de ${r.leak} l/min`);
   params.push(`frecuencia respiratoria de ${r.respiratoryRate} rpm`);
   if (r.spo2 != null) params.push(`SpO₂ de ${r.spo2}%`);
-  out.push(`Se encuentra en ventilación mecánica no invasiva${dur ? ` ${dur}` : ''}, en modo ${mode} con ${iface}, ${joinEs(params)}.`);
+  out.push(`Se encuentra en ventilación mecánica no invasiva${dur ? ` ${dur}` : ''}${r.mode === 'vni' ? '' : `, en modo ${mode}`} con ${iface}, ${joinEs(params)}.`);
   if (r.hacorScore != null && r.hacorRisk) out.push(`HACOR ${r.hacorScore} (riesgo ${r.hacorRisk === 'low' ? 'bajo' : r.hacorRisk === 'medium' ? 'medio' : 'alto'}).`);
   const gas = [r.ph != null ? `pH ${num(r.ph)}` : undefined, r.paco2 != null ? `PaCO₂ ${num(r.paco2)}` : undefined, r.pao2 != null ? `PaO₂ ${num(r.pao2)}` : undefined, r.hco3 != null ? `HCO₃ ${num(r.hco3)}` : undefined].filter((x): x is string => !!x);
   if (gas.length > 0) out.push(`En la gasometría arterial: ${gas.join(', ')}.`);
