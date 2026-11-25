@@ -20,6 +20,11 @@ export const oxygenDeviceLabels: Record<OxygenDeviceType, string> = {
   'tubo-t': 'Tubo en T',
 };
 
+/** El dispositivo dentro de una oración: en minúscula, salvo las siglas ("filtro HME con O₂", "tubo en T"). */
+export function oxygenDeviceInline(device: OxygenDeviceType): string {
+  return oxygenDeviceLabels[device].toLowerCase().replace('hme', 'HME').replace('o₂', 'O₂').replace('tubo en t', 'tubo en T');
+}
+
 export const oxygenDeviceOptions: { value: OxygenDeviceType; label: string }[] = (
   Object.entries(oxygenDeviceLabels) as [OxygenDeviceType, string][]
 ).map(([value, label]) => ({ value, label }));

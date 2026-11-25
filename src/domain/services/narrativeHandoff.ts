@@ -9,7 +9,7 @@
  * está llevando a cabo o si no cumple criterios.
  */
 import { AirwayEvent, HFNCRecord, MobilizationContraindication, MobilizationStart, MrcAssessment, NIVRecord, OxygenRecord, Patient, Prestacion, PveDecision, SupportEpisode, VMIRecord } from '../../types';
-import { oxygenDeviceLabels, ktrTechniqueLabels, ktmTypeLabels } from '../../utils/prestacionLabels';
+import { oxygenDeviceInline, ktrTechniqueLabels, ktmTypeLabels } from '../../utils/prestacionLabels';
 import { ventilatoryMechanicsSentence } from '../../utils/ventilatoryMechanics';
 import { calendarDaysBetween, daysAgoText } from '../../utils/supportDays';
 import { dayWithWeekday } from '../../utils/vmiDays';
@@ -117,6 +117,13 @@ function introSentences(patient: Patient): string[] {
   if (!sex && !age && !hasAntecedentes && !patient.admissionDiagnosis) return [];
   const first = `Paciente${sex}${age}${hasAntecedentes ? `, con antecedentes de ${joinEs(patient.antecedentes.map(plainCase))}` : ''}.`;
   return patient.admissionDiagnosis ? [first, `Ingresó con diagnóstico de ${plainCase(patient.admissionDiagnosis)}.`] : [first];
+}
+
+/** "Tiene cánula de traqueostomía (día 10)." — va antes del soporte; el soporte "traqueostomía" (registros viejos) ya lo dice. */
+function airwaySentence(patient: Patient, now: Date): string[] {
+  if (patient.airwayType !== 'traqueostomia' || patient.supportType === 'traqueostomia') return [];
+  const day = patient.tracheostomyDate ? calendarDaysBetween(patient.tracheostomyDate, now) + 1 : undefined;
+  return [`Tiene cánula de traqueostomía${day !== undefined && day > 0 ? ` (día ${day})` : ''}.`];
 }
 
 function pveSentences(decisions: PveDecision[]): string[] {
@@ -236,7 +243,7 @@ function oxygenSentences(r: OxygenRecord): string[] {
   const extras = [r.fio2 != null ? `al ${r.fio2}%` : undefined, `a ${num(r.flow)} l/min`].filter(Boolean).join(' ');
   const vitals = [r.spo2 != null ? `SpO₂ de ${r.spo2}%` : undefined, r.respiratoryRate != null ? `frecuencia respiratoria de ${r.respiratoryRate} rpm` : undefined].filter((x): x is string => !!x);
   return [
-    `Se encuentra con oxígeno convencional, por ${oxygenDeviceLabels[r.device].toLowerCase()} ${extras}${vitals.length > 0 ? `, con ${joinEs(vitals)}` : ''}.${r.notes ? ` ${r.notes}.` : ''}`.replace('..', '.'),
+    `Se encuentra con oxígeno convencional, por ${oxygenDeviceInline(r.device)} ${extras}${vitals.length > 0 ? `, con ${joinEs(vitals)}` : ''}.${r.notes ? ` ${r.notes}.` : ''}`.replace('..', '.'),
     ...(r.ventilatoryMechanics ? [ventilatoryMechanicsSentence(r.ventilatoryMechanics)] : []),
   ];
 }
@@ -296,7 +303,7 @@ function prestacionesSentences(input: NarrativeHandoffInput): string[] {
     const techniques = [...new Set(ktr.flatMap((p) => p.techniques ?? []))].map((t) => ktrTechniqueLabels[t].toLowerCase());
     const aspiration = describeAspiration(ktr);
     const { traits, none } = describeSecretionTraits(ktr);
-    const oxygen = [...new Set(ktr.filter((p) => p.oxygenDevice).map((p) => `${oxygenDeviceLabels[p.oxygenDevice!].toLowerCase()}${p.oxygenLiters != null ? ` a ${p.oxygenLiters} l/min` : ''}`))];
+    const oxygen = [...new Set(ktr.filter((p) => p.oxygenDevice).map((p) => `${oxygenDeviceInline(p.oxygenDevice!)}${p.oxygenLiters != null ? ` a ${p.oxygenLiters} l/min` : ''}`))];
     const sample = describeRespiratorySample(ktr);
     // Con aspiración en todas las sesiones, la cantidad y la calidad se cuelgan de la aspiración
     // ("aspiración de secreciones de moderada cantidad y calidad mucosa"): sin repetir "secreciones".
@@ -344,12 +351,14 @@ function prestacionesSentences(input: NarrativeHandoffInput): string[] {
 export function buildNarrativeEvolution(input: NarrativeHandoffInput, now: Date = new Date()): string {
   const sentences = [
     ...introSentences(input.patient),
+    ...airwaySentence(input.patient, now),
     ...supportSentences(input, now),
     ...(input.vmiOff ? [vmiOffSentence(input.vmiOff)] : []),
     ...(input.daysSinceNiv != null ? [`Sin ventilación no invasiva desde hace ${input.daysSinceNiv === 0 ? 'menos de un día' : input.daysSinceNiv === 1 ? '1 día' : `${input.daysSinceNiv} días`}.`] : []),
     mobilizationSentence(input),
     eventsSentence(input),
-    narrateSpontaneousVentilation(input.spontaneousVentilation, input.periodPhrase),
+    // Si ya se informan los días sin VMI, describir además las pruebas del turno es redundante.
+    input.vmiOff ? undefined : narrateSpontaneousVentilation(input.spontaneousVentilation, input.periodPhrase),
     ...prestacionesSentences(input),
   ].filter((s): s is string => !!s && s.trim().length > 0);
   return sentences.join(' ').replace(/\s+/g, ' ').trim();

@@ -11,7 +11,7 @@ import { MrcAssessment, NIVRecord, HFNCRecord, OxygenRecord, Patient, Prestacion
 import { earlyMobilizationSummary } from '../../utils/earlyMobilization';
 import { calendarDaysBetween } from '../../utils/supportDays';
 import { dayWithWeekday } from '../../utils/vmiDays';
-import { oxygenDeviceLabels, ktrTechniqueLabels, ktmTypeLabels } from '../../utils/prestacionLabels';
+import { oxygenDeviceInline, ktrTechniqueLabels, ktmTypeLabels } from '../../utils/prestacionLabels';
 import { formatSVDuration, svInterruptionReasonLabels, svModalityShortLabels } from '../../utils/spontaneousVentilation';
 import { formatRass, weaningStatuses } from '../../utils/vmiEducation';
 import { cannulaFitOptions } from '../../utils/hfncEducation';
@@ -142,7 +142,7 @@ function hfncLines(r: HFNCRecord): (string | undefined)[] {
 
 function oxygenLines(r: OxygenRecord): (string | undefined)[] {
   return [
-    line('O₂', oxygenDeviceLabels[r.device].toLowerCase(), r.fio2 != null ? `${r.fio2}%` : undefined, `${num(r.flow)} L/min`, r.spo2 != null ? `SpO₂ ${r.spo2}%` : undefined, r.respiratoryRate != null ? `FR ${r.respiratoryRate}` : undefined),
+    line('O₂', oxygenDeviceInline(r.device), r.fio2 != null ? `${r.fio2}%` : undefined, `${num(r.flow)} L/min`, r.spo2 != null ? `SpO₂ ${r.spo2}%` : undefined, r.respiratoryRate != null ? `FR ${r.respiratoryRate}` : undefined),
     r.ventilatoryMechanics ? line('Mec. vent.:', r.ventilatoryMechanics) : undefined,
     r.notes ? line('Nota:', r.notes) : undefined,
   ];
@@ -159,7 +159,7 @@ function prestacionesLine(prestaciones: Prestacion[], mrc: MrcAssessment | undef
     const techniques = [...new Set(ktr.flatMap((p) => p.techniques ?? []))].map((t) => ktrTechniqueLabels[t].toLowerCase());
     const aspiration = describeAspiration(ktr)?.replace('con aspiración de secreciones', 'c/ aspiración').replace('sin aspiración de secreciones', 's/ aspiración');
     const secretions = describeSecretions(ktr);
-    const oxygen = [...new Set(ktr.filter((p) => p.oxygenDevice).map((p) => `${oxygenDeviceLabels[p.oxygenDevice!].toLowerCase()}${p.oxygenLiters != null ? ` ${p.oxygenLiters} L/min` : ''}`))];
+    const oxygen = [...new Set(ktr.filter((p) => p.oxygenDevice).map((p) => `${oxygenDeviceInline(p.oxygenDevice!)}${p.oxygenLiters != null ? ` ${p.oxygenLiters} L/min` : ''}`))];
     const sample = describeRespiratorySample(ktr, 'colon')?.replace('toma de muestra respiratoria', 'muestra resp.');
     const detail = [...techniques, aspiration, secretions, sample, ...oxygen].filter(Boolean).join(', ');
     items.push(`KTR${times(ktr.length)}${detail ? ` (${detail})` : ''}`);
@@ -198,6 +198,8 @@ function eventsLine(input: GeneralHandoffPatientInput): string | undefined {
 }
 
 function svLine(input: GeneralHandoffPatientInput): string | undefined {
+  // Si ya se informan los días sin VMI, las pruebas del turno son redundantes.
+  if (input.vmiOff) return undefined;
   const sv = input.spontaneousVentilation;
   if (!sv || sv.periods.length === 0) return undefined;
   const modalities = [...new Set(sv.periods.map((p) => svModalityShortLabels[p.modality]))].join(', ');
