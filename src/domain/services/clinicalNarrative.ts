@@ -235,7 +235,7 @@ function narrateNiv(record: NIVRecord): string {
 
   const parts: string[] = [];
   parts.push(
-    `En ventilación no invasiva (${modeLabel}), interfaz ${interfaceLabel}. Parámetros: ${record.mode === 'cpap' ? `CPAP ${record.peep}` : `PS ${record.supportPressure}, PEEP ${record.peep}, sensibilidad espiratoria ${record.expiratorySensitivity}%`}, FiO₂ ${record.fio2}%${record.leak != null ? `, fuga ${record.leak} l/min` : ''}.`
+    `En ventilación no invasiva${record.mode === 'vni' ? '' : ` (${modeLabel})`}, interfaz ${interfaceLabel}. Parámetros: ${record.mode === 'cpap' ? `CPAP ${record.peep}` : `PS ${record.supportPressure}, PEEP ${record.peep}, sensibilidad espiratoria ${record.expiratorySensitivity}%`}, FiO₂ ${record.fio2}%${record.leak != null ? `, fuga ${record.leak} l/min` : ''}.`
   );
   if (record.hacorScore != null && record.hacorRisk) {
     parts.push(`HACOR ${record.hacorScore}, riesgo ${riskLabels[record.hacorRisk]}.`);
