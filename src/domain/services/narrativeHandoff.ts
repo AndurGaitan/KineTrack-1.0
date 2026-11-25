@@ -119,6 +119,13 @@ function introSentences(patient: Patient): string[] {
   return patient.admissionDiagnosis ? [first, `Ingresó con diagnóstico de ${plainCase(patient.admissionDiagnosis)}.`] : [first];
 }
 
+/** "Tiene cánula de traqueostomía (día 10)." — va antes del soporte; el soporte "traqueostomía" (registros viejos) ya lo dice. */
+function airwaySentence(patient: Patient, now: Date): string[] {
+  if (patient.airwayType !== 'traqueostomia' || patient.supportType === 'traqueostomia') return [];
+  const day = patient.tracheostomyDate ? calendarDaysBetween(patient.tracheostomyDate, now) + 1 : undefined;
+  return [`Tiene cánula de traqueostomía${day !== undefined && day > 0 ? ` (día ${day})` : ''}.`];
+}
+
 function pveSentences(decisions: PveDecision[]): string[] {
   return decisions.map((d) => {
     if (d.decision === 'realizada') {
@@ -344,6 +351,7 @@ function prestacionesSentences(input: NarrativeHandoffInput): string[] {
 export function buildNarrativeEvolution(input: NarrativeHandoffInput, now: Date = new Date()): string {
   const sentences = [
     ...introSentences(input.patient),
+    ...airwaySentence(input.patient, now),
     ...supportSentences(input, now),
     ...(input.vmiOff ? [vmiOffSentence(input.vmiOff)] : []),
     ...(input.daysSinceNiv != null ? [`Sin ventilación no invasiva desde hace ${input.daysSinceNiv === 0 ? 'menos de un día' : input.daysSinceNiv === 1 ? '1 día' : `${input.daysSinceNiv} días`}.`] : []),
