@@ -4,6 +4,7 @@ import { AppProvider, useApp } from './contexts/AppContext';
 import { BottomNav } from './components/BottomNav';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { LoginPage } from './pages/LoginPage';
+import { LandingPage } from './pages/LandingPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { SectorDetailPage } from './pages/SectorDetailPage';
 import { PatientDetailPage } from './pages/PatientDetailPage';
@@ -90,6 +91,7 @@ function ScheduleRoute() {
 function AppRoutes() {
   return <Routes>
       <Route path="/" element={<LoginPage />} />
+      <Route path="/presentacion" element={<LandingPage />} />
       <Route path="/dashboard" element={<ProtectedRoute>
             <DashboardPage />
           </ProtectedRoute>} />
