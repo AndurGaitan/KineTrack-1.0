@@ -46,11 +46,8 @@ export interface GeneralHandoffInput {
 }
 
 export function buildGeneralHandoffText(input: GeneralHandoffInput): string {
-  const count = input.patients.length;
-  const header = [
-    `${bold('PASE DE GUARDIA')} · ${input.periodTitle}`,
-    `${input.kinesiologoName} · ${count} paciente${count === 1 ? '' : 's'}`,
-  ].join('\n');
+  // El encabezado no lleva la cantidad de pacientes de cada kinesiólogo: ese dato es solo de coordinación.
+  const header = [`${bold('PASE DE GUARDIA')} · ${input.periodTitle}`, input.kinesiologoName].join('\n');
 
   const now = new Date();
   const separator = '──────────';
