@@ -15,7 +15,7 @@ import { calendarDaysBetween, daysAgoText } from '../../utils/supportDays';
 import { dayWithWeekday } from '../../utils/vmiDays';
 import { cannulaFitOptions } from '../../utils/hfncEducation';
 import { formatRass, mobilizationLevels, rassLevels } from '../../utils/vmiEducation';
-import { pveFailureInfo, pveReasonLabel } from '../../components/PveDecisionForm';
+import { pveReasonLabel } from '../../components/PveDecisionForm';
 import { nivModeShort, nivUsageText } from '../../utils/nivEducation';
 import {
   LatestSupportRecord,
@@ -131,13 +131,7 @@ function pveSentences(decisions: PveDecision[]): string[] {
     if (d.decision === 'realizada') {
       const mode = d.sbtType === 'psv' ? ' en presión de soporte' : d.sbtType === 'cpap' ? ' en CPAP' : d.sbtType === 't-piece' ? ' con tubo en T' : '';
       const duration = d.durationMinutes ? ` de ${d.durationMinutes} minutos` : '';
-      const { criteria, cause } = pveFailureInfo(d);
-      const failure = [
-        criteria.length > 0 ? `, interrumpida por ${joinEs(criteria.map((c) => c.text))}` : '',
-        cause ? `; causa probable ${cause}` : '',
-        d.failureReason ? ` (${d.failureReason})` : '',
-      ].join('');
-      const result = d.sbtResult === 'success' ? ', con resultado exitoso' : d.sbtResult === 'failure' ? `, con resultado fallido${failure}` : '';
+      const result = d.sbtResult === 'success' ? ', con resultado exitoso' : d.sbtResult === 'failure' ? `, con resultado fallido${d.failureReason ? ` (${d.failureReason})` : ''}` : '';
       return `se realizó la prueba de ventilación espontánea${duration}${mode}${result}`;
     }
     const reason = pveReasonLabel(d.decision, d.reason);

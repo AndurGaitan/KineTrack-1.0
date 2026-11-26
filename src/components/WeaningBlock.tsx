@@ -5,7 +5,6 @@ import {
   PveDraft,
   emptyPveDraft,
   pveDecisionLabels,
-  pveFailureInfo,
   pveReasonLabel,
   pveSbtTypes,
 } from './PveDecisionForm';
@@ -22,8 +21,7 @@ function describe(d: PveDecision): string {
     const type = pveSbtTypes.find((t) => t.value === d.sbtType)?.label ?? d.sbtType;
     const result = d.sbtResult === 'success' ? 'exitosa' : d.sbtResult === 'failure' ? 'fallida' : undefined;
     const duration = d.durationMinutes ? `${d.durationMinutes} min` : undefined;
-    const { criteria, cause } = pveFailureInfo(d);
-    return [type, duration, result, ...criteria.map((c) => c.label), cause ? `causa ${cause}` : undefined, d.failureReason].filter(Boolean).join(' · ');
+    return [type, duration, result, d.failureReason].filter(Boolean).join(' · ');
   }
   return pveReasonLabel(d.decision, d.reason) ?? '';
 }

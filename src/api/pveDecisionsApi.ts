@@ -1,5 +1,5 @@
 import { apiFetch } from './client';
-import type { PveDecision, PveDecisionKind, PveFailureCause, PveInterruptionCriterion, PveSbtType } from '../types';
+import type { PveDecision, PveDecisionKind, PveSbtType } from '../types';
 
 export type CreatePveDecisionInput = {
   patientId: string;
@@ -10,8 +10,6 @@ export type CreatePveDecisionInput = {
   sbtResult?: 'success' | 'failure';
   failureReason?: string;
   durationMinutes?: number;
-  interruptionCriteria?: PveInterruptionCriterion[];
-  failureCause?: PveFailureCause;
   notes?: string;
 };
 

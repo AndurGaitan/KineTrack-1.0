@@ -1,4 +1,4 @@
-import type { PveDecision, PveDecisionKind, PveFailureCause, PveInterruptionCriterion, PveSbtType, WeaningStatus } from '../types';
+import type { PveDecisionKind, PveSbtType, WeaningStatus } from '../types';
 import type { CreatePveDecisionInput } from '../api/pveDecisionsApi';
 
 /**
@@ -52,37 +52,6 @@ const pveEntrySbtTypes = pveSbtTypes.filter((t) => t.value !== 'cpap');
 const pveDurationPresets = [30, 60, 120];
 const PVE_MAX_PROTOCOL_MINUTES = 120;
 
-/** Criterios de interrupción (sección 5.2). `short` para el pase compacto y `text` para la evolución. */
-export const pveInterruptionCriteria: { value: PveInterruptionCriterion; label: string; hint: string; short: string; text: string }[] = [
-  { value: 'taquipnea', label: 'FR > 35 sostenida', hint: 'Más de 35 respiraciones por minuto', short: 'FR >35', text: 'frecuencia respiratoria mayor a 35 sostenida' },
-  { value: 'desaturacion', label: 'Desaturación', hint: 'SpO₂ < 90 % o deterioro del objetivo', short: 'desaturación', text: 'desaturación' },
-  { value: 'trabajo-respiratorio', label: 'Trabajo respiratorio', hint: 'Respiración paradójica o musculatura accesoria', short: 'trabajo resp.', text: 'aumento del trabajo respiratorio' },
-  { value: 'hemodinamica', label: 'Hemodinamia o arritmia', hint: 'Inestabilidad o arritmia significativa', short: 'hemodinamia/arritmia', text: 'inestabilidad hemodinámica o arritmia' },
-  { value: 'neurologico', label: 'Conciencia o agitación', hint: 'Deterioro, agitación, ansiedad o diaforesis', short: 'conciencia/agitación', text: 'deterioro de conciencia, agitación o diaforesis' },
-  { value: 'otros-signos', label: 'Otros signos de fatiga', hint: 'Fatiga o intolerancia evidente', short: 'fatiga', text: 'signos de fatiga o intolerancia' },
-];
-
-/** Causa probable predominante de la falla (sección 5.5). */
-export const pveFailureCauses: { value: PveFailureCause; label: string; hint: string }[] = [
-  { value: 'respiratoria', label: 'Respiratoria', hint: 'Enfermedad pulmonar o carga ventilatoria' },
-  { value: 'cardiovascular', label: 'Cardiovascular', hint: 'Disfunción o edema por el destete' },
-  { value: 'neuromuscular', label: 'Neuromuscular', hint: 'Debilidad muscular respiratoria' },
-  { value: 'neurologica', label: 'Neurológica', hint: 'Sedación, delirium o alteración neurológica' },
-  { value: 'metabolica', label: 'Metabólica', hint: 'Electrolitos, fiebre o dolor' },
-  { value: 'secreciones', label: 'Secreciones', hint: 'Abundantes o difíciles de eliminar' },
-  { value: 'asincronias', label: 'Asincronías', hint: 'O programación inadecuada' },
-  { value: 'no-identificada', label: 'No identificada', hint: 'Todavía sin causa clara' },
-];
-
-/** Criterios y causa de una PVE fallida, con sus textos (vacío en los registros anteriores). */
-export function pveFailureInfo(d: Pick<PveDecision, 'interruptionCriteria' | 'failureCause'>) {
-  const criteria = (d.interruptionCriteria ?? [])
-    .map((v) => pveInterruptionCriteria.find((c) => c.value === v))
-    .filter((c): c is (typeof pveInterruptionCriteria)[number] => !!c);
-  const cause = pveFailureCauses.find((c) => c.value === d.failureCause)?.label.toLowerCase();
-  return { criteria, cause };
-}
-
 export const pveDecisionLabels: Record<PveDecisionKind, string> = {
   realizada: 'PVE realizada',
   contraindicada: 'No cumple criterios para la PVE',
@@ -103,8 +72,6 @@ export interface PveDraft {
   sbtResult: '' | 'success' | 'failure';
   /** Minutos, como texto del campo. */
   duration: string;
-  interruptionCriteria: PveInterruptionCriterion[];
-  failureCause: '' | PveFailureCause;
   failureReason: string;
 }
 
@@ -114,8 +81,6 @@ export const emptyPveDraft: PveDraft = {
   sbtType: '',
   sbtResult: '',
   duration: '',
-  interruptionCriteria: [],
-  failureCause: '',
   failureReason: '',
 };
 
@@ -128,12 +93,10 @@ const validDuration = (value: string) => {
 export function pveDraftError(d: PveDraft): string | null {
   if (!d.decision) return null;
   if (d.decision === 'realizada') {
-    // El protocolo pide registrar modalidad, duración, resultado y, si falla, por qué (sección 6).
+    // El protocolo pide registrar modalidad, duración y resultado (sección 6).
     if (!d.sbtType) return 'Indicá la modalidad de la PVE';
     if (!validDuration(d.duration)) return 'Indicá cuántos minutos duró la PVE';
     if (!d.sbtResult) return 'Indicá el resultado de la PVE';
-    if (d.sbtResult === 'failure' && d.interruptionCriteria.length === 0) return 'Marcá por qué se interrumpió la PVE';
-    if (d.sbtResult === 'failure' && !d.failureCause) return 'Elegí la causa probable o "No identificada"';
     return null;
   }
   return d.reason.trim() ? null : d.decision === 'contraindicada' ? 'Indicá por qué no cumple criterios' : 'Indicá por qué no se realizó';
@@ -149,13 +112,7 @@ export function pveDraftToInput(d: PveDraft, patientId: string, timestamp?: stri
       sbtType: d.sbtType as PveSbtType,
       sbtResult: d.sbtResult || undefined,
       durationMinutes: Number(d.duration),
-      ...(d.sbtResult === 'failure'
-        ? {
-            interruptionCriteria: d.interruptionCriteria,
-            failureCause: d.failureCause || undefined,
-            failureReason: d.failureReason.trim() || undefined,
-          }
-        : {}),
+      failureReason: d.sbtResult === 'failure' && d.failureReason.trim() ? d.failureReason.trim() : undefined,
     };
   }
   return { patientId, timestamp, decision: d.decision, reason: d.reason.trim() };
@@ -278,9 +235,7 @@ export function PveDecisionForm({
                   key={r}
                   type="button"
                   aria-pressed={value.sbtResult === r}
-                  onClick={() =>
-                    onChange({ ...value, sbtResult: value.sbtResult === r ? '' : r, interruptionCriteria: [], failureCause: '', failureReason: '' })
-                  }
+                  onClick={() => onChange({ ...value, sbtResult: value.sbtResult === r ? '' : r, failureReason: '' })}
                   className={`min-h-[48px] border-2 rounded-xl font-medium ${
                     value.sbtResult === r
                       ? r === 'success'
@@ -295,64 +250,16 @@ export function PveDecisionForm({
             </div>
           </div>
           {value.sbtResult === 'failure' && (
-            <>
-              <div>
-                <div className="block text-sm font-medium text-gray-700 mb-1">¿Por qué se interrumpió? (una o más)</div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  {pveInterruptionCriteria.map((c) => {
-                    const on = value.interruptionCriteria.includes(c.value);
-                    return (
-                      <button
-                        key={c.value}
-                        type="button"
-                        role="checkbox"
-                        aria-checked={on}
-                        onClick={() =>
-                          onChange({
-                            ...value,
-                            interruptionCriteria: on ? value.interruptionCriteria.filter((v) => v !== c.value) : [...value.interruptionCriteria, c.value],
-                          })
-                        }
-                        className={`min-h-[52px] px-3 py-2 border-2 rounded-xl text-left ${on ? 'border-red-500 bg-red-50' : 'border-gray-200 active:bg-gray-50'}`}
-                      >
-                        <div className="text-sm font-semibold text-gray-900">{c.label}</div>
-                        <div className="text-xs text-gray-600 mt-0.5">{c.hint}</div>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-              <div>
-                <div className="block text-sm font-medium text-gray-700 mb-1">Causa probable (la predominante)</div>
-                <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label="Causa probable de la falla">
-                  {pveFailureCauses.map((c) => (
-                    <button
-                      key={c.value}
-                      type="button"
-                      role="radio"
-                      aria-checked={value.failureCause === c.value}
-                      onClick={() => onChange({ ...value, failureCause: c.value })}
-                      className={`min-h-[52px] px-3 py-2 border-2 rounded-xl text-left ${
-                        value.failureCause === c.value ? 'border-red-500 bg-red-50' : 'border-gray-200 active:bg-gray-50'
-                      }`}
-                    >
-                      <div className="text-sm font-semibold text-gray-900">{c.label}</div>
-                      <div className="text-xs text-gray-600 mt-0.5">{c.hint}</div>
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Detalle (opcional)</label>
-                <input
-                  className={fieldClass}
-                  placeholder="Ej: edema pulmonar a los 15 minutos"
-                  maxLength={500}
-                  value={value.failureReason}
-                  onChange={(e) => onChange({ ...value, failureReason: e.target.value })}
-                />
-              </div>
-            </>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Motivo de falla (opcional)</label>
+              <input
+                className={fieldClass}
+                placeholder="Ej: taquipnea, desaturación"
+                maxLength={500}
+                value={value.failureReason}
+                onChange={(e) => onChange({ ...value, failureReason: e.target.value })}
+              />
+            </div>
           )}
         </div>
       )}

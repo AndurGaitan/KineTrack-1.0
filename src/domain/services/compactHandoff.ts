@@ -15,7 +15,7 @@ import { oxygenDeviceInline, ktrTechniqueLabels, ktmTypeLabels } from '../../uti
 import { formatSVDuration, svInterruptionReasonLabels, svModalityShortLabels } from '../../utils/spontaneousVentilation';
 import { formatRass, weaningStatuses } from '../../utils/vmiEducation';
 import { cannulaFitOptions } from '../../utils/hfncEducation';
-import { pveFailureInfo, pveReasonLabel } from '../../components/PveDecisionForm';
+import { pveReasonLabel } from '../../components/PveDecisionForm';
 import { nivModeShort, nivUsageShort } from '../../utils/nivEducation';
 import type { GeneralHandoffPatientInput } from './generalHandoffText';
 import { describeAspiration, describeRespiratorySample, describeSecretions, mrcStatusLabels, narrateTraqueostomiaForPase } from './clinicalNarrative';
@@ -104,13 +104,10 @@ function vmiLines(r: VMIRecord, pveDecisions: PveDecision[]): (string | undefine
 
 export function describePve(d: PveDecision): string {
   if (d.decision === 'realizada') {
-    const { criteria, cause } = pveFailureInfo(d);
     const details = [
       d.sbtType ? sbtShort[d.sbtType] : undefined,
       d.durationMinutes ? `${d.durationMinutes} min` : undefined,
       d.sbtResult === 'success' ? 'exitosa' : d.sbtResult === 'failure' ? 'fallida' : undefined,
-      criteria.length > 0 ? criteria.map((c) => c.short).join(' + ') : undefined,
-      cause ? `causa ${cause}` : undefined,
       d.failureReason,
     ].filter(Boolean);
     return details.length > 0 ? `PVE realizada (${details.join(', ')})` : 'PVE realizada';
