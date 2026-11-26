@@ -10,10 +10,11 @@ import { ChangeBedModal } from '../components/ChangeBedModal';
 import { ClosePatientModal } from '../components/ClosePatientModal';
 import { ActionSheet } from '../components/ActionSheet';
 import { PatientCarePanel } from '../components/PatientCarePanel';
-import { EditIcon, BedDoubleIcon, ActivityIcon, WindIcon, DropletIcon, ChevronDownIcon, ChevronUpIcon, RepeatIcon, XCircleIcon, ClipboardPlusIcon, ClipboardListIcon, DumbbellIcon, ClipboardCheckIcon, BrainIcon, TrendingUpIcon, StethoscopeIcon } from 'lucide-react';
+import { EditIcon, BedDoubleIcon, ActivityIcon, WindIcon, DropletIcon, ChevronDownIcon, ChevronUpIcon, RepeatIcon, XCircleIcon, ClipboardPlusIcon, ClipboardListIcon, DumbbellIcon, ClipboardCheckIcon, BrainIcon, TrendingUpIcon, StethoscopeIcon, EyeIcon } from 'lucide-react';
 import { SupportType, ClosureReason, AirwayEventInput } from '../types';
 import { calendarDaysBetween, daysSpanText } from '../utils/supportDays';
 import { notifySuccess } from '../utils/notify';
+import { gcsAppliesTo } from '../utils/gcs';
 const supportTypeLabels = {
   imv: 'VMI',
   niv: 'VMNI',
@@ -574,7 +575,12 @@ export function PatientDetailPage() {
       description: 'Fuerza muscular (DAUCI) — Glasgow, PEmax, deglución',
       icon: BrainIcon,
       onClick: () => navigate(`/patient/${patient.id}/mrc/new`)
-    }, {
+    }, ...(gcsAppliesTo(patient) ? [{
+      label: 'Escala de Glasgow (GCS)',
+      description: 'Respuesta ocular, verbal y motora',
+      icon: EyeIcon,
+      onClick: () => navigate(`/patient/${patient.id}/glasgow/new`)
+    }] : []), {
       label: 'Progresión',
       description: 'Avance en el plan kinésico',
       icon: TrendingUpIcon,

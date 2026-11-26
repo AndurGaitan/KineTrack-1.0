@@ -26,6 +26,7 @@ import { ClosedPatientsPage } from './pages/ClosedPatientsPage';
 import { ProfilePage } from './pages/ProfilePage';
 import { PrestacionFormPage } from './pages/PrestacionFormPage';
 import { MrcAssessmentFormPage } from './pages/MrcAssessmentFormPage';
+import { GcsFormPage } from './pages/GcsFormPage';
 import { PaseDeGuardiaPage } from './pages/PaseDeGuardiaPage';
 import { PaseGeneralPage } from './pages/PaseGeneralPage';
 import { CoordinatorDashboardPage } from './pages/coordinator/CoordinatorDashboardPage';
@@ -173,6 +174,9 @@ function AppRoutes() {
       {/* Team productivity / quality logging (any kinesiólogo) */}
       <Route path="/patient/:patientId/prestacion/new" element={<ProtectedRoute>
             <PrestacionFormPage />
+          </ProtectedRoute>} />
+      <Route path="/patient/:patientId/glasgow/new" element={<ProtectedRoute>
+            <GcsFormPage />
           </ProtectedRoute>} />
       <Route path="/patient/:patientId/mrc/new" element={<ProtectedRoute>
             <MrcAssessmentFormPage />
