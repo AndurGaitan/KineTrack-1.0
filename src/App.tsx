@@ -39,6 +39,7 @@ import { StagePage } from './pages/coordinator/StagePage';
 import { QualityShadowPage } from './pages/coordinator/QualityShadowPage';
 import { ProtocolLibraryPage } from './pages/coordinator/ProtocolLibraryPage';
 import { UpdateNotice } from './components/UpdateNotice';
+import { ScrollToTop } from './components/ScrollToTop';
 import { Toaster } from './components/Toaster';
 
 // Recharts (and the Recharts-only VMITrendsPage) is code-split out of the
@@ -230,6 +231,7 @@ export function App() {
   return <BrowserRouter>
       <ErrorBoundary>
         <AppProvider>
+          <ScrollToTop />
           <AppRoutes />
           <UpdateNotice />
         <Toaster />
