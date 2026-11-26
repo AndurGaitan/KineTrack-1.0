@@ -8,14 +8,25 @@ import type { CreatePveDecisionInput } from '../api/pveDecisionsApi';
  * Lo usan la monitorización VMI y la tarjeta "PVE de hoy".
  */
 
-export const pveContraindicationReasons: { value: string; label: string }[] = [
-  { value: 'inestabilidad-hemodinamica', label: 'Inestabilidad hemodinámica' },
-  { value: 'fio2-peep-altos', label: 'FiO₂ / PEEP altos' },
-  { value: 'sedacion-profunda', label: 'Sedación profunda o sin impulso respiratorio' },
-  { value: 'bloqueo-neuromuscular', label: 'Bloqueo neuromuscular' },
-  { value: 'hipertension-endocraneana', label: 'Hipertensión endocraneana' },
-  { value: 'otra', label: 'Otra' },
+/**
+ * Motivos de "no cumple criterios": uno por cada criterio de aptitud del protocolo institucional de liberación de
+ * la VMI (2026), sección 5.1. El protocolo no exige un valor de RASS, Glasgow ni hemoglobina para iniciar la PVE.
+ */
+export const pveContraindicationReasons: { value: string; label: string; hint: string }[] = [
+  { value: 'causa-no-resuelta', label: 'Causa de la VMI sin mejoría', hint: 'La causa que motivó la VMI no está resuelta ni controlada' },
+  { value: 'oxigenacion-inadecuada', label: 'Oxigenación inadecuada', hint: 'Requiere FiO₂ > 0,50 o PEEP > 8 cmH₂O, o SpO₂ fuera del objetivo' },
+  { value: 'inestabilidad-hemodinamica', label: 'Inestabilidad hemodinámica', hint: 'Shock no controlado o aumento reciente de vasoactivos' },
+  { value: 'sin-esfuerzo-inspiratorio', label: 'Ausencia de esfuerzo inspiratorio espontáneo', hint: 'No inicia respiraciones por sí mismo' },
 ];
+
+/** Motivos que ya no se ofrecen; solo para mostrar los registros cargados antes del protocolo. */
+const pveContraindicationLegacyReasons: Record<string, string> = {
+  'fio2-peep-altos': 'FiO₂ / PEEP altos',
+  'sedacion-profunda': 'Sedación profunda o sin impulso respiratorio',
+  'bloqueo-neuromuscular': 'Bloqueo neuromuscular',
+  'hipertension-endocraneana': 'Hipertensión endocraneana',
+  otra: 'Otra',
+};
 
 /**
  * "Cumple criterios y no se realizó": el motivo ahora es texto libre. Estas etiquetas
@@ -40,7 +51,9 @@ export const pveDecisionLabels: Record<PveDecisionKind, string> = {
 };
 
 export function pveReasonLabel(decision: PveDecisionKind, reason?: string): string | undefined {
-  if (decision === 'contraindicada') return pveContraindicationReasons.find((r) => r.value === reason)?.label ?? reason;
+  if (decision === 'contraindicada') {
+    return pveContraindicationReasons.find((r) => r.value === reason)?.label ?? ((reason && pveContraindicationLegacyReasons[reason]) || reason);
+  }
   return (reason && pveNotDoneLegacyReasons[reason]) || reason;
 }
 
@@ -194,15 +207,26 @@ export function PveDecisionForm({
           </label>
           {value.decision === 'contraindicada' ? (
             <>
-              <select className={fieldClass} value={value.reason} onChange={(e) => onChange({ ...value, reason: e.target.value })}>
-                <option value="">Seleccionar...</option>
+              <div className="space-y-2" role="radiogroup" aria-label="Criterio que no cumple">
                 {pveContraindicationReasons.map((r) => (
-                  <option key={r.value} value={r.value}>
-                    {r.label}
-                  </option>
+                  <button
+                    key={r.value}
+                    type="button"
+                    role="radio"
+                    aria-checked={value.reason === r.value}
+                    onClick={() => onChange({ ...value, reason: r.value })}
+                    className={`w-full min-h-[52px] px-3 py-2 border-2 rounded-xl text-left ${
+                      value.reason === r.value ? 'border-amber-500 bg-amber-50' : 'border-gray-200 active:bg-gray-50'
+                    }`}
+                  >
+                    <div className="text-sm font-semibold text-gray-900">{r.label}</div>
+                    <div className="text-xs text-gray-600 mt-0.5">{r.hint}</div>
+                  </button>
                 ))}
-              </select>
-              <p className="text-xs text-gray-500 mt-1">Un día en que no cumple criterios no cuenta como día elegible en el indicador de PVE.</p>
+              </div>
+              <p className="text-xs text-gray-500 mt-2">
+                Si hay más de una, elegí la principal. Un día en que no cumple criterios no cuenta como día elegible en el indicador de PVE.
+              </p>
             </>
           ) : (
             <input
