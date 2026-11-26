@@ -605,6 +605,35 @@ export interface MrcAssessment {
   notes?: string;
 }
 
+/** Componente de la escala de Glasgow: puntaje o NT (no evaluable). */
+export type GcsValue = number | 'NT';
+export type GcsFactor =
+  | 'sedacion'
+  | 'bloqueo-neuromuscular'
+  | 'tubo-orotraqueal'
+  | 'traqueostomia'
+  | 'limitacion-fisica'
+  | 'lenguaje-audicion'
+  | 'otro';
+export interface GcsAssessment {
+  id: string;
+  patientId: string;
+  episodeId?: string;
+  evaluatedByUserId: string;
+  evaluatedByName?: string;
+  assessedAt: string;
+  eye: GcsValue;
+  verbal: GcsValue;
+  motor: GcsValue;
+  eyeNtReason?: string;
+  verbalNtReason?: string;
+  motorNtReason?: string;
+  /** Solo cuando los tres componentes son evaluables. */
+  totalScore?: number;
+  interferingFactors: GcsFactor[];
+  notes?: string;
+}
+
 export interface Protocol {
   id: string;
   name: string;
