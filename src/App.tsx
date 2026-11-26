@@ -39,6 +39,7 @@ import { StagePage } from './pages/coordinator/StagePage';
 import { QualityShadowPage } from './pages/coordinator/QualityShadowPage';
 import { ProtocolLibraryPage } from './pages/coordinator/ProtocolLibraryPage';
 import { UpdateNotice } from './components/UpdateNotice';
+import { Toaster } from './components/Toaster';
 
 // Recharts (and the Recharts-only VMITrendsPage) is code-split out of the
 // main bundle — it roughly doubles the app's gzip size and only
@@ -231,6 +232,7 @@ export function App() {
         <AppProvider>
           <AppRoutes />
           <UpdateNotice />
+        <Toaster />
         </AppProvider>
       </ErrorBoundary>
     </BrowserRouter>;

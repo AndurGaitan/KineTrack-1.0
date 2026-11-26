@@ -4,6 +4,7 @@ import { useApp } from '../contexts/AppContext';
 import { Header } from '../components/ui/Header';
 import { ScoreCalculator } from '../components/ScoreCalculator';
 import { ScoreType, RiskLevel } from '../types';
+import { notifySuccess } from '../utils/notify';
 export function ScoreCalculatorPage() {
   const {
     type,
@@ -23,15 +24,19 @@ export function ScoreCalculatorPage() {
         <p className="text-gray-600">Paciente no encontrado</p>
       </div>;
   }
-  const handleSave = (value: number, inputs: Record<string, number>, risk: RiskLevel) => {
-    addScore({
+  const handleSave = async (value: number, inputs: Record<string, number>, risk: RiskLevel) => {
+    const ok = await addScore({
       patientId: patient.id,
       type,
       value,
       inputs,
       risk
     });
-    navigate(`/patient/${patient.id}`);
+    if (ok) {
+      notifySuccess(type === 'hacor' ? 'Score HACOR guardado' : 'Score ROX guardado', patient.alias);
+      navigate(`/patient/${patient.id}`);
+    }
+    return ok;
   };
   const title = type === 'hacor' ? 'Score HACOR' : 'Score ROX';
   return <div className="min-h-screen bg-gray-50">

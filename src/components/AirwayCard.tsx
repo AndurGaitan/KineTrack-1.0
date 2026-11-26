@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { ChevronRightIcon } from 'lucide-react';
 import { useApp } from '../contexts/AppContext';
 import { toLocalDateTimeInputValue } from '../utils/dateInput';
+import { confirmSave } from '../utils/notify';
 import type { AirwayType, Patient } from '../types';
 
 const OPTIONS: { value: AirwayType; label: string }[] = [
@@ -30,7 +31,8 @@ export function AirwayCard({ patient }: { patient: Patient }) {
     if (!value) return;
     const [y, m, d] = value.split('-').map(Number);
     // Mediodía local: evita que la zona horaria corra la fecha un día.
-    void updatePatient(patient.id, { tracheostomyDate: new Date(y, m - 1, d, 12).toISOString() });
+    const tracheostomyDate = new Date(y, m - 1, d, 12).toISOString();
+    void confirmSave(() => updatePatient(patient.id, { tracheostomyDate }), 'Fecha de traqueostomía guardada', patient.alias);
   };
 
   const label = OPTIONS.find((o) => o.value === patient.airwayType)?.label ?? 'Sin indicar';
@@ -49,7 +51,7 @@ export function AirwayCard({ patient }: { patient: Patient }) {
         <div className="px-5 pb-5 space-y-3 border-t border-gray-100 pt-4">
           <div className="flex gap-2">
             {OPTIONS.map((o) => (
-              <button key={o.value} type="button" onClick={() => patient.airwayType !== o.value && void updatePatient(patient.id, { airwayType: o.value })} className={chip(patient.airwayType === o.value)}>
+              <button key={o.value} type="button" onClick={() => patient.airwayType !== o.value && void confirmSave(() => updatePatient(patient.id, { airwayType: o.value }), `Vía aérea: ${o.label}`, patient.alias)} className={chip(patient.airwayType === o.value)}>
                 {o.label}
               </button>
             ))}

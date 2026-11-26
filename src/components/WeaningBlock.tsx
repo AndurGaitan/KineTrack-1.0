@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useApp } from '../contexts/AppContext';
+import { confirmSave } from '../utils/notify';
 import {
   PveDecisionForm,
   PveDraft,
@@ -69,7 +70,11 @@ export function WeaningBlock({
           <button
             type="button"
             onClick={() => {
-              if (window.confirm('¿Quitar la decisión de PVE de hoy?')) existing.forEach((d) => void deletePveDecision(d.id));
+              if (!window.confirm('¿Quitar la decisión de PVE de hoy?')) return;
+              void confirmSave(async () => {
+                for (const d of existing) if (!(await deletePveDecision(d.id))) return false;
+                return true;
+              }, 'Decisión de PVE quitada');
             }}
             className="text-gray-600 underline"
           >

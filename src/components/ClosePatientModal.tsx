@@ -1,12 +1,15 @@
 import { useState, FormEvent } from 'react';
 import { XIcon, AlertTriangleIcon } from 'lucide-react';
 import { Button } from './ui/Button';
+import { SaveButton } from './ui/SaveButton';
+import { useFormRetry } from '../hooks/useRetry';
+import { dismissRetry, offerRetry } from '../utils/notify';
 import { ClosureReason } from '../types';
 import { toLocalDateTimeInputValue } from '../utils/dateInput';
 interface ClosePatientModalProps {
   patientAlias: string;
   onClose: () => void;
-  onConfirm: (reason: ClosureReason, date: string, notes: string) => void;
+  onConfirm: (reason: ClosureReason, date: string, notes: string) => Promise<boolean>;
 }
 const closureReasons = [{
   value: 'discharge',
@@ -33,21 +36,28 @@ export function ClosePatientModal({
   const [reason, setReason] = useState<ClosureReason | ''>('');
   const [date, setDate] = useState(() => toLocalDateTimeInputValue(new Date()));
   const [notes, setNotes] = useState('');
-  const handleSubmit = (e: FormEvent) => {
+  const [saving, setSaving] = useState(false);
+  const { formRef, retry } = useFormRetry();
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    if (!reason) return;
-    onConfirm(reason as ClosureReason, new Date(date).toISOString(), notes);
+    if (!reason || saving) return;
+    dismissRetry(retry);
+    setSaving(true);
+    if (!(await onConfirm(reason as ClosureReason, new Date(date).toISOString(), notes))) {
+      setSaving(false);
+      offerRetry(retry);
+    }
   };
   return <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 p-4">
       <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
         <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
           <h2 className="text-xl font-bold text-gray-900">Cerrar Caso</h2>
-          <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-lg transition-colors" aria-label="Cerrar">
+          <button onClick={onClose} disabled={saving} className="p-2 hover:bg-gray-100 rounded-lg transition-colors" aria-label="Cerrar">
             <XIcon className="w-5 h-5" />
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-6">
+        <form ref={formRef} onSubmit={handleSubmit} className="p-6 space-y-6">
           <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4 flex gap-3">
             <AlertTriangleIcon className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
             <div>
@@ -88,12 +98,12 @@ export function ClosePatientModal({
           </div>
 
           <div className="flex gap-3 pt-4">
-            <Button type="button" variant="secondary" onClick={onClose} fullWidth>
+            <Button type="button" variant="secondary" onClick={onClose} disabled={saving} fullWidth>
               Cancelar
             </Button>
-            <Button type="submit" variant="danger" fullWidth disabled={!reason}>
+            <SaveButton variant="danger" fullWidth saving={saving} disabled={!reason}>
               Cerrar Caso
-            </Button>
+            </SaveButton>
           </div>
         </form>
       </div>

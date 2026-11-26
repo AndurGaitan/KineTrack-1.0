@@ -16,6 +16,9 @@ import {
 } from '../../domain/services/trachDecannulation';
 import type { TrachRecord } from '../../types';
 import { PlusIcon, PencilIcon } from 'lucide-react';
+import { useApp } from '../../contexts/AppContext';
+import { useRetry } from '../../hooks/useRetry';
+import { attempt, dismissRetry, notifyError, notifySuccess, offerRetry } from '../../utils/notify';
 
 interface TrachStatusCardProps {
   patientId: string;
@@ -46,8 +49,9 @@ function latest<T>(records: TrachRecord[], pick: (r: TrachRecord) => T | undefin
 export function TrachStatusCard({ patientId, ctx, onUpdateState, onChanged }: TrachStatusCardProps) {
   const { now, records, overview, episode } = ctx;
   const [busy, setBusy] = useState(false);
-  const [justLogged, setJustLogged] = useState<string | undefined>(undefined);
-  const [error, setError] = useState<string | null>(null);
+  const { patients } = useApp();
+  const alias = patients.find((p) => p.id === patientId)?.alias;
+  const retry = useRetry(() => logAspiration());
 
   const hours = hoursFreeOfVmi(episode, now);
   const cuff = latest(records, (r) => r.cuffStatus);
@@ -61,31 +65,35 @@ export function TrachStatusCard({ patientId, ctx, onUpdateState, onChanged }: Tr
   const counts = statusCounts(process);
 
   const logAspiration = async () => {
+    if (busy) return;
+    dismissRetry(retry);
     setBusy(true);
-    setError(null);
     try {
       const created = await trachApi.logAspiration({ patientId, episodeId: episode?.id });
-      setJustLogged(created.id);
-      await onChanged();
-      window.setTimeout(() => setJustLogged((current) => (current === created.id ? undefined : current)), 8000);
+      notifySuccess('Aspiración registrada', alias, { label: 'Deshacer', run: () => void undo(created.id) });
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'No se pudo registrar la aspiración');
+      notifyError('No se pudo registrar la aspiración', err);
+      offerRetry(retry);
+      setBusy(false);
+      return;
+    }
+    try {
+      await onChanged();
+    } catch (err) {
+      notifyError('Se registró, pero no se pudo actualizar la vista', err);
     } finally {
       setBusy(false);
     }
   };
 
-  const undo = async () => {
-    if (!justLogged) return;
-    const id = justLogged;
-    setJustLogged(undefined);
-    try {
-      await trachApi.deleteAspiration(id);
-      await onChanged();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'No se pudo deshacer');
-    }
-  };
+  const undo = (id: string) =>
+    attempt(
+      async () => {
+        await trachApi.deleteAspiration(id);
+        await onChanged();
+      },
+      { success: 'Aspiración deshecha', detail: alias, failure: 'No se pudo deshacer la aspiración' }
+    );
 
   return (
     <Card>
@@ -136,16 +144,6 @@ export function TrachStatusCard({ patientId, ctx, onUpdateState, onChanged }: Tr
           Aspiración
         </Button>
       </div>
-
-      {justLogged && (
-        <div className="mt-3 flex items-center justify-between rounded-xl bg-green-50 border border-green-200 px-4 py-2.5 text-sm text-green-900">
-          <span>✓ Aspiración registrada</span>
-          <button onClick={undo} className="font-semibold underline">
-            Deshacer
-          </button>
-        </div>
-      )}
-      {error && <p className="mt-3 text-sm text-red-600">{error}</p>}
     </Card>
   );
 }

@@ -3,6 +3,9 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useApp } from '../contexts/AppContext';
 import { Header } from '../components/ui/Header';
 import { Button } from '../components/ui/Button';
+import { SaveButton } from '../components/ui/SaveButton';
+import { useFormRetry } from '../hooks/useRetry';
+import { dismissRetry, notifySuccess, offerRetry } from '../utils/notify';
 import { CollapsibleSection } from '../components/ui/Tooltip';
 import { VMIField, VMISelect } from '../components/VMIField';
 import { AlertPanel } from '../components/AlertPanel';
@@ -54,7 +57,8 @@ const clamp = (n: number, min: number, max: number) => Math.min(max, Math.max(mi
  * registro (modo, parámetros, PEEP, FiO₂): solo se cambia lo que varió. Lo
  * esencial queda abierto; el resto de las secciones, plegadas.
  */
-export function VMIEntryForm({ patient, onDone, onCancel, children }: { patient: Patient; onDone: () => void; onCancel?: () => void; children?: ReactNode }) {
+export function VMIEntryForm({ patient, onDone, onCancel, children, justSaved = false }: { patient: Patient; onDone: () => void; onCancel?: () => void; children?: ReactNode; justSaved?: boolean }) {
+  const { formRef, retry } = useFormRetry();
   const navigate = useNavigate();
   const { addVMIRecord, addPveDecision, deletePveDecision, getPatientPveDecisions, getActiveEpisode, getPatientVMIRecords, features } = useApp();
   const recordedAt = useRecordTimestamp();
@@ -203,8 +207,9 @@ export function VMIEntryForm({ patient, onDone, onCancel, children }: { patient:
       return;
     }
 
+    dismissRetry(retry);
     setSaving(true);
-    await addVMIRecord({
+    const ok = await addVMIRecord({
       patientId: patient.id,
       episodeId: activeEpisode?.id,
       timestamp: recordedAt.timestamp,
@@ -265,14 +270,28 @@ export function VMIEntryForm({ patient, onDone, onCancel, children }: { patient:
       alerts
     });
 
-    const pveInput = pveDraftToInput(pveDraft, patient.id, recordedAt.timestamp);
-    if (pveInput && (await addPveDecision(pveInput))) {
-      // Una decisión por día: la nueva reemplaza a la que ya estaba cargada.
-      for (const old of todaysPve) await deletePveDecision(old.id);
+    if (!ok) {
+      setSaving(false);
+      offerRetry(retry);
+      return;
     }
 
+    const pveInput = pveDraftToInput(pveDraft, patient.id, recordedAt.timestamp);
+    const pveSaved = pveInput ? await savePve(pveInput, todaysPve) : false;
+
+    notifySuccess(pveSaved ? 'Monitorización y PVE guardadas' : 'Monitorización VMI guardada', patient.alias);
     setSaving(false);
     onDone();
+  };
+
+  /** Una decisión por día: la nueva reemplaza a la que ya estaba cargada. Si falla, se reintenta solo la PVE. */
+  const savePve = async (input: NonNullable<ReturnType<typeof pveDraftToInput>>, replaced: typeof todaysPve): Promise<boolean> => {
+    if (!(await addPveDecision(input))) {
+      offerRetry(() => void savePve(input, replaced).then(done => done && notifySuccess('Decisión de PVE guardada', patient.alias)));
+      return false;
+    }
+    for (const old of replaced) await deletePveDecision(old.id);
+    return true;
   };
 
   const toggleAsynchronyType = (type: AsynchronyType) => {
@@ -286,8 +305,8 @@ export function VMIEntryForm({ patient, onDone, onCancel, children }: { patient:
 
   return (
     <div>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {last && <PrefillNotice timestamp={last.timestamp} />}
+        <form ref={formRef} onSubmit={handleSubmit} className="space-y-4">
+          {last && <PrefillNotice timestamp={last.timestamp} highlight={justSaved} />}
           {/* STEP 1: Ventilator Mode (FIRST) */}
           <CollapsibleSection title="Modo Ventilatorio" subtitle="VCV, PCV o PSV">
             <div className="space-y-4">
@@ -778,9 +797,9 @@ export function VMIEntryForm({ patient, onDone, onCancel, children }: { patient:
                 Cancelar
               </Button>
             )}
-            <Button type="submit" fullWidth disabled={!canSave || saving}>
-              {saving ? 'Guardando...' : 'Guardar monitorización'}
-            </Button>
+            <SaveButton fullWidth saving={saving} saved={justSaved} disabled={!canSave}>
+              Guardar monitorización
+            </SaveButton>
           </div>
 
           {!canSave && (

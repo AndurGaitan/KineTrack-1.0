@@ -17,6 +17,7 @@ import { useEditableHandoff } from '../hooks/useEditableHandoff';
 import { copyText } from '../utils/clipboard';
 import { AirwayEvent, MrcAssessment, Prestacion, TrachOverview } from '../types';
 import { CheckIcon, ClipboardCopyIcon, UsersIcon } from 'lucide-react';
+import { notifyError, notifySuccess } from '../utils/notify';
 
 export function PaseGeneralPage() {
   const {
@@ -148,7 +149,7 @@ export function PaseGeneralPage() {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {
-      setError('No se pudo copiar automáticamente. Seleccioná el texto manualmente.');
+      notifyError('No se pudo copiar automáticamente', 'Seleccioná el texto manualmente.');
       return;
     }
     try {
@@ -159,8 +160,9 @@ export function PaseGeneralPage() {
         text: finalText,
       });
       setHistoryKey((k) => k + 1);
+      notifySuccess('Pase general copiado', 'Guardado en el historial');
     } catch {
-      setError('Se copió el texto, pero no se pudo guardar en el historial.');
+      notifyError('Se copió, pero no se guardó en el historial');
     }
   };
 

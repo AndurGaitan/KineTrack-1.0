@@ -4,6 +4,7 @@ import * as handoffNotesApi from '../api/handoffNotesApi';
 import { copyText } from '../utils/clipboard';
 import type { HandoffNote } from '../types';
 import { CheckIcon, ClipboardCopyIcon, Trash2Icon } from 'lucide-react';
+import { notifyError, notifySuccess } from '../utils/notify';
 
 interface HandoffHistoryProps {
   kind: 'general' | 'evolucion';
@@ -45,6 +46,7 @@ export function HandoffHistory({ kind, patientId, refreshKey }: HandoffHistoryPr
     try {
       await copyText(note.text);
       setCopiedId(note.id);
+      notifySuccess('Texto copiado');
       setTimeout(() => setCopiedId(null), 2000);
     } catch {
       setError('No se pudo copiar automáticamente. Abrí la nota y seleccioná el texto manualmente.');
@@ -56,8 +58,9 @@ export function HandoffHistory({ kind, patientId, refreshKey }: HandoffHistoryPr
     try {
       await handoffNotesApi.deleteHandoffNote(note.id);
       setNotes((prev) => prev.filter((n) => n.id !== note.id));
+      notifySuccess('Nota eliminada');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'No se pudo eliminar la nota');
+      notifyError('No se pudo eliminar la nota', err);
     }
   };
 

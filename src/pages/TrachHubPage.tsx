@@ -53,7 +53,7 @@ export function TrachHubPage() {
     <div className="min-h-screen bg-gray-50">
       <Header title="Traqueostomía" showBack showPatientList sectorId={sector?.id} />
 
-      <main className="max-w-2xl mx-auto p-4 pb-24 space-y-4">
+      <main key={patient.id} className="max-w-2xl mx-auto p-4 pb-24 space-y-4">
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 flex items-center justify-between">
           <div>
             <div className="text-xs text-gray-500 mb-0.5">Paciente</div>

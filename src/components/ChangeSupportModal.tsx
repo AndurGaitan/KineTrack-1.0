@@ -1,6 +1,9 @@
 import { useState, FormEvent } from 'react';
 import { XIcon } from 'lucide-react';
 import { Button } from './ui/Button';
+import { SaveButton } from './ui/SaveButton';
+import { useFormRetry } from '../hooks/useRetry';
+import { dismissRetry, offerRetry } from '../utils/notify';
 import { SectorBedPicker } from './SectorBedPicker';
 import { AirwayEventInput, AirwayEventType, Patient, Sector, SupportType } from '../types';
 import { toLocalDateTimeInputValue } from '../utils/dateInput';
@@ -17,7 +20,7 @@ interface ChangeSupportModalProps {
     date: string,
     airwayEvent?: AirwayEventInput,
     location?: { sectorId: string; bedId: string }
-  ) => void;
+  ) => Promise<boolean>;
 }
 const supportOptions = [{
   value: 'imv',
@@ -85,10 +88,12 @@ export function ChangeSupportModal({
   const [sectorId, setSectorId] = useState(patient.sectorId);
   const [bedId, setBedId] = useState('');
   const [locationError, setLocationError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  const { formRef, retry } = useFormRetry();
 
-  const handleSubmit = (e: FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    if (!newSupport) return;
+    if (!newSupport || saving) return;
     const finalReason = reason === 'Otro' ? customReason : reason;
 
     let airwayEvent: AirwayEventInput | undefined;
@@ -110,7 +115,14 @@ export function ChangeSupportModal({
       location = { sectorId, bedId };
     }
 
-    onConfirm(newSupport as SupportType, finalReason, new Date(date).toISOString(), airwayEvent, location);
+    dismissRetry(retry);
+    setSaving(true);
+    // Si sale bien, el diálogo se cierra desde la ficha; si falla, queda abierto con lo elegido.
+    const ok = await onConfirm(newSupport as SupportType, finalReason, new Date(date).toISOString(), airwayEvent, location);
+    if (!ok) {
+      setSaving(false);
+      offerRetry(retry);
+    }
   };
 
   const canSubmit =
@@ -125,12 +137,12 @@ export function ChangeSupportModal({
           <h2 className="text-xl font-bold text-gray-900">
             Cambiar Soporte Respiratorio
           </h2>
-          <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-lg transition-colors" aria-label="Cerrar">
+          <button onClick={onClose} disabled={saving} className="p-2 hover:bg-gray-100 rounded-lg transition-colors" aria-label="Cerrar">
             <XIcon className="w-5 h-5" />
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-6">
+        <form ref={formRef} onSubmit={handleSubmit} className="p-6 space-y-6">
           <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
             <p className="text-sm text-blue-900">
               <strong>Soporte actual:</strong>{' '}
@@ -257,12 +269,12 @@ export function ChangeSupportModal({
             </div>}
 
           <div className="flex gap-3 pt-4">
-            <Button type="button" variant="secondary" onClick={onClose} fullWidth>
+            <Button type="button" variant="secondary" onClick={onClose} disabled={saving} fullWidth>
               Cancelar
             </Button>
-            <Button type="submit" fullWidth disabled={!canSubmit}>
+            <SaveButton fullWidth saving={saving} disabled={!canSubmit}>
               Confirmar Cambio
-            </Button>
+            </SaveButton>
           </div>
         </form>
       </div>

@@ -6,6 +6,7 @@ import { Input, Select } from '../../components/ui/Input';
 import { CoordinatorNav } from '../../components/CoordinatorNav';
 import { useApp } from '../../contexts/AppContext';
 import * as sectorsApi from '../../api/sectorsApi';
+import { attempt, notifyError, notifySuccess } from '../../utils/notify';
 
 const typeOptions = [
   { value: 'uci', label: 'UCI' },
@@ -56,6 +57,7 @@ export function SectorsAdminPage() {
     try {
       await sectorsApi.createSector({ name, type, bedLabels });
       await refreshSectors();
+      notifySuccess('Sector creado', name);
       setShowNewSector(false);
       setName('');
       setBedLabelsInput('');
@@ -76,19 +78,32 @@ export function SectorsAdminPage() {
       }
       await refreshSectors();
       setAddBedInputs((prev) => ({ ...prev, [sectorId]: '' }));
+      notifySuccess(labels.length === 1 ? 'Cama agregada' : `${labels.length} camas agregadas`);
     } catch (err) {
-      window.alert(err instanceof Error ? err.message : 'No se pudo agregar la cama');
+      // Pudo haberse agregado una parte: se muestra lo que quedó, sin ofrecer repetir todo.
+      await refreshSectors();
+      notifyError('No se pudieron agregar todas las camas', err);
     }
   };
 
   const toggleSectorActive = async (sectorId: string, active: boolean) => {
-    await sectorsApi.updateSector(sectorId, { active: !active });
-    await refreshSectors();
+    await attempt(
+      async () => {
+        await sectorsApi.updateSector(sectorId, { active: !active });
+        await refreshSectors();
+      },
+      { success: active ? 'Sector desactivado' : 'Sector activado', failure: 'No se pudo actualizar el sector' }
+    );
   };
 
   const toggleBedActive = async (sectorId: string, bedId: string, active: boolean) => {
-    await sectorsApi.updateBed(sectorId, bedId, { active: !active });
-    await refreshSectors();
+    await attempt(
+      async () => {
+        await sectorsApi.updateBed(sectorId, bedId, { active: !active });
+        await refreshSectors();
+      },
+      { success: active ? 'Cama desactivada' : 'Cama activada', failure: 'No se pudo actualizar la cama' }
+    );
   };
 
   return (

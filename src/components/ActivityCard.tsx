@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Card } from './ui/Card';
 import { useApp } from '../contexts/AppContext';
 import { mobilizationLevels } from '../utils/vmiEducation';
@@ -9,6 +9,8 @@ import { MultiChoiceChips } from './MultiChoiceChips';
 import { ChoiceChips } from './ChoiceChips';
 import type { KtmType, MobilizationLevel, Prestacion } from '../types';
 import { DumbbellIcon, StethoscopeIcon } from 'lucide-react';
+import { useRetry } from '../hooks/useRetry';
+import { dismissRetry, notifyError, notifySuccess, offerRetry } from '../utils/notify';
 
 interface ActivityCardProps {
   patientId: string;
@@ -44,8 +46,16 @@ export function ActivityCard({ patientId, prestaciones, now, onChanged }: Activi
   const [startsMobilization, setStartsMobilization] = useState(false);
   const [ktrOpen, setKtrOpen] = useState(false);
   const [ktrDetail, setKtrDetail] = useState<KtrDetail>(emptyKtrDetail);
-  const [message, setMessage] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  // Contador que se resalta un instante después de registrar.
+  const [flash, setFlash] = useState<'ktr' | 'ktm' | null>(null);
+  const lastAttempt = useRef<{ kind: 'ktr' | 'ktm'; withDetail: boolean }>({ kind: 'ktr', withDetail: false });
+  const retry = useRetry(() => log(lastAttempt.current.kind, lastAttempt.current.withDetail));
+
+  useEffect(() => {
+    if (!flash) return;
+    const t = window.setTimeout(() => setFlash(null), 1800);
+    return () => window.clearTimeout(t);
+  }, [flash]);
 
   const today = startOfToday(now);
   const todays = prestaciones.filter((p) => new Date(p.timestamp).getTime() >= today);
@@ -54,38 +64,49 @@ export function ActivityCard({ patientId, prestaciones, now, onChanged }: Activi
   const lastKtr = prestaciones.find((p) => p.type === 'kinesioterapia-respiratoria');
   const lastKtm = prestaciones.find((p) => p.type === 'kinesioterapia-motora');
 
-  const log = async (kind: 'ktr' | 'ktm', options?: { ktrDetail?: KtrDetail }) => {
+  const startMobilizationToo = async (): Promise<boolean> => {
+    const ok = await startMobilization(patientId);
+    if (!ok) offerRetry(() => void startMobilizationToo().then((done) => done && notifySuccess('Inicio de movilización anotado', patient?.alias)));
+    return ok;
+  };
+
+  const log = async (kind: 'ktr' | 'ktm', withDetail = false) => {
+    if (busy) return;
+    lastAttempt.current = { kind, withDetail };
+    dismissRetry(retry);
     setBusy(kind);
-    setError(null);
-    setMessage(null);
+    const detail = withDetail ? ktrDetail : undefined;
     try {
       await addPrestacion({
         patientId,
         type: kind === 'ktr' ? 'kinesioterapia-respiratoria' : 'kinesioterapia-motora',
         ...(kind === 'ktm' && ktmLevel !== '' ? { mobilizationLevel: Number(ktmLevel) as MobilizationLevel } : {}),
         ...(kind === 'ktm' && ktmTypes.length > 0 ? { ktmTypes } : {}),
-        ...(options?.ktrDetail ? ktrDetailPayload(options.ktrDetail) : {}),
+        ...(detail ? ktrDetailPayload(detail) : {}),
       });
-      let started = false;
-      if (kind === 'ktm' && startsMobilization) started = await startMobilization(patientId);
-      setMessage(
-        kind === 'ktr'
-          ? '✓ Kinesioterapia respiratoria registrada'
-          : started
-            ? '✓ Kinesioterapia motora registrada · inicio de movilización activa anotado'
-            : '✓ Kinesioterapia motora registrada'
-      );
-      setKtmOpen(false);
-      setKtmTypes([]);
-      setKtmLevel('');
-      setStartsMobilization(false);
-      setKtrOpen(false);
-      setKtrDetail(emptyKtrDetail);
-      if (options?.ktrDetail?.aspirated) await onChanged?.();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'No se pudo registrar la prestación');
-    } finally {
+      notifyError(kind === 'ktr' ? 'No se pudo registrar la KTR' : 'No se pudo registrar la KTM', err);
+      offerRetry(retry);
       setBusy(null);
+      return;
+    }
+    // Desde acá la prestación ya está guardada: nada de lo que siga puede ofrecer repetirla.
+    const started = kind === 'ktm' && startsMobilization ? await startMobilizationToo() : false;
+    notifySuccess(kind === 'ktr' ? 'KTR registrada' : started ? 'KTM e inicio de movilización registrados' : 'KTM registrada', patient?.alias);
+    setKtmOpen(false);
+    setKtmTypes([]);
+    setKtmLevel('');
+    setStartsMobilization(false);
+    setKtrOpen(false);
+    setKtrDetail(emptyKtrDetail);
+    setFlash(kind);
+    setBusy(null);
+    if (detail?.aspirated) {
+      try {
+        await onChanged?.();
+      } catch (err) {
+        notifyError('Se registró, pero no se pudo actualizar la vista', err);
+      }
     }
   };
 
@@ -109,7 +130,7 @@ export function ActivityCard({ patientId, prestaciones, now, onChanged }: Activi
           <StethoscopeIcon className="w-6 h-6 text-blue-600 mb-2" />
           <div className="font-bold text-gray-900">KTR</div>
           <div className="text-xs text-gray-600">Kinesioterapia respiratoria</div>
-          <div className="text-xs text-blue-800 mt-2 font-semibold">Hoy: {ktrToday.length}</div>
+          <div className={`inline-block rounded-md px-1 -mx-1 text-xs text-blue-800 mt-2 font-semibold ${flash === 'ktr' ? 'kt-flash' : ''}`}>Hoy: {ktrToday.length}</div>
           {lastKtr && <div className="text-[11px] text-blue-800/80">última {ago(lastKtr.timestamp, now)}</div>}
         </button>
 
@@ -126,7 +147,7 @@ export function ActivityCard({ patientId, prestaciones, now, onChanged }: Activi
           <DumbbellIcon className="w-6 h-6 text-emerald-600 mb-2" />
           <div className="font-bold text-gray-900">KTM</div>
           <div className="text-xs text-gray-600">Kinesioterapia motora</div>
-          <div className="text-xs text-emerald-800 mt-2 font-semibold">Hoy: {ktmToday.length}</div>
+          <div className={`inline-block rounded-md px-1 -mx-1 text-xs text-emerald-800 mt-2 font-semibold ${flash === 'ktm' ? 'kt-flash' : ''}`}>Hoy: {ktmToday.length}</div>
           {lastKtm && <div className="text-[11px] text-emerald-800/80">última {ago(lastKtm.timestamp, now)}</div>}
         </button>
       </div>
@@ -137,18 +158,18 @@ export function ActivityCard({ patientId, prestaciones, now, onChanged }: Activi
           <KtrDetailFields value={ktrDetail} onChange={setKtrDetail} />
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             <button
-              onClick={() => log('ktr', { ktrDetail })}
+              onClick={() => log('ktr', true)}
               disabled={busy !== null}
               className="rounded-xl bg-blue-600 text-white font-bold px-4 py-3 active:bg-blue-700 disabled:opacity-50"
             >
-              Registrar KTR
+              {busy === 'ktr' && lastAttempt.current.withDetail ? 'Guardando...' : 'Registrar KTR'}
             </button>
             <button
               onClick={() => log('ktr')}
               disabled={busy !== null}
               className="rounded-xl border border-dashed border-gray-300 px-4 py-3 text-sm text-gray-600 active:bg-gray-50 disabled:opacity-50"
             >
-              Registrar sin detalle
+              {busy === 'ktr' && !lastAttempt.current.withDetail ? 'Guardando...' : 'Registrar sin detalle'}
             </button>
           </div>
         </div>
@@ -177,13 +198,10 @@ export function ActivityCard({ patientId, prestaciones, now, onChanged }: Activi
             disabled={busy !== null}
             className="w-full rounded-xl bg-emerald-600 text-white font-bold px-4 py-3 active:bg-emerald-700 disabled:opacity-50"
           >
-            Registrar KTM
+            {busy === 'ktm' ? 'Guardando...' : 'Registrar KTM'}
           </button>
         </div>
       )}
-
-      {message && <p className="mt-3 text-sm text-green-700 font-medium">{message}</p>}
-      {error && <p className="mt-3 text-sm text-red-600">{error}</p>}
     </Card>
   );
 }

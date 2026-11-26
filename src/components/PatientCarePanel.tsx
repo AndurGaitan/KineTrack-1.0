@@ -46,6 +46,7 @@ export function PatientCarePanel({ patient, onChangeSupport }: { patient: Patien
     getPatientOxygenRecords,
   } = useApp();
   const [saved, setSaved] = useState(false);
+  const [version, setVersion] = useState(0);
   const current = patient.supportType;
   const episode = getActiveEpisode(patient.id);
   const prestaciones = getPatientPrestaciones(patient.id);
@@ -60,19 +61,24 @@ export function PatientCarePanel({ patient, onChangeSupport }: { patient: Patien
   ).length;
   const now = useMemo(() => new Date(), [prestaciones, recordCount]);
 
-  // Tras guardar, el formulario se vuelve a montar con el nuevo "último registro".
-  const formKey = `${current}-${recordCount}`;
+  // Cuando el guardado termina del todo, el formulario se vuelve a montar con el nuevo "último registro".
+  // (Si falla, queda tal cual, con lo cargado.)
+  const formKey = `${current}-${version}`;
 
   useEffect(() => {
     if (!saved) return;
-    const t = window.setTimeout(() => setSaved(false), 4000);
+    const t = window.setTimeout(() => setSaved(false), 2500);
     return () => window.clearTimeout(t);
   }, [saved]);
+  useEffect(() => setSaved(false), [current]);
 
   const chips = supportChips;
   // La traqueostomía es la vía aérea (no un soporte): se muestra en VMI o cuando el paciente ya la tiene.
   const isTrach = patient.airwayType === 'traqueostomia';
-  const done = () => setSaved(true);
+  const done = () => {
+    setVersion(v => v + 1);
+    setSaved(true);
+  };
 
   return (
     <div className="space-y-4">
@@ -103,18 +109,15 @@ export function PatientCarePanel({ patient, onChangeSupport }: { patient: Patien
 
       {monitoringTitle[current] && (
         <Card>
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-lg font-bold text-gray-900">{monitoringTitle[current]}</h2>
-            {saved && <span className="text-sm font-semibold text-green-700">✓ Guardado</span>}
-          </div>
+          <h2 className="text-lg font-bold text-gray-900 mb-3">{monitoringTitle[current]}</h2>
           {current === 'imv' && (
-            <VMIEntryForm key={formKey} patient={patient} onDone={done}>
+            <VMIEntryForm key={formKey} patient={patient} onDone={done} justSaved={saved}>
               <MobilizationCard patientId={patient.id} now={now} />
             </VMIEntryForm>
           )}
-          {current === 'niv' && <NIVEntryForm key={formKey} patient={patient} onDone={done} />}
-          {current === 'hfnc' && <HFNCEntryForm key={formKey} patient={patient} onDone={done} />}
-          {current === 'conventional-oxygen' && <OxygenForm key={formKey} patient={patient} onDone={done} />}
+          {current === 'niv' && <NIVEntryForm key={formKey} patient={patient} onDone={done} justSaved={saved} />}
+          {current === 'hfnc' && <HFNCEntryForm key={formKey} patient={patient} onDone={done} justSaved={saved} />}
+          {current === 'conventional-oxygen' && <OxygenForm key={formKey} patient={patient} onDone={done} justSaved={saved} />}
         </Card>
       )}
 

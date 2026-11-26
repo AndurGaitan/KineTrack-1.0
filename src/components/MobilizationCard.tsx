@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { Card } from './ui/Card';
+import { useRetry } from '../hooks/useRetry';
+import { confirmSave, dismissRetry, notifySuccess, offerRetry } from '../utils/notify';
 import { useApp } from '../contexts/AppContext';
 import { toLocalDateTimeInputValue } from '../utils/dateInput';
 import { calendarDaysBetween, daysAgoText } from '../utils/supportDays';
@@ -23,6 +25,7 @@ const fmt = (iso: string) =>
  */
 export function MobilizationCard({ patientId, now }: { patientId: string; now: Date }) {
   const {
+    patients,
     getActiveEpisode,
     getEpisodeMobilizationStart,
     getPatientMobilizationContraindications,
@@ -42,6 +45,9 @@ export function MobilizationCard({ patientId, now }: { patientId: string; now: D
   const [toValue, setToValue] = useState('');
   const [busy, setBusy] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+  const alias = patients.find((p) => p.id === patientId)?.alias;
+  const retryStart = useRetry(() => submitStart());
+  const retryContra = useRetry(() => submitContra());
 
   if (!episode || episode.supportType !== 'imv') return null;
 
@@ -58,6 +64,8 @@ export function MobilizationCard({ patientId, now }: { patientId: string; now: D
   const nowInput = toLocalDateTimeInputValue(new Date());
 
   const closeForm = () => {
+    dismissRetry(retryStart);
+    dismissRetry(retryContra);
     setMode(null);
     setFormError(null);
     setStartNote('');
@@ -70,10 +78,13 @@ export function MobilizationCard({ patientId, now }: { patientId: string; now: D
     if (Number.isNaN(when.getTime())) return setFormError('Elegí la fecha y hora de inicio');
     if (when.getTime() > Date.now() + 60 * 1000) return setFormError('La fecha no puede ser posterior a ahora');
     if (when.getTime() < episodeStart.getTime()) return setFormError('No puede ser anterior al inicio de la VMI');
+    dismissRetry(retryStart);
     setBusy(true);
     const ok = await startMobilization(patientId, when.toISOString(), startNote.trim() || undefined);
     setBusy(false);
-    if (ok) closeForm();
+    if (!ok) return offerRetry(retryStart);
+    notifySuccess('Inicio de movilización guardado', alias);
+    closeForm();
   };
 
   const submitContra = async () => {
@@ -88,10 +99,13 @@ export function MobilizationCard({ patientId, now }: { patientId: string; now: D
       if (to.getTime() > Date.now() + 60 * 1000) return setFormError('"Hasta" no puede ser posterior a ahora');
       endAt = to.toISOString();
     }
+    dismissRetry(retryContra);
     setBusy(true);
     const ok = await addMobilizationContraindication({ patientId, reason, startAt: from.toISOString(), endAt });
     setBusy(false);
-    if (ok) closeForm();
+    if (!ok) return offerRetry(retryContra);
+    notifySuccess('Registrado: no cumple criterios', alias);
+    closeForm();
   };
 
   return (
@@ -113,7 +127,8 @@ export function MobilizationCard({ patientId, now }: { patientId: string; now: D
           <button
             type="button"
             onClick={() => {
-              if (window.confirm('¿Eliminar el registro de inicio de movilización? Podés volver a cargarlo después.')) void deleteMobilizationStart(start.id);
+              if (window.confirm('¿Eliminar el registro de inicio de movilización? Podés volver a cargarlo después.'))
+                void confirmSave(() => deleteMobilizationStart(start.id), 'Inicio de movilización eliminado', alias);
             }}
             className="mt-2 text-xs text-green-800 underline"
           >
@@ -126,7 +141,7 @@ export function MobilizationCard({ patientId, now }: { patientId: string; now: D
           <div className="mt-0.5">{mobilizationReasonLabel(open.reason)} · la ventana de {MOBILIZATION_WINDOW_HOURS} h está en pausa.</div>
           <button
             type="button"
-            onClick={() => void liftMobilizationContraindication(open.id)}
+            onClick={() => void confirmSave(() => liftMobilizationContraindication(open.id), 'Ventana de movilización retomada', alias)}
             className="mt-2 rounded-lg bg-amber-600 text-white text-sm font-semibold px-3 py-2 active:bg-amber-700"
           >
             Ya cumple criterios (retomar la ventana)
@@ -253,7 +268,7 @@ export function MobilizationCard({ patientId, now }: { patientId: string; now: D
                 <button
             type="button"
                   onClick={() => {
-                    if (window.confirm('¿Eliminar este registro?')) void deleteMobilizationContraindication(c.id);
+                    if (window.confirm('¿Eliminar este registro?')) void confirmSave(() => deleteMobilizationContraindication(c.id), 'Registro eliminado', alias);
                   }}
                   className="text-xs text-gray-400 underline shrink-0"
                 >
