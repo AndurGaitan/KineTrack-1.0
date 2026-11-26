@@ -462,7 +462,20 @@ export interface TrachOverview {
 // Etapa 1: decisiones de PVE y movilización precoz (72 h).
 // ---------------------------------------------------------------------------
 export type PveDecisionKind = 'realizada' | 'contraindicada' | 'no-realizada';
+// 'cpap' ya no se ofrece (el protocolo institucional usa PSV de bajo nivel o tubo en T); queda para leer registros viejos.
 export type PveSbtType = 'psv' | 'cpap' | 't-piece';
+/** Criterios de interrupción de la PVE (protocolo, sección 5.2). */
+export type PveInterruptionCriterion = 'taquipnea' | 'desaturacion' | 'trabajo-respiratorio' | 'hemodinamica' | 'neurologico' | 'otros-signos';
+/** Causa probable predominante de una PVE fallida (protocolo, sección 5.5). */
+export type PveFailureCause =
+  | 'respiratoria'
+  | 'cardiovascular'
+  | 'neuromuscular'
+  | 'neurologica'
+  | 'metabolica'
+  | 'secreciones'
+  | 'asincronias'
+  | 'no-identificada';
 
 export interface PveDecision {
   id: string;
@@ -474,7 +487,11 @@ export interface PveDecision {
   reason?: string;
   sbtType?: PveSbtType;
   sbtResult?: 'success' | 'failure';
+  /** Detalle libre de la falla. */
   failureReason?: string;
+  durationMinutes?: number;
+  interruptionCriteria?: PveInterruptionCriterion[];
+  failureCause?: PveFailureCause;
   notes?: string;
 }
 
