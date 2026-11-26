@@ -89,8 +89,9 @@ export function pveDraftError(d: PveDraft): string | null {
   if (d.decision === 'realizada') {
     // El protocolo pide registrar modalidad, duración y resultado (sección 6).
     if (!d.sbtType) return 'Indicá la modalidad de la PVE';
-    if (!d.duration) return 'Indicá la duración de la PVE';
     if (!d.sbtResult) return 'Indicá el resultado de la PVE';
+    // En una fallida no se pide la duración: se interrumpe antes y no se guarda un tiempo que nadie midió.
+    if (d.sbtResult === 'success' && !d.duration) return 'Indicá la duración de la PVE';
     return null;
   }
   return d.reason.trim() ? null : d.decision === 'contraindicada' ? 'Indicá por qué no cumple criterios' : 'Indicá por qué no se realizó';
@@ -105,7 +106,7 @@ export function pveDraftToInput(d: PveDraft, patientId: string, timestamp?: stri
       decision: 'realizada',
       sbtType: d.sbtType as PveSbtType,
       sbtResult: d.sbtResult || undefined,
-      durationMinutes: Number(d.duration),
+      durationMinutes: d.sbtResult === 'success' ? Number(d.duration) : undefined,
       failureReason: d.sbtResult === 'failure' && d.failureReason.trim() ? d.failureReason.trim() : undefined,
     };
   }
@@ -188,25 +189,6 @@ export function PveDecisionForm({
             </div>
           </div>
           <div>
-            <div className="block text-sm font-medium text-gray-700 mb-1">Duración (minutos)</div>
-            <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label="Duración de la PVE en minutos">
-              {pveDurationOptions.map((m) => (
-                <button
-                  key={m}
-                  type="button"
-                  role="radio"
-                  aria-checked={value.duration === String(m)}
-                  onClick={() => onChange({ ...value, duration: String(m) })}
-                  className={`min-h-[48px] border-2 rounded-xl font-semibold ${
-                    value.duration === String(m) ? 'border-green-500 bg-green-50 text-gray-900' : 'border-gray-200 text-gray-700 active:bg-gray-50'
-                  }`}
-                >
-                  {m}
-                </button>
-              ))}
-            </div>
-          </div>
-          <div>
             <div className="block text-sm font-medium text-gray-700 mb-1">Resultado</div>
             <div className="grid grid-cols-2 gap-2">
               {(['success', 'failure'] as const).map((r) => (
@@ -214,7 +196,7 @@ export function PveDecisionForm({
                   key={r}
                   type="button"
                   aria-pressed={value.sbtResult === r}
-                  onClick={() => onChange({ ...value, sbtResult: value.sbtResult === r ? '' : r, failureReason: '' })}
+                  onClick={() => onChange({ ...value, sbtResult: value.sbtResult === r ? '' : r, duration: '', failureReason: '' })}
                   className={`min-h-[48px] border-2 rounded-xl font-medium ${
                     value.sbtResult === r
                       ? r === 'success'
@@ -228,6 +210,27 @@ export function PveDecisionForm({
               ))}
             </div>
           </div>
+          {value.sbtResult === 'success' && (
+            <div>
+              <div className="block text-sm font-medium text-gray-700 mb-1">Duración (minutos)</div>
+              <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label="Duración de la PVE en minutos">
+                {pveDurationOptions.map((m) => (
+                  <button
+                    key={m}
+                    type="button"
+                    role="radio"
+                    aria-checked={value.duration === String(m)}
+                    onClick={() => onChange({ ...value, duration: String(m) })}
+                    className={`min-h-[48px] border-2 rounded-xl font-semibold ${
+                      value.duration === String(m) ? 'border-green-500 bg-green-50 text-gray-900' : 'border-gray-200 text-gray-700 active:bg-gray-50'
+                    }`}
+                  >
+                    {m}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
           {value.sbtResult === 'failure' && (
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Motivo de falla (opcional)</label>
