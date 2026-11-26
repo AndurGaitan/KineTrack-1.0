@@ -11,12 +11,13 @@ import type { CreatePveDecisionInput } from '../api/pveDecisionsApi';
 /**
  * Motivos de "no cumple criterios": uno por cada criterio de aptitud del protocolo institucional de liberación de
  * la VMI (2026), sección 5.1. El protocolo no exige un valor de RASS, Glasgow ni hemoglobina para iniciar la PVE.
+ * `short` y `hint` van en el botón; `label`, en la evolución, el pase y los registros.
  */
-export const pveContraindicationReasons: { value: string; label: string; hint: string }[] = [
-  { value: 'causa-no-resuelta', label: 'Causa de la VMI sin mejoría', hint: 'La causa que motivó la VMI no está resuelta ni controlada' },
-  { value: 'oxigenacion-inadecuada', label: 'Oxigenación inadecuada', hint: 'Requiere FiO₂ > 0,50 o PEEP > 8 cmH₂O, o SpO₂ fuera del objetivo' },
-  { value: 'inestabilidad-hemodinamica', label: 'Inestabilidad hemodinámica', hint: 'Shock no controlado o aumento reciente de vasoactivos' },
-  { value: 'sin-esfuerzo-inspiratorio', label: 'Ausencia de esfuerzo inspiratorio espontáneo', hint: 'No inicia respiraciones por sí mismo' },
+export const pveContraindicationReasons: { value: string; label: string; short: string; hint: string }[] = [
+  { value: 'causa-no-resuelta', label: 'Causa de la VMI sin mejoría', short: 'Causa sin mejoría', hint: 'Motivo de la VMI' },
+  { value: 'oxigenacion-inadecuada', label: 'Oxigenación inadecuada', short: 'Oxigenación', hint: 'FiO₂ > 0,50 o PEEP > 8' },
+  { value: 'inestabilidad-hemodinamica', label: 'Inestabilidad hemodinámica', short: 'Hemodinamia', hint: 'Shock o más vasoactivos' },
+  { value: 'sin-esfuerzo-inspiratorio', label: 'Ausencia de esfuerzo inspiratorio espontáneo', short: 'Sin esfuerzo', hint: 'No inicia respiraciones' },
 ];
 
 /** Motivos que ya no se ofrecen; solo para mostrar los registros cargados antes del protocolo. */
@@ -249,31 +250,26 @@ export function PveDecisionForm({
       {(value.decision === 'contraindicada' || value.decision === 'no-realizada') && (
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
-            {value.decision === 'contraindicada' ? 'Motivo por el que no cumple criterios' : 'Motivo por el que no se realizó'}
+            {value.decision === 'contraindicada' ? 'Motivo principal' : 'Motivo por el que no se realizó'}
           </label>
           {value.decision === 'contraindicada' ? (
-            <>
-              <div className="space-y-2" role="radiogroup" aria-label="Criterio que no cumple">
-                {pveContraindicationReasons.map((r) => (
-                  <button
-                    key={r.value}
-                    type="button"
-                    role="radio"
-                    aria-checked={value.reason === r.value}
-                    onClick={() => onChange({ ...value, reason: r.value })}
-                    className={`w-full min-h-[52px] px-3 py-2 border-2 rounded-xl text-left ${
-                      value.reason === r.value ? 'border-amber-500 bg-amber-50' : 'border-gray-200 active:bg-gray-50'
-                    }`}
-                  >
-                    <div className="text-sm font-semibold text-gray-900">{r.label}</div>
-                    <div className="text-xs text-gray-600 mt-0.5">{r.hint}</div>
-                  </button>
-                ))}
-              </div>
-              <p className="text-xs text-gray-500 mt-2">
-                Si hay más de una, elegí la principal. Un día en que no cumple criterios no cuenta como día elegible en el indicador de PVE.
-              </p>
-            </>
+            <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label="Criterio que no cumple">
+              {pveContraindicationReasons.map((r) => (
+                <button
+                  key={r.value}
+                  type="button"
+                  role="radio"
+                  aria-checked={value.reason === r.value}
+                  onClick={() => onChange({ ...value, reason: r.value })}
+                  className={`min-h-[52px] px-2 py-1.5 border-2 rounded-xl leading-tight ${
+                    value.reason === r.value ? 'border-amber-500 bg-amber-50' : 'border-gray-200 active:bg-gray-50'
+                  }`}
+                >
+                  <div className="text-sm font-semibold text-gray-900">{r.short}</div>
+                  <div className="text-xs text-gray-600">{r.hint}</div>
+                </button>
+              ))}
+            </div>
           ) : (
             <input
               className={fieldClass}
