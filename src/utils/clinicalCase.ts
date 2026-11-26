@@ -1,4 +1,5 @@
 import type { PveDecision, VMIRecord } from '../types';
+import { pveReasonLabel } from '../components/PveDecisionForm';
 
 /**
  * Retrospectiva de un caso de VMI: pasa los registros de monitorización a una serie con "día de VMI",
@@ -223,9 +224,11 @@ export function pveEvents(decisions: PveDecision[], startMs: number): CaseEvent[
       if (d.decision === 'realizada') {
         const how = d.sbtType ? ` (${sbt[d.sbtType] ?? d.sbtType})` : '';
         const result = d.sbtResult === 'success' ? ': exitosa' : d.sbtResult === 'failure' ? `: fallida${d.failureReason ? ` (${d.failureReason})` : ''}` : '';
-        text = `PVE realizada${how}${result}`;
+        const duration = d.durationMinutes ? `, ${d.durationMinutes} min` : '';
+        text = `PVE realizada${how}${duration}${result}`;
       } else if (d.decision === 'contraindicada') {
-        text = `PVE: no cumple criterios${d.reason ? ` (${d.reason})` : ''}`;
+        const reason = pveReasonLabel(d.decision, d.reason);
+        text = `PVE: no cumple criterios${reason ? ` (${reason})` : ''}`;
       } else {
         text = `PVE: cumple criterios y no se realizó${d.reason ? ` (${d.reason})` : ''}`;
       }

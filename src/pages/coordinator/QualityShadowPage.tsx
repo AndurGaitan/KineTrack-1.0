@@ -435,7 +435,6 @@ function CorrectionDialog({ row, onClose, onDone }: { row: ShadowPatientDay; onC
               <select value={method} onChange={(e) => setMethod(e.target.value)} className="w-full border-2 border-gray-200 rounded-lg px-2 py-1 text-sm">
                 <option value="">Método…</option>
                 <option value="psv">PSV</option>
-                <option value="cpap">CPAP</option>
                 <option value="t-piece">Tubo en T</option>
               </select>
             ) : (

@@ -104,7 +104,12 @@ function vmiLines(r: VMIRecord, pveDecisions: PveDecision[]): (string | undefine
 
 export function describePve(d: PveDecision): string {
   if (d.decision === 'realizada') {
-    const details = [d.sbtType ? sbtShort[d.sbtType] : undefined, d.sbtResult === 'success' ? 'exitosa' : d.sbtResult === 'failure' ? 'fallida' : undefined, d.failureReason].filter(Boolean);
+    const details = [
+      d.sbtType ? sbtShort[d.sbtType] : undefined,
+      d.durationMinutes ? `${d.durationMinutes} min` : undefined,
+      d.sbtResult === 'success' ? 'exitosa' : d.sbtResult === 'failure' ? 'fallida' : undefined,
+      d.failureReason,
+    ].filter(Boolean);
     return details.length > 0 ? `PVE realizada (${details.join(', ')})` : 'PVE realizada';
   }
   const reason = pveReasonLabel(d.decision, d.reason);

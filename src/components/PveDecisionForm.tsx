@@ -38,11 +38,18 @@ const pveNotDoneLegacyReasons: Record<string, string> = {
   otra: 'Otra',
 };
 
-export const pveSbtTypes: { value: PveSbtType; label: string; short: string }[] = [
-  { value: 'psv', label: 'Presión de soporte (PSV)', short: 'PSV' },
+/** Todas las modalidades, incluida CPAP, para mostrar los registros ya cargados. */
+export const pveSbtTypes: { value: PveSbtType; label: string; short: string; hint?: string }[] = [
+  { value: 'psv', label: 'Presión de soporte (PSV)', short: 'PSV', hint: 'PS 5–7 + PEEP 5' },
   { value: 'cpap', label: 'CPAP', short: 'CPAP' },
-  { value: 't-piece', label: 'Tubo en T', short: 'Tubo en T' },
+  { value: 't-piece', label: 'Tubo en T', short: 'Tubo en T', hint: 'Sin soporte' },
 ];
+
+/** Modalidades del protocolo: PSV de bajo nivel o tubo en T (sección 5.2). */
+const pveEntrySbtTypes = pveSbtTypes.filter((t) => t.value !== 'cpap');
+
+/** Duraciones que se registran: 30 minutos (inicial) o 120 (extendida). */
+const pveDurationOptions = [30, 120];
 
 export const pveDecisionLabels: Record<PveDecisionKind, string> = {
   realizada: 'PVE realizada',
@@ -62,15 +69,31 @@ export interface PveDraft {
   reason: string;
   sbtType: '' | PveSbtType;
   sbtResult: '' | 'success' | 'failure';
+  /** Minutos elegidos ('30' o '120'). */
+  duration: string;
   failureReason: string;
 }
 
-export const emptyPveDraft: PveDraft = { decision: '', reason: '', sbtType: '', sbtResult: '', failureReason: '' };
+export const emptyPveDraft: PveDraft = {
+  decision: '',
+  reason: '',
+  sbtType: '',
+  sbtResult: '',
+  duration: '',
+  failureReason: '',
+};
 
 /** Qué falta para poder guardar el borrador (null si está completo o si no se eligió ninguna decisión). */
 export function pveDraftError(d: PveDraft): string | null {
   if (!d.decision) return null;
-  if (d.decision === 'realizada') return d.sbtType ? null : 'Indicá la modalidad de la PVE';
+  if (d.decision === 'realizada') {
+    // El protocolo pide registrar modalidad, duración y resultado (sección 6).
+    if (!d.sbtType) return 'Indicá la modalidad de la PVE';
+    if (!d.sbtResult) return 'Indicá el resultado de la PVE';
+    // En una fallida no se pide la duración: se interrumpe antes y no se guarda un tiempo que nadie midió.
+    if (d.sbtResult === 'success' && !d.duration) return 'Indicá la duración de la PVE';
+    return null;
+  }
   return d.reason.trim() ? null : d.decision === 'contraindicada' ? 'Indicá por qué no cumple criterios' : 'Indicá por qué no se realizó';
 }
 
@@ -83,6 +106,7 @@ export function pveDraftToInput(d: PveDraft, patientId: string, timestamp?: stri
       decision: 'realizada',
       sbtType: d.sbtType as PveSbtType,
       sbtResult: d.sbtResult || undefined,
+      durationMinutes: d.sbtResult === 'success' ? Number(d.duration) : undefined,
       failureReason: d.sbtResult === 'failure' && d.failureReason.trim() ? d.failureReason.trim() : undefined,
     };
   }
@@ -146,32 +170,33 @@ export function PveDecisionForm({
         <div className="space-y-3">
           <div>
             <div className="block text-sm font-medium text-gray-700 mb-1">Modalidad</div>
-            <div className="grid grid-cols-3 gap-2" role="radiogroup" aria-label="Modalidad de la PVE">
-              {pveSbtTypes.map((t) => (
+            <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label="Modalidad de la PVE">
+              {pveEntrySbtTypes.map((t) => (
                 <button
                   key={t.value}
                   type="button"
                   role="radio"
                   aria-checked={value.sbtType === t.value}
                   onClick={() => onChange({ ...value, sbtType: t.value })}
-                  className={`min-h-[48px] px-1 border-2 rounded-xl text-sm font-semibold leading-tight ${
-                    value.sbtType === t.value ? 'border-green-500 bg-green-50 text-gray-900' : 'border-gray-200 text-gray-700 active:bg-gray-50'
+                  className={`min-h-[52px] px-2 py-1.5 border-2 rounded-xl leading-tight ${
+                    value.sbtType === t.value ? 'border-green-500 bg-green-50' : 'border-gray-200 active:bg-gray-50'
                   }`}
                 >
-                  {t.short}
+                  <div className="text-sm font-semibold text-gray-900">{t.short}</div>
+                  <div className="text-xs text-gray-600">{t.hint}</div>
                 </button>
               ))}
             </div>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Resultado</label>
+            <div className="block text-sm font-medium text-gray-700 mb-1">Resultado</div>
             <div className="grid grid-cols-2 gap-2">
               {(['success', 'failure'] as const).map((r) => (
                 <button
                   key={r}
                   type="button"
                   aria-pressed={value.sbtResult === r}
-                  onClick={() => onChange({ ...value, sbtResult: value.sbtResult === r ? '' : r, failureReason: '' })}
+                  onClick={() => onChange({ ...value, sbtResult: value.sbtResult === r ? '' : r, duration: '', failureReason: '' })}
                   className={`min-h-[48px] border-2 rounded-xl font-medium ${
                     value.sbtResult === r
                       ? r === 'success'
@@ -185,6 +210,27 @@ export function PveDecisionForm({
               ))}
             </div>
           </div>
+          {value.sbtResult === 'success' && (
+            <div>
+              <div className="block text-sm font-medium text-gray-700 mb-1">Duración (minutos)</div>
+              <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label="Duración de la PVE en minutos">
+                {pveDurationOptions.map((m) => (
+                  <button
+                    key={m}
+                    type="button"
+                    role="radio"
+                    aria-checked={value.duration === String(m)}
+                    onClick={() => onChange({ ...value, duration: String(m) })}
+                    className={`min-h-[48px] border-2 rounded-xl font-semibold ${
+                      value.duration === String(m) ? 'border-green-500 bg-green-50 text-gray-900' : 'border-gray-200 text-gray-700 active:bg-gray-50'
+                    }`}
+                  >
+                    {m}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
           {value.sbtResult === 'failure' && (
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Motivo de falla (opcional)</label>

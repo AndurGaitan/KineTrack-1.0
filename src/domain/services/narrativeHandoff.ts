@@ -130,8 +130,9 @@ function pveSentences(decisions: PveDecision[]): string[] {
   return decisions.map((d) => {
     if (d.decision === 'realizada') {
       const mode = d.sbtType === 'psv' ? ' en presión de soporte' : d.sbtType === 'cpap' ? ' en CPAP' : d.sbtType === 't-piece' ? ' con tubo en T' : '';
+      const duration = d.durationMinutes ? ` de ${d.durationMinutes} minutos` : '';
       const result = d.sbtResult === 'success' ? ', con resultado exitoso' : d.sbtResult === 'failure' ? `, con resultado fallido${d.failureReason ? ` (${d.failureReason})` : ''}` : '';
-      return `se realizó la prueba de ventilación espontánea${mode}${result}`;
+      return `se realizó la prueba de ventilación espontánea${duration}${mode}${result}`;
     }
     const reason = pveReasonLabel(d.decision, d.reason);
     return d.decision === 'contraindicada'

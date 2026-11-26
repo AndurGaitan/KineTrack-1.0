@@ -20,7 +20,8 @@ function describe(d: PveDecision): string {
   if (d.decision === 'realizada') {
     const type = pveSbtTypes.find((t) => t.value === d.sbtType)?.label ?? d.sbtType;
     const result = d.sbtResult === 'success' ? 'exitosa' : d.sbtResult === 'failure' ? 'fallida' : undefined;
-    return [type, result, d.failureReason].filter(Boolean).join(' · ');
+    const duration = d.durationMinutes ? `${d.durationMinutes} min` : undefined;
+    return [type, duration, result, d.failureReason].filter(Boolean).join(' · ');
   }
   return pveReasonLabel(d.decision, d.reason) ?? '';
 }

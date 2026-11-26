@@ -9,6 +9,7 @@ export type CreatePveDecisionInput = {
   sbtType?: PveSbtType;
   sbtResult?: 'success' | 'failure';
   failureReason?: string;
+  durationMinutes?: number;
   notes?: string;
 };
 

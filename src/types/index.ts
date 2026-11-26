@@ -462,6 +462,7 @@ export interface TrachOverview {
 // Etapa 1: decisiones de PVE y movilización precoz (72 h).
 // ---------------------------------------------------------------------------
 export type PveDecisionKind = 'realizada' | 'contraindicada' | 'no-realizada';
+// 'cpap' ya no se ofrece (el protocolo institucional usa PSV de bajo nivel o tubo en T); queda para leer registros viejos.
 export type PveSbtType = 'psv' | 'cpap' | 't-piece';
 
 export interface PveDecision {
@@ -475,6 +476,7 @@ export interface PveDecision {
   sbtType?: PveSbtType;
   sbtResult?: 'success' | 'failure';
   failureReason?: string;
+  durationMinutes?: number;
   notes?: string;
 }
 
