@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useState } from 'react';
+import { FormEvent, useEffect, useRef, useState } from 'react';
 import { Header } from '../../components/ui/Header';
 import { Card } from '../../components/ui/Card';
 import { Badge } from '../../components/ui/Badge';
@@ -8,6 +8,7 @@ import { CoordinatorNav } from '../../components/CoordinatorNav';
 import { useApp } from '../../contexts/AppContext';
 import * as authApi from '../../api/authApi';
 import { User } from '../../types';
+import { attempt, notifyError, notifySuccess } from '../../utils/notify';
 
 interface IssuedCredential {
   name: string;
@@ -26,6 +27,11 @@ export function UsersAdminPage() {
   const [error, setError] = useState<string | null>(null);
   const [credential, setCredential] = useState<IssuedCredential | null>(null);
   const [copied, setCopied] = useState(false);
+  const credentialRef = useRef<HTMLDivElement>(null);
+  // La credencial aparece arriba de todo: se lleva a la vista aunque el botón estuviera al final de la lista.
+  useEffect(() => {
+    credentialRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }, [credential]);
 
   const load = () => {
     setLoading(true);
@@ -42,8 +48,13 @@ export function UsersAdminPage() {
     if (u.id === currentUser?.id && newRole !== 'coordinador') {
       if (!window.confirm('Vas a quitarte tu propio rol de coordinador. ¿Continuar?')) return;
     }
-    await authApi.setUserRole(u.id, newRole);
-    load();
+    await attempt(
+      async () => {
+        await authApi.setUserRole(u.id, newRole);
+        load();
+      },
+      { success: newRole === 'coordinador' ? 'Ahora es coordinador' : 'Se quitó la coordinación', detail: u.name, failure: 'No se pudo cambiar el rol' }
+    );
   };
 
   const showCredential = (next: IssuedCredential) => {
@@ -58,6 +69,7 @@ export function UsersAdminPage() {
     try {
       const { user, temporaryPassword } = await authApi.createUser({ name: form.name, email: form.email });
       showCredential({ name: user.name, email: user.email, temporaryPassword, reason: 'created' });
+      notifySuccess('Usuario creado', user.name);
       setForm({ name: '', email: '' });
       setShowForm(false);
       load();
@@ -73,8 +85,9 @@ export function UsersAdminPage() {
     try {
       const { temporaryPassword } = await authApi.resetUserPassword(u.id);
       showCredential({ name: u.name, email: u.email, temporaryPassword, reason: 'reset' });
+      notifySuccess('Contraseña temporal generada', u.name);
     } catch (err) {
-      window.alert(err instanceof Error ? err.message : 'No se pudo restablecer la contraseña');
+      notifyError('No se pudo restablecer la contraseña', err);
     }
   };
 
@@ -121,6 +134,7 @@ export function UsersAdminPage() {
         </div>
 
         {credential && (
+          <div ref={credentialRef}>
           <Card className="border-2 border-green-300 bg-green-50">
             <div className="font-bold text-gray-900 mb-1">
               {credential.reason === 'created' ? 'Cuenta creada' : 'Contraseña restablecida'}: {credential.name}
@@ -147,6 +161,7 @@ export function UsersAdminPage() {
               </button>
             </div>
           </Card>
+          </div>
         )}
 
         {showForm && (

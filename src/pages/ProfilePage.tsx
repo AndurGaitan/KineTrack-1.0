@@ -8,17 +8,17 @@ import { Input } from '../components/ui/Input';
 import { Badge } from '../components/ui/Badge';
 import * as authApi from '../api/authApi';
 import { LogOutIcon } from 'lucide-react';
+import { useFormRetry } from '../hooks/useRetry';
+import { dismissRetry, notifySuccess, offerRetry } from '../utils/notify';
 
 export function ProfilePage() {
   const navigate = useNavigate();
   const { user, updateProfile, logout } = useApp();
   const [name, setName] = useState(user?.name ?? '');
   const [submitting, setSubmitting] = useState(false);
-  const [saved, setSaved] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const { formRef, retry } = useFormRetry();
   const [passwords, setPasswords] = useState({ current: '', next: '', confirm: '' });
   const [pwSubmitting, setPwSubmitting] = useState(false);
-  const [pwSaved, setPwSaved] = useState(false);
   const [pwError, setPwError] = useState<string | null>(null);
 
   if (!user) return null;
@@ -26,7 +26,6 @@ export function ProfilePage() {
   const handlePasswordSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setPwError(null);
-    setPwSaved(false);
     if (passwords.next.length < 8) {
       setPwError('La contraseña nueva debe tener al menos 8 caracteres');
       return;
@@ -39,7 +38,7 @@ export function ProfilePage() {
     try {
       await authApi.changeMyPassword({ currentPassword: passwords.current, newPassword: passwords.next });
       setPasswords({ current: '', next: '', confirm: '' });
-      setPwSaved(true);
+      notifySuccess('Contraseña actualizada');
     } catch (err) {
       setPwError(err instanceof Error ? err.message : 'No se pudo cambiar la contraseña');
     } finally {
@@ -49,15 +48,14 @@ export function ProfilePage() {
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    if (!name.trim()) return;
+    if (!name.trim() || submitting) return;
+    dismissRetry(retry);
     setSubmitting(true);
-    setError(null);
-    setSaved(false);
     try {
       await updateProfile(name.trim());
-      setSaved(true);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'No se pudo guardar');
+      notifySuccess('Perfil actualizado');
+    } catch {
+      offerRetry(retry); // el aviso del error ya lo emitió el contexto
     } finally {
       setSubmitting(false);
     }
@@ -80,21 +78,15 @@ export function ProfilePage() {
             </Badge>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form ref={formRef} onSubmit={handleSubmit} className="space-y-4">
             <Input
               label="Nombre"
               value={name}
-              onChange={(e) => {
-                setName(e.target.value);
-                setSaved(false);
-              }}
+              onChange={(e) => setName(e.target.value)}
               placeholder="Tu nombre"
               required
             />
             <Input label="Email" value={user.email} disabled />
-
-            {error && <p className="text-sm text-red-600">{error}</p>}
-            {saved && <p className="text-sm text-green-600">✓ Perfil actualizado</p>}
 
             <Button type="submit" fullWidth disabled={submitting || name.trim() === user.name}>
               {submitting ? 'Guardando...' : 'Guardar Cambios'}
@@ -110,10 +102,7 @@ export function ProfilePage() {
               type="password"
               autoComplete="current-password"
               value={passwords.current}
-              onChange={(e) => {
-                setPasswords({ ...passwords, current: e.target.value });
-                setPwSaved(false);
-              }}
+              onChange={(e) => setPasswords({ ...passwords, current: e.target.value })}
               required
             />
             <Input
@@ -121,10 +110,7 @@ export function ProfilePage() {
               type="password"
               autoComplete="new-password"
               value={passwords.next}
-              onChange={(e) => {
-                setPasswords({ ...passwords, next: e.target.value });
-                setPwSaved(false);
-              }}
+              onChange={(e) => setPasswords({ ...passwords, next: e.target.value })}
               placeholder="Mínimo 8 caracteres"
               required
             />
@@ -133,15 +119,11 @@ export function ProfilePage() {
               type="password"
               autoComplete="new-password"
               value={passwords.confirm}
-              onChange={(e) => {
-                setPasswords({ ...passwords, confirm: e.target.value });
-                setPwSaved(false);
-              }}
+              onChange={(e) => setPasswords({ ...passwords, confirm: e.target.value })}
               required
             />
 
             {pwError && <p className="text-sm text-red-600">{pwError}</p>}
-            {pwSaved && <p className="text-sm text-green-600">✓ Contraseña actualizada</p>}
 
             <Button type="submit" fullWidth disabled={pwSubmitting || !passwords.current || !passwords.next || !passwords.confirm}>
               {pwSubmitting ? 'Guardando...' : 'Cambiar contraseña'}

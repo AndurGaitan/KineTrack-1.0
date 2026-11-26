@@ -13,6 +13,7 @@ import { PatientCarePanel } from '../components/PatientCarePanel';
 import { EditIcon, BedDoubleIcon, ActivityIcon, WindIcon, DropletIcon, ChevronDownIcon, ChevronUpIcon, RepeatIcon, XCircleIcon, ClipboardPlusIcon, ClipboardListIcon, DumbbellIcon, ClipboardCheckIcon, BrainIcon, TrendingUpIcon, StethoscopeIcon } from 'lucide-react';
 import { SupportType, ClosureReason, AirwayEventInput } from '../types';
 import { calendarDaysBetween, daysSpanText } from '../utils/supportDays';
+import { notifySuccess } from '../utils/notify';
 const supportTypeLabels = {
   imv: 'VMI',
   niv: 'VMNI',
@@ -141,32 +142,44 @@ export function PatientDetailPage() {
   const calculateEpisodeDuration = (startAt: string, endAt?: string) => {
     return daysSpanText(calendarDaysBetween(startAt, endAt ?? new Date()));
   };
-  const handleChangeSupport = (
+  const handleChangeSupport = async (
     newSupport: SupportType,
     reason: string,
     date: string,
     airwayEvent?: AirwayEventInput,
     location?: { sectorId: string; bedId: string }
   ) => {
-    changeSupportType(patient.id, newSupport, reason, date, airwayEvent, location);
-    setShowChangeSupportModal(false);
+    const ok = await changeSupportType(patient.id, newSupport, reason, date, airwayEvent, location);
+    if (ok) {
+      notifySuccess('Soporte cambiado', patient.alias);
+      setShowChangeSupportModal(false);
+    }
+    return ok;
   };
   const handleStartChangeSupport = (to: SupportType) => {
     setChangeSupportTo(to);
     setShowChangeSupportModal(true);
   };
-  const handleChangeBed = (sectorId: string, bedId: string) => {
-    updatePatient(patient.id, { sectorId, bedId });
-    setShowChangeBedModal(false);
+  const handleChangeBed = async (sectorId: string, bedId: string) => {
+    const ok = await updatePatient(patient.id, { sectorId, bedId });
+    if (ok) {
+      notifySuccess('Cama actualizada', patient.alias);
+      setShowChangeBedModal(false);
+    }
+    return ok;
   };
-  const handleClosePatient = (reason: ClosureReason, date: string, notes: string) => {
-    closePatient(patient.id, {
+  const handleClosePatient = async (reason: ClosureReason, date: string, notes: string) => {
+    const ok = await closePatient(patient.id, {
       reason,
       date,
       notes
     });
-    setShowClosePatientModal(false);
-    navigate(`/sector/${sector.id}`);
+    if (ok) {
+      notifySuccess('Caso cerrado', patient.alias);
+      setShowClosePatientModal(false);
+      navigate(`/sector/${sector.id}`);
+    }
+    return ok;
   };
   const getEpisodeRecords = (episodeId: string, supportType: SupportType) => {
     switch (supportType) {
@@ -271,7 +284,7 @@ export function PatientDetailPage() {
           </Card>}
 
         {!isClosed && <>
-            <PatientCarePanel patient={patient} onChangeSupport={handleStartChangeSupport} />
+            <PatientCarePanel key={patient.id} patient={patient} onChangeSupport={handleStartChangeSupport} />
 
             {/* Otras prestaciones y evolución */}
             <div className="grid grid-cols-2 gap-3">

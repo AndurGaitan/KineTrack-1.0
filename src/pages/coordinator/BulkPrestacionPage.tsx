@@ -8,6 +8,7 @@ import { CoordinatorNav } from '../../components/CoordinatorNav';
 import * as prestacionesApi from '../../api/prestacionesApi';
 import { PrestacionType } from '../../types';
 import { CheckCircleIcon, AlertCircleIcon } from 'lucide-react';
+import { notifyError, notifySuccess } from '../../utils/notify';
 
 const supportTypeLabels: Record<string, string> = {
   imv: 'VMI',
@@ -87,6 +88,10 @@ export function BulkPrestacionPage() {
       }
     });
     setResult({ succeeded, failed });
+    if (succeeded.length > 0) notifySuccess(succeeded.length === 1 ? '1 prestación registrada' : `${succeeded.length} prestaciones registradas`);
+    if (failed.length > 0) {
+      notifyError(failed.length === 1 ? 'Falló 1 registro' : `Fallaron ${failed.length} registros`, `${failed.map((f) => f.alias).join(', ')}: quedaron seleccionados`);
+    }
     setSelected(new Set(failed.map((f) => f.patientId)));
     setSubmitting(false);
   };

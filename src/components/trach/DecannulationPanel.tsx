@@ -24,6 +24,8 @@ import {
 } from '../../domain/services/trachDecannulation';
 import type { TrachDecannulationProcess, TrachDomain, TrachDomainStatus } from '../../types';
 import { ChevronDownIcon, ChevronUpIcon } from 'lucide-react';
+import { useRetry } from '../../hooks/useRetry';
+import { dismissRetry, notifyError, notifySuccess, offerRetry } from '../../utils/notify';
 
 interface DecannulationPanelProps {
   patientId: string;
@@ -40,7 +42,8 @@ export function DecannulationPanel({ patientId, ctx, onProcessChange, onGoToUpda
   const [expanded, setExpanded] = useState<TrachDomain | null>(null);
   const [rescueForced, setRescueForced] = useState(false);
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const retryStart = useRetry(() => start());
+  const retryAspiration = useRetry(() => logAspiration());
   const [confirmStart, setConfirmStart] = useState(false);
   const [showEnd, setShowEnd] = useState(false);
 
@@ -50,16 +53,31 @@ export function DecannulationPanel({ patientId, ctx, onProcessChange, onGoToUpda
   const missing = useMemo(() => missingItems(process, ctx, rescueVisible), [process, ctx, rescueVisible]);
 
   const start = async () => {
+    dismissRetry(retryStart);
     setBusy(true);
-    setError(null);
     try {
       onProcessChange(await trachApi.startProcess({ patientId, episodeId: episode?.id }));
+      notifySuccess('Proceso de decanulación iniciado');
       setConfirmStart(false);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'No se pudo iniciar el proceso');
+      notifyError('No se pudo iniciar el proceso', err);
+      offerRetry(retryStart);
     } finally {
       setBusy(false);
     }
+  };
+
+  const logAspiration = async () => {
+    dismissRetry(retryAspiration);
+    try {
+      await trachApi.logAspiration({ patientId, episodeId: episode?.id });
+    } catch (err) {
+      notifyError('No se pudo registrar la aspiración', err);
+      offerRetry(retryAspiration);
+      return;
+    }
+    notifySuccess('Aspiración registrada');
+    await onChanged();
   };
 
   const runAction = async (domain: TrachDomain, action: DomainAction) => {
@@ -70,12 +88,7 @@ export function DecannulationPanel({ patientId, ctx, onProcessChange, onGoToUpda
       return setExpanded('rescate');
     }
     // log-aspiration
-    try {
-      await trachApi.logAspiration({ patientId, episodeId: episode?.id });
-      await onChanged();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'No se pudo registrar la aspiración');
-    }
+    await logAspiration();
     void domain;
   };
 
@@ -111,7 +124,6 @@ export function DecannulationPanel({ patientId, ctx, onProcessChange, onGoToUpda
             </div>
           </div>
         )}
-        {error && <p className="mt-3 text-sm text-red-600">{error}</p>}
       </Card>
     );
   }
@@ -213,7 +225,6 @@ export function DecannulationPanel({ patientId, ctx, onProcessChange, onGoToUpda
         )}
       </div>
 
-      {error && <p className="mt-3 text-sm text-red-600">{error}</p>}
 
       {showEnd && <EndProcessSheet process={process} onClose={() => setShowEnd(false)} onEnded={() => { setShowEnd(false); onProcessChange(null); void onChanged(); }} />}
     </Card>
@@ -243,12 +254,12 @@ function DomainCard({ meta, index, ctx, process, open, onToggle, onProcessChange
   const [notes, setNotes] = useState('');
   const [showHistory, setShowHistory] = useState(false);
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const retry = useRetry(() => save());
 
   const save = async () => {
-    if (!draft) return;
+    if (!draft || busy) return;
+    dismissRetry(retry);
     setBusy(true);
-    setError(null);
     try {
       const updated = await trachApi.assessDomain(process.id, {
         domain: meta.key,
@@ -259,10 +270,12 @@ function DomainCard({ meta, index, ctx, process, open, onToggle, onProcessChange
         observed: { facts: obs.facts, check: obs.check, checkText: obs.checkText, reference: meta.reference },
       });
       onProcessChange(updated);
+      notifySuccess('Interpretación guardada', `${meta.label}: ${STATUS_META[draft].label.toLowerCase()}`);
       setDraft(undefined);
       setNotes('');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'No se pudo guardar la interpretación');
+      notifyError('No se pudo guardar la interpretación', err);
+      offerRetry(retry);
     } finally {
       setBusy(false);
     }
@@ -339,7 +352,6 @@ function DomainCard({ meta, index, ctx, process, open, onToggle, onProcessChange
             {draft && (
               <div className="mt-3 space-y-3">
                 <Input label="Fundamento (opcional)" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Ej: tos efectiva, secreciones manejables" />
-                {error && <p className="text-sm text-red-600">{error}</p>}
                 <Button fullWidth onClick={save} disabled={busy} className="bg-indigo-600">
                   {busy ? 'Guardando...' : `Guardar como ${STATUS_META[draft].label.toLowerCase()}`}
                 </Button>
@@ -375,17 +387,19 @@ function EndProcessSheet({ process, onClose, onEnded }: { process: TrachDecannul
   const [outcome, setOutcome] = useState<'decanulado' | 'suspendido' | undefined>(undefined);
   const [notes, setNotes] = useState('');
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const retry = useRetry(() => end());
 
   const end = async () => {
-    if (!outcome) return;
+    if (!outcome || busy) return;
+    dismissRetry(retry);
     setBusy(true);
-    setError(null);
     try {
       await trachApi.endProcess(process.id, { outcome, notes: notes.trim() || undefined });
+      notifySuccess('Proceso de decanulación finalizado');
       onEnded();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'No se pudo finalizar el proceso');
+      notifyError('No se pudo finalizar el proceso', err);
+      offerRetry(retry);
     } finally {
       setBusy(false);
     }
@@ -408,7 +422,6 @@ function EndProcessSheet({ process, onClose, onEnded }: { process: TrachDecannul
         {outcome === 'decanulado' && (
           <p className="text-xs text-gray-500">Después de decanular, actualizá el soporte del paciente desde “Cambiar soporte” en su ficha.</p>
         )}
-        {error && <p className="text-sm text-red-600">{error}</p>}
         <Button fullWidth disabled={busy || !outcome} onClick={end}>
           {busy ? 'Guardando...' : 'Finalizar proceso'}
         </Button>

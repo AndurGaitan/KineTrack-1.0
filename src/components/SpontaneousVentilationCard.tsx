@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useApp } from '../contexts/AppContext';
 import { toLocalDateTimeInputValue } from '../utils/dateInput';
 import {
@@ -15,6 +15,8 @@ import { calendarDaysBetween, daysSpanText } from '../utils/supportDays';
 import { dayWithWeekday, lastVmiEnd } from '../utils/vmiDays';
 import type { SpontaneousVentilationPeriod, SVInterruptionReason, SVModality } from '../types';
 import { ChevronRightIcon } from 'lucide-react';
+import { useRetry } from '../hooks/useRetry';
+import { dismissRetry, notifySuccess, offerRetry } from '../utils/notify';
 
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 const deviceName = (m: SVModality) => cap(svModalityShortLabels[m]);
@@ -80,6 +82,16 @@ export function SpontaneousVentilationCard({ patientId, episodeId }: { patientId
   const [reason, setReason] = useState<SVInterruptionReason | undefined>(undefined);
   const [timesOpen, setTimesOpen] = useState(false);
   const [busy, setBusy] = useState(false);
+  const lastClose = useRef<{ res: 'ok' | 'stop'; rsn?: SVInterruptionReason }>();
+  const retryStart = useRetry(() => startTrial());
+  const retryClose = useRetry(() => lastClose.current && closeActive(lastClose.current.res, lastClose.current.rsn));
+  const retrySave = useRetry(() => save());
+  const retryRemove = useRetry(() => remove());
+  const dropRetries = () => [retryStart, retryClose, retrySave, retryRemove].forEach(dismissRetry);
+  const cancel = () => {
+    dropRetries();
+    setSheet(null);
+  };
 
   const local = (iso: string) => toLocalDateTimeInputValue(new Date(iso));
   const iso = (v: string) => new Date(v).toISOString();
@@ -95,6 +107,7 @@ export function SpontaneousVentilationCard({ patientId, episodeId }: { patientId
   const timesInvalid = !start || !end || !(endMs > startMs) || endMs > Date.now() + 60_000;
 
   const open = (next: Sheet) => {
+    dropRetries();
     setResult(undefined);
     setReason(undefined);
     if (next?.kind === 'finish' && active) {
@@ -121,36 +134,57 @@ export function SpontaneousVentilationCard({ patientId, episodeId }: { patientId
   const finishBlocked = timesOpen && timesInvalid;
   const closeActive = async (res: 'ok' | 'stop', rsn?: SVInterruptionReason) => {
     if (!active || busy || finishBlocked) return;
+    lastClose.current = { res, rsn };
+    dismissRetry(retryClose);
     setBusy(true);
-    await updateSVPeriod(active.id, {
+    const ok = await updateSVPeriod(active.id, {
       ...(timesOpen ? { startAt: iso(start), endAt: iso(end) } : { endAt: new Date().toISOString() }),
       tolerated: res === 'ok',
       interruptionReason: res === 'stop' ? rsn : undefined,
     });
     setBusy(false);
+    if (!ok) return offerRetry(retryClose);
+    notifySuccess(res === 'ok' ? 'Prueba finalizada' : 'Prueba registrada como interrumpida', patient?.alias);
     setSheet(null);
+  };
+
+  const startTrial = async () => {
+    if (busy) return;
+    dismissRetry(retryStart);
+    setBusy(true);
+    const ok = await startSVPeriod(patientId, modality, episodeId);
+    setBusy(false);
+    if (!ok) return offerRetry(retryStart);
+    notifySuccess('Prueba iniciada', patient?.alias);
   };
 
   const save = async () => {
     if (busy || timesInvalid || !sheet) return;
+    dismissRetry(retrySave);
     setBusy(true);
     const tolerated = result === 'ok' ? true : result === 'stop' ? false : undefined;
     const interruptionReason = result === 'stop' ? reason : undefined;
+    let ok = true;
     if (sheet.kind === 'edit') {
-      await updateSVPeriod(sheet.id, { startAt: iso(start), endAt: iso(end), tolerated, interruptionReason });
+      ok = await updateSVPeriod(sheet.id, { startAt: iso(start), endAt: iso(end), tolerated, interruptionReason });
     } else if (sheet.kind === 'new') {
-      await addManualSVPeriod({ patientId, episodeId, startAt: iso(start), endAt: iso(end), modality, tolerated, interruptionReason });
+      ok = await addManualSVPeriod({ patientId, episodeId, startAt: iso(start), endAt: iso(end), modality, tolerated, interruptionReason });
     }
     setBusy(false);
+    if (!ok) return offerRetry(retrySave);
+    notifySuccess('Prueba guardada', patient?.alias);
     setSheet(null);
   };
 
   const remove = async () => {
     if (sheet?.kind !== 'edit' || busy) return;
     if (!window.confirm('¿Eliminar esta prueba?')) return;
+    dismissRetry(retryRemove);
     setBusy(true);
-    await deleteSVPeriod(sheet.id);
+    const ok = await deleteSVPeriod(sheet.id);
     setBusy(false);
+    if (!ok) return offerRetry(retryRemove);
+    notifySuccess('Prueba eliminada', patient?.alias);
     setSheet(null);
   };
 
@@ -228,7 +262,7 @@ export function SpontaneousVentilationCard({ patientId, episodeId }: { patientId
             </button>
           </div>
           {timesOpen && times}
-          <button type="button" onClick={() => setSheet(null)} className="text-sm font-semibold text-gray-500">
+          <button type="button" onClick={cancel} className="text-sm font-semibold text-gray-500">
             Cancelar
           </button>
         </div>
@@ -245,8 +279,8 @@ export function SpontaneousVentilationCard({ patientId, episodeId }: { patientId
             </div>
           )}
           {!offVent && (
-            <button type="button" onClick={() => startSVPeriod(patientId, modality, episodeId)} className={primary}>
-              Iniciar prueba
+            <button type="button" onClick={startTrial} disabled={busy} className={primary}>
+              {busy ? 'Iniciando...' : 'Iniciar prueba'}
             </button>
           )}
 
@@ -321,7 +355,7 @@ export function SpontaneousVentilationCard({ patientId, episodeId }: { patientId
             Guardar
           </button>
           <div className="flex items-center justify-between">
-            <button type="button" onClick={() => setSheet(null)} className="text-sm font-semibold text-gray-500">
+            <button type="button" onClick={cancel} className="text-sm font-semibold text-gray-500">
               Cancelar
             </button>
             {sheet.kind === 'edit' && (

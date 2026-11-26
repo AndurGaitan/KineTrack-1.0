@@ -3,6 +3,9 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useApp } from '../contexts/AppContext';
 import { Header } from '../components/ui/Header';
 import { Button } from '../components/ui/Button';
+import { SaveButton } from '../components/ui/SaveButton';
+import { useFormRetry } from '../hooks/useRetry';
+import { dismissRetry, notifySuccess, offerRetry } from '../utils/notify';
 import { VMIField } from '../components/VMIField';
 import { ChoiceChips } from '../components/ChoiceChips';
 import { AlertPanel } from '../components/AlertPanel';
@@ -20,7 +23,8 @@ const fitOptions = cannulaFitOptions.map(o => ({ value: o.value as CannulaFit, l
  * Carga de monitorización HFNC (CAFO). Se precarga con el último registro del
  * paciente: si no cambió nada alcanza con guardar.
  */
-export function HFNCEntryForm({ patient, onDone, onCancel }: { patient: Patient; onDone: () => void; onCancel?: () => void }) {
+export function HFNCEntryForm({ patient, onDone, onCancel, justSaved = false }: { patient: Patient; onDone: () => void; onCancel?: () => void; justSaved?: boolean }) {
+  const { formRef, retry } = useFormRetry();
   const { addHFNCRecord, getActiveEpisode, getPatientHFNCRecords } = useApp();
   const recordedAt = useRecordTimestamp();
   const activeEpisode = getActiveEpisode(patient.id);
@@ -63,8 +67,9 @@ export function HFNCEntryForm({ patient, onDone, onCancel }: { patient: Patient;
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (recordedAt.isFuture || saving) return;
+    dismissRetry(retry);
     setSaving(true);
-    await addHFNCRecord({
+    const ok = await addHFNCRecord({
       patientId: patient.id,
       episodeId: activeEpisode?.id,
       timestamp: recordedAt.timestamp,
@@ -83,13 +88,18 @@ export function HFNCEntryForm({ patient, onDone, onCancel }: { patient: Patient;
       alerts
     });
     setSaving(false);
+    if (!ok) {
+      offerRetry(retry);
+      return;
+    }
+    notifySuccess('Monitorización CAFO guardada', patient.alias);
     onDone();
   };
   const set = (patch: Partial<typeof formData>) => setFormData(prev => ({ ...prev, ...patch }));
   const roxTone = calculations.roxIndex >= 4.88 ? 'green' : calculations.roxIndex >= 3.85 ? 'yellow' : 'red';
 
-  return <form onSubmit={handleSubmit} className="space-y-4">
-      {last && <PrefillNotice timestamp={last.timestamp} />}
+  return <form ref={formRef} onSubmit={handleSubmit} className="space-y-4">
+      {last && <PrefillNotice timestamp={last.timestamp} highlight={justSaved} />}
 
       <div className="grid grid-cols-2 gap-3">
         <VMIField label="Flujo" educationKey="flow" unit="L/min" type="number" inputMode="decimal" value={formData.flow} onChange={e => set({ flow: Number(e.target.value) })} required />
@@ -131,9 +141,9 @@ export function HFNCEntryForm({ patient, onDone, onCancel }: { patient: Patient;
         {onCancel && <Button type="button" variant="secondary" onClick={onCancel} fullWidth>
             Cancelar
           </Button>}
-        <Button type="submit" fullWidth disabled={saving}>
-          {saving ? 'Guardando...' : 'Guardar monitorización'}
-        </Button>
+        <SaveButton fullWidth saving={saving} saved={justSaved}>
+          Guardar monitorización
+        </SaveButton>
       </div>
     </form>;
 }

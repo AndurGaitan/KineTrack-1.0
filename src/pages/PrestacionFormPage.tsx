@@ -11,6 +11,8 @@ import { mobilizationLevels } from '../utils/vmiEducation';
 import { ktmTypeOptions, oxygenDeviceOptions } from '../utils/prestacionLabels';
 import { MultiChoiceChips } from '../components/MultiChoiceChips';
 import { KtrDetail, KtrDetailFields, emptyKtrDetail, ktrDetailPayload } from '../components/KtrDetailFields';
+import { useFormRetry } from '../hooks/useRetry';
+import { dismissRetry, notifyError, notifySuccess, offerRetry } from '../utils/notify';
 
 const typeOptions: { value: PrestacionType; label: string }[] = [
   { value: 'kinesioterapia-respiratoria', label: 'Kinesioterapia respiratoria' },
@@ -50,7 +52,7 @@ export function PrestacionFormPage() {
   const [startsMobilization, setStartsMobilization] = useState(false);
   const [ktmTypes, setKtmTypes] = useState<KtmType[]>([]);
   const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const { formRef, retry } = useFormRetry();
 
   const showOxygenFields = type === 'kinesioterapia-respiratoria' && patient?.supportType === 'conventional-oxygen';
   const showDuration = type !== 'kinesioterapia-respiratoria' && type !== 'kinesioterapia-motora';
@@ -75,9 +77,9 @@ export function PrestacionFormPage() {
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    if (!type || recordedAt.isFuture) return;
+    if (!type || recordedAt.isFuture || submitting) return;
+    dismissRetry(retry);
     setSubmitting(true);
-    setError(null);
     try {
       await addPrestacion({
         patientId: patient.id,
@@ -92,13 +94,25 @@ export function PrestacionFormPage() {
         ...(type === 'kinesioterapia-respiratoria' ? ktrDetailPayload(ktrDetail) : {}),
         ...(type === 'kinesioterapia-motora' && ktmTypes.length > 0 ? { ktmTypes } : {}),
       });
-      if (canStartMobilization && startsMobilization) await startMobilization(patient.id, recordedAt.timestamp);
-      navigate(`/patient/${patient.id}`);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'No se pudo guardar la prestación');
-    } finally {
+      notifyError('No se pudo guardar la prestación', err);
+      offerRetry(retry);
       setSubmitting(false);
+      return;
     }
+    // La prestación ya está guardada: si falla el inicio de movilización, se reintenta solo eso.
+    if (canStartMobilization && startsMobilization) {
+      const patientId = patient.id;
+      const startedAt = recordedAt.timestamp;
+      const start = async () => {
+        if (await startMobilization(patientId, startedAt)) return true;
+        offerRetry(() => void start().then((done) => done && notifySuccess('Inicio de movilización anotado')));
+        return false;
+      };
+      await start();
+    }
+    notifySuccess('Prestación registrada', `${typeOptions.find((o) => o.value === type)?.label} · ${patient.alias}`);
+    navigate(`/patient/${patient.id}`);
   };
 
   return (
@@ -110,7 +124,7 @@ export function PrestacionFormPage() {
           <div className="text-xl font-bold text-gray-900">{patient.alias}</div>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form ref={formRef} onSubmit={handleSubmit} className="space-y-6">
           <RecordDateField state={recordedAt} label="Fecha y hora de la prestación" />
 
           <Select
@@ -207,8 +221,6 @@ export function PrestacionFormPage() {
             onChange={(e) => setNotes(e.target.value)}
             placeholder="Ej: Sedestación al borde de la cama, buena tolerancia"
           />
-
-          {error && <p className="text-sm text-red-600">{error}</p>}
 
           <div className="flex gap-3 pt-4">
             <Button type="button" variant="secondary" onClick={() => navigate(-1)} fullWidth>

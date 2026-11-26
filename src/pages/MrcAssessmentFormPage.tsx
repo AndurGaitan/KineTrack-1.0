@@ -6,6 +6,8 @@ import { Button } from '../components/ui/Button';
 import { Select } from '../components/ui/Input';
 import * as mrcApi from '../api/mrcApi';
 import { MrcScores, MrcStatus } from '../types';
+import { useFormRetry } from '../hooks/useRetry';
+import { dismissRetry, notifyError, notifySuccess, offerRetry } from '../utils/notify';
 
 const MUSCLE_GROUPS: { key: keyof MrcScores; label: string }[] = [
   { key: 'shoulderAbductionRight', label: 'Abducción de hombro' },
@@ -39,7 +41,7 @@ export function MrcAssessmentFormPage() {
   const [scores, setScores] = useState<MrcScores>({});
   const [daucicConfirmed, setDaucicConfirmed] = useState<'' | 'si' | 'no'>('');
   const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const { formRef, retry } = useFormRetry();
 
   const total = useMemo(() => {
     const values = MUSCLE_GROUPS.flatMap((g) => [scores[g.key], scores[leftKeyFor(g.key)]]);
@@ -61,8 +63,9 @@ export function MrcAssessmentFormPage() {
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
+    if (submitting) return;
+    dismissRetry(retry);
     setSubmitting(true);
-    setError(null);
     try {
       await mrcApi.createMrcAssessment({
         patientId: patient.id,
@@ -70,9 +73,11 @@ export function MrcAssessmentFormPage() {
         daucicConfirmed: daucicConfirmed === '' ? undefined : daucicConfirmed === 'si',
         ...scores,
       });
+      notifySuccess('Evaluación MRC guardada', patient.alias);
       navigate(`/patient/${patient.id}`);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'No se pudo guardar la evaluación');
+      notifyError('No se pudo guardar la evaluación MRC', err);
+      offerRetry(retry);
     } finally {
       setSubmitting(false);
     }
@@ -95,7 +100,7 @@ export function MrcAssessmentFormPage() {
           </p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form ref={formRef} onSubmit={handleSubmit} className="space-y-6">
           <Select label="Estado de la evaluación" value={status} onChange={(e) => setStatus(e.target.value as MrcStatus)} options={statusOptions} />
 
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 space-y-4">
@@ -164,8 +169,6 @@ export function MrcAssessmentFormPage() {
               </button>
             </div>
           </div>
-
-          {error && <p className="text-sm text-red-600">{error}</p>}
 
           <div className="flex gap-3 pt-4">
             <Button type="button" variant="secondary" onClick={() => navigate(-1)} fullWidth>

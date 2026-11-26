@@ -3,6 +3,9 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useApp } from '../contexts/AppContext';
 import { Header } from '../components/ui/Header';
 import { Button } from '../components/ui/Button';
+import { SaveButton } from '../components/ui/SaveButton';
+import { useFormRetry } from '../hooks/useRetry';
+import { dismissRetry, notifySuccess, offerRetry } from '../utils/notify';
 import { CollapsibleSection } from '../components/ui/Tooltip';
 import { NIVField } from '../components/NIVField';
 import { ChoiceChips } from '../components/ChoiceChips';
@@ -31,7 +34,8 @@ const modeOptions = nivEntryModes.map(m => ({ value: m.value as NIVMode, label: 
  * Carga de monitorización VNI (VMNI). Se precarga con el último registro:
  * interfaz, modo, parámetros y piel quedan como estaban y solo se cambia lo que varió.
  */
-export function NIVEntryForm({ patient, onDone, onCancel }: { patient: Patient; onDone: () => void; onCancel?: () => void }) {
+export function NIVEntryForm({ patient, onDone, onCancel, justSaved = false }: { patient: Patient; onDone: () => void; onCancel?: () => void; justSaved?: boolean }) {
+  const { formRef, retry } = useFormRetry();
   const { addNIVRecord, getActiveEpisode, getPatientNIVRecords, features } = useApp();
   const recordedAt = useRecordTimestamp();
   const activeEpisode = getActiveEpisode(patient.id);
@@ -101,8 +105,9 @@ export function NIVEntryForm({ patient, onDone, onCancel }: { patient: Patient; 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (!canSave || saving) return;
+    dismissRetry(retry);
     setSaving(true);
-    await addNIVRecord({
+    const ok = await addNIVRecord({
       patientId: patient.id,
       episodeId: activeEpisode?.id,
       timestamp: recordedAt.timestamp,
@@ -138,6 +143,11 @@ export function NIVEntryForm({ patient, onDone, onCancel }: { patient: Patient; 
       alerts
     });
     setSaving(false);
+    if (!ok) {
+      offerRetry(retry);
+      return;
+    }
+    notifySuccess('Monitorización VMNI guardada', patient.alias);
     onDone();
   };
   const toggleLesionLocation = (location: string) => {
@@ -147,8 +157,8 @@ export function NIVEntryForm({ patient, onDone, onCancel }: { patient: Patient; 
   };
   const hasSkinIssue = formData.skinIntegrity !== 'no-lesions' && formData.skinIntegrity !== '';
 
-  return <form onSubmit={handleSubmit} className="space-y-4">
-      {last && <PrefillNotice timestamp={last.timestamp} />}
+  return <form ref={formRef} onSubmit={handleSubmit} className="space-y-4">
+      {last && <PrefillNotice timestamp={last.timestamp} highlight={justSaved} />}
 
       <ChoiceChips label="Interfaz" options={interfaceOptions} value={formData.interfaceType} onChange={v => set({ interfaceType: v })} />
       {formData.interfaceType === 'other' && <NIVField label="Especificar interfaz" placeholder="Ej: máscara custom" value={formData.interfaceOther} onChange={e => set({ interfaceOther: e.target.value })} />}
@@ -222,9 +232,9 @@ export function NIVEntryForm({ patient, onDone, onCancel }: { patient: Patient; 
         {onCancel && <Button type="button" variant="secondary" onClick={onCancel} fullWidth>
             Cancelar
           </Button>}
-        <Button type="submit" fullWidth disabled={!canSave || saving}>
-          {saving ? 'Guardando...' : 'Guardar monitorización'}
-        </Button>
+        <SaveButton fullWidth saving={saving} saved={justSaved} disabled={!canSave}>
+          Guardar monitorización
+        </SaveButton>
       </div>
     </form>;
 }

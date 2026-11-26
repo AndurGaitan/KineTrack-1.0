@@ -1,6 +1,9 @@
 import { useState, FormEvent } from 'react';
 import { XIcon } from 'lucide-react';
 import { Button } from './ui/Button';
+import { SaveButton } from './ui/SaveButton';
+import { useFormRetry } from '../hooks/useRetry';
+import { dismissRetry, offerRetry } from '../utils/notify';
 import { SectorBedPicker } from './SectorBedPicker';
 import { Patient, Sector } from '../types';
 
@@ -8,7 +11,7 @@ interface ChangeBedModalProps {
   patient: Patient;
   sectors: Sector[];
   onClose: () => void;
-  onConfirm: (sectorId: string, bedId: string) => void;
+  onConfirm: (sectorId: string, bedId: string) => Promise<boolean>;
 }
 
 /**
@@ -19,11 +22,14 @@ export function ChangeBedModal({ patient, sectors, onClose, onConfirm }: ChangeB
   const [sectorId, setSectorId] = useState(patient.sectorId);
   const [bedId, setBedId] = useState(patient.bedId);
   const [error, setError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  const { formRef, retry } = useFormRetry();
 
   const currentSector = sectors.find((s) => s.id === patient.sectorId);
 
-  const handleSubmit = (e: FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
+    if (saving) return;
     if (!bedId) {
       setError('Seleccioná una cama');
       return;
@@ -32,7 +38,12 @@ export function ChangeBedModal({ patient, sectors, onClose, onConfirm }: ChangeB
       setError('Elegí una cama o un sector distinto del actual');
       return;
     }
-    onConfirm(sectorId, bedId);
+    dismissRetry(retry);
+    setSaving(true);
+    if (!(await onConfirm(sectorId, bedId))) {
+      setSaving(false);
+      offerRetry(retry);
+    }
   };
 
   return (
@@ -40,12 +51,12 @@ export function ChangeBedModal({ patient, sectors, onClose, onConfirm }: ChangeB
       <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
         <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
           <h2 className="text-xl font-bold text-gray-900">Cambiar de Cama</h2>
-          <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-lg transition-colors" aria-label="Cerrar">
+          <button onClick={onClose} disabled={saving} className="p-2 hover:bg-gray-100 rounded-lg transition-colors" aria-label="Cerrar">
             <XIcon className="w-5 h-5" />
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-6">
+        <form ref={formRef} onSubmit={handleSubmit} className="p-6 space-y-6">
           <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 text-sm text-blue-900">
             <strong>Ubicación actual:</strong> {currentSector?.name ?? '—'} · Cama {patient.bedLabel ?? patient.bedId}
           </div>
@@ -69,12 +80,12 @@ export function ChangeBedModal({ patient, sectors, onClose, onConfirm }: ChangeB
           {error && <p className="text-sm text-red-600">{error}</p>}
 
           <div className="flex gap-3 pt-4">
-            <Button type="button" variant="secondary" onClick={onClose} fullWidth>
+            <Button type="button" variant="secondary" onClick={onClose} disabled={saving} fullWidth>
               Cancelar
             </Button>
-            <Button type="submit" fullWidth>
+            <SaveButton fullWidth saving={saving}>
               Confirmar Cambio
-            </Button>
+            </SaveButton>
           </div>
         </form>
       </div>

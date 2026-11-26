@@ -4,6 +4,7 @@ import { Header } from '../../components/ui/Header';
 import { Card } from '../../components/ui/Card';
 import { CoordinatorNav } from '../../components/CoordinatorNav';
 import type { AppStage } from '../../types';
+import { confirmSave } from '../../utils/notify';
 
 const stage1Includes = [
   'Prestaciones: KTR y KTM (un toque, sin nivel de movilización)',
@@ -26,7 +27,7 @@ export function StagePage() {
   const change = async (next: AppStage) => {
     if (next === stage || saving) return;
     setSaving(true);
-    await setStage(next);
+    await confirmSave(() => setStage(next), `Etapa ${next} activada`, 'Vale para todo el equipo');
     setSaving(false);
   };
 

@@ -1,6 +1,8 @@
 import { FormEvent, useState } from 'react';
 import { useApp } from '../contexts/AppContext';
-import { Button } from './ui/Button';
+import { SaveButton } from './ui/SaveButton';
+import { useFormRetry } from '../hooks/useRetry';
+import { dismissRetry, notifySuccess, offerRetry } from '../utils/notify';
 import { VMIField } from './VMIField';
 import { ChoiceChips } from './ChoiceChips';
 import { AlertPanel } from './AlertPanel';
@@ -35,7 +37,8 @@ function previewAlerts(device: OxygenDeviceType, flow: number | undefined, spo2?
 }
 
 /** Registro de oxigenoterapia convencional: dispositivo + flujo (+ SpO₂ y FR). */
-export function OxygenForm({ patient, onDone }: { patient: Patient; onDone: () => void }) {
+export function OxygenForm({ patient, onDone, justSaved = false }: { patient: Patient; onDone: () => void; justSaved?: boolean }) {
+  const { formRef, retry } = useFormRetry();
   const { addOxygenRecord, getActiveEpisode, getPatientOxygenRecords } = useApp();
   const recordedAt = useRecordTimestamp();
   const activeEpisode = getActiveEpisode(patient.id);
@@ -61,6 +64,7 @@ export function OxygenForm({ patient, onDone }: { patient: Patient; onDone: () =
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (!canSave || saving) return;
+    dismissRetry(retry);
     setSaving(true);
     const ok = await addOxygenRecord({
       patientId: patient.id,
@@ -75,16 +79,19 @@ export function OxygenForm({ patient, onDone }: { patient: Patient; onDone: () =
       ventilatoryMechanics: mechanics || undefined,
     });
     setSaving(false);
-    if (ok) {
-      setNotes('');
-      setMechanics('');
-      onDone();
+    if (!ok) {
+      offerRetry(retry);
+      return;
     }
+    notifySuccess('Registro de oxígeno guardado', patient.alias);
+    setNotes('');
+    setMechanics('');
+    onDone();
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      {last && <PrefillNotice timestamp={last.timestamp} />}
+    <form ref={formRef} onSubmit={handleSubmit} className="space-y-4">
+      {last && <PrefillNotice timestamp={last.timestamp} highlight={justSaved} />}
 
       <ChoiceChips label="Dispositivo" options={deviceOptions} value={device} onChange={setDevice} columns={2} />
 
@@ -113,9 +120,9 @@ export function OxygenForm({ patient, onDone }: { patient: Patient; onDone: () =
 
       <RecordDateField state={recordedAt} label="Fecha y hora del registro" compact />
 
-      <Button type="submit" fullWidth disabled={!canSave || saving}>
-        {saving ? 'Guardando...' : 'Guardar registro de oxígeno'}
-      </Button>
+      <SaveButton fullWidth saving={saving} saved={justSaved} disabled={!canSave}>
+        Guardar registro de oxígeno
+      </SaveButton>
     </form>
   );
 }

@@ -7,6 +7,8 @@ import { useApp } from '../../contexts/AppContext';
 import * as scheduleApi from '../../api/scheduleApi';
 import * as authApi from '../../api/authApi';
 import { ShiftAssignment, ShiftTemplate, ShiftTemplateSlot, User } from '../../types';
+import { useFormRetry } from '../../hooks/useRetry';
+import { attempt, dismissRetry, notifyError, notifySuccess, offerRetry } from '../../utils/notify';
 
 const DAY_LABELS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
 
@@ -45,6 +47,7 @@ export function SchedulePage() {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [showTemplateForm, setShowTemplateForm] = useState(false);
+  const { formRef: templateRef, retry: retryTemplate } = useFormRetry();
   const [templateForm, setTemplateForm] = useState(emptyTemplateForm);
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
 
@@ -82,23 +85,45 @@ export function SchedulePage() {
   };
 
   const handleGenerateMonth = async () => {
-    const result = await scheduleApi.generateMonth(year, month);
-    window.alert(`Se generaron ${result.created} turnos nuevos (de ${result.totalSlotsForMonth} esperados este mes).`);
-    load();
+    try {
+      const result = await scheduleApi.generateMonth(year, month);
+      notifySuccess(`Se generaron ${result.created} turnos nuevos`, `${result.totalSlotsForMonth} esperados este mes`);
+      load();
+    } catch (err) {
+      notifyError('No se pudieron generar los turnos', err);
+      offerRetry(() => void handleGenerateMonth());
+    }
   };
 
   const handleCreateTemplate = async (e: FormEvent) => {
     e.preventDefault();
     if (!templateForm.name || templateForm.daysOfWeek.length === 0) return;
-    await scheduleApi.createShiftTemplate(templateForm);
+    dismissRetry(retryTemplate);
+    try {
+      await scheduleApi.createShiftTemplate(templateForm);
+    } catch (err) {
+      notifyError('No se pudo guardar la plantilla', err);
+      offerRetry(retryTemplate);
+      return;
+    }
+    notifySuccess('Plantilla guardada', templateForm.name);
     setTemplateForm(emptyTemplateForm);
     setShowTemplateForm(false);
     load();
   };
 
   const handleAssign = async (assignmentId: string, userId: string) => {
-    await scheduleApi.assignSlot(assignmentId, userId || null);
-    load();
+    await attempt(
+      async () => {
+        await scheduleApi.assignSlot(assignmentId, userId || null);
+        load();
+      },
+      {
+        success: userId ? 'Turno asignado' : 'Turno liberado',
+        detail: users.find((u) => u.id === userId)?.name,
+        failure: 'No se pudo asignar el turno',
+      }
+    );
   };
 
   const toggleDay = (d: number) => {
@@ -152,7 +177,7 @@ export function SchedulePage() {
 
         {showTemplateForm && (
           <Card>
-            <form onSubmit={handleCreateTemplate} className="space-y-4">
+            <form ref={templateRef} onSubmit={handleCreateTemplate} className="space-y-4">
               <Input label="Nombre" value={templateForm.name} onChange={(e) => setTemplateForm({ ...templateForm, name: e.target.value })} placeholder="Ej: Mañana Lun-Vie" />
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Días de la semana</label>

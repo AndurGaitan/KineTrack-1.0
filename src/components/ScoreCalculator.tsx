@@ -5,9 +5,11 @@ import { Badge } from './ui/Badge';
 import { ScoreType, RiskLevel } from '../types';
 import { calculateHACOR, calculateROX, HACORInputs, ROXInputs } from '../utils/scores';
 import { Card } from './ui/Card';
+import { useRetry } from '../hooks/useRetry';
+import { dismissRetry, offerRetry } from '../utils/notify';
 interface ScoreCalculatorProps {
   type: ScoreType;
-  onSave: (value: number, inputs: Record<string, number>, risk: RiskLevel) => void;
+  onSave: (value: number, inputs: Record<string, number>, risk: RiskLevel) => Promise<boolean>;
   onCancel: () => void;
 }
 const riskLabels = {
@@ -45,10 +47,17 @@ export function ScoreCalculator({
       setResult(calc);
     }
   }, [type, hacorInputs, roxInputs]);
-  const handleSave = () => {
-    if (!result) return;
+  const [saving, setSaving] = useState(false);
+  const retry = useRetry(() => handleSave());
+  const handleSave = async () => {
+    if (!result || saving) return;
     const inputs = type === 'hacor' ? hacorInputs : roxInputs;
-    onSave(result.score, inputs as Record<string, number>, result.risk);
+    dismissRetry(retry);
+    setSaving(true);
+    if (!(await onSave(result.score, inputs as Record<string, number>, result.risk))) {
+      setSaving(false);
+      offerRetry(retry);
+    }
   };
   if (type === 'hacor') {
     return <div className="space-y-6">
@@ -93,8 +102,8 @@ export function ScoreCalculator({
           <Button type="button" variant="secondary" onClick={onCancel} fullWidth>
             Cancelar
           </Button>
-          <Button onClick={handleSave} fullWidth>
-            Guardar Resultado
+          <Button onClick={handleSave} disabled={saving} fullWidth>
+            {saving ? 'Guardando...' : 'Guardar Resultado'}
           </Button>
         </div>
       </div>;
@@ -131,8 +140,8 @@ export function ScoreCalculator({
         <Button type="button" variant="secondary" onClick={onCancel} fullWidth>
           Cancelar
         </Button>
-        <Button onClick={handleSave} fullWidth>
-          Guardar Resultado
+        <Button onClick={handleSave} disabled={saving} fullWidth>
+          {saving ? 'Guardando...' : 'Guardar Resultado'}
         </Button>
       </div>
     </div>;

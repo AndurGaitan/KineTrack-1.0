@@ -23,6 +23,8 @@ import {
   TrachVentilatorySupport,
 } from '../types';
 import { ChevronDownIcon, ChevronUpIcon } from 'lucide-react';
+import { useFormRetry } from '../hooks/useRetry';
+import { dismissRetry, notifySuccess, offerRetry } from '../utils/notify';
 
 const toOptions = <T extends string>(labels: Record<T, string>) =>
   (Object.keys(labels) as T[]).map((value) => ({ value, label: labels[value] }));
@@ -62,6 +64,7 @@ export function TrachEntryPage() {
   const [swallowingTest, setSwallowingTest] = useState<SwallowingTestResult | ''>('');
   const [blueTest, setBlueTest] = useState<BlueTestResult | ''>('');
   const [submitting, setSubmitting] = useState(false);
+  const { formRef, retry } = useFormRetry();
 
   if (!patient || patient.supportType !== 'traqueostomia') {
     return (
@@ -76,10 +79,11 @@ export function TrachEntryPage() {
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    if (!hasAnything || recordedAt.isFuture) return;
+    if (!hasAnything || recordedAt.isFuture || submitting) return;
+    dismissRetry(retry);
     setSubmitting(true);
     try {
-      await addTrachRecord({
+      const ok = await addTrachRecord({
         patientId: patient.id,
         episodeId: activeEpisode?.id,
         timestamp: recordedAt.timestamp,
@@ -95,6 +99,11 @@ export function TrachEntryPage() {
         swallowingTest: swallowingTest || undefined,
         blueTest: blueTest || undefined,
       });
+      if (!ok) {
+        offerRetry(retry);
+        return;
+      }
+      notifySuccess('Estado actualizado', patient.alias);
       navigate(`/patient/${patient.id}/traqueostomia`);
     } finally {
       setSubmitting(false);
@@ -112,7 +121,7 @@ export function TrachEntryPage() {
           <p className="text-xs text-gray-500 mt-2">Completá solo lo que cambió. Todo lo que cargues se reutiliza en el proceso de decanulación y en la evolución.</p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form ref={formRef} onSubmit={handleSubmit} className="space-y-4">
           <RecordDateField state={recordedAt} label="Fecha y hora del registro" />
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 space-y-5">
             <div>

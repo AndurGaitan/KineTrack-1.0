@@ -7,6 +7,8 @@ import { Badge } from '../../components/ui/Badge';
 import { CoordinatorNav } from '../../components/CoordinatorNav';
 import * as protocolsApi from '../../api/protocolsApi';
 import { Protocol } from '../../types';
+import { useFormRetry } from '../../hooks/useRetry';
+import { attempt, dismissRetry, notifyError, notifySuccess, offerRetry } from '../../utils/notify';
 
 const emptyForm = {
   name: '',
@@ -24,6 +26,7 @@ export function ProtocolsAdminPage() {
   const [protocols, setProtocols] = useState<Protocol[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
+  const { formRef, retry } = useFormRetry();
   const [form, setForm] = useState(emptyForm);
   const [error, setError] = useState<string | null>(null);
 
@@ -44,6 +47,7 @@ export function ProtocolsAdminPage() {
       return;
     }
     setError(null);
+    dismissRetry(retry);
     try {
       await protocolsApi.createProtocol({
         ...form,
@@ -51,23 +55,35 @@ export function ProtocolsAdminPage() {
         effectiveFrom: form.effectiveFrom || undefined,
         validUntil: form.validUntil || undefined,
       });
+      notifySuccess('Protocolo creado', form.name);
       setForm(emptyForm);
       setShowForm(false);
       load();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'No se pudo crear el protocolo');
+      notifyError('No se pudo crear el protocolo', err);
+      offerRetry(retry);
     }
   };
 
   const toggleField = async (protocol: Protocol, field: 'approved' | 'available' | 'archived' | 'replaced' | 'isPriority') => {
-    await protocolsApi.updateProtocol(protocol.id, { [field]: !protocol[field] });
-    load();
+    await attempt(
+      async () => {
+        await protocolsApi.updateProtocol(protocol.id, { [field]: !protocol[field] });
+        load();
+      },
+      { success: 'Protocolo actualizado', detail: protocol.name, failure: 'No se pudo actualizar el protocolo' }
+    );
   };
 
   const handleDelete = async (id: string) => {
     if (!window.confirm('¿Eliminar este protocolo?')) return;
-    await protocolsApi.deleteProtocol(id);
-    load();
+    await attempt(
+      async () => {
+        await protocolsApi.deleteProtocol(id);
+        load();
+      },
+      { success: 'Protocolo eliminado', failure: 'No se pudo eliminar el protocolo' }
+    );
   };
 
   return (
@@ -83,7 +99,7 @@ export function ProtocolsAdminPage() {
 
         {showForm && (
           <Card>
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form ref={formRef} onSubmit={handleSubmit} className="space-y-4">
               <Input label="Nombre" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Ej: Protocolo de sedoanalgesia" />
               <Input label="Versión" value={form.version} onChange={(e) => setForm({ ...form, version: e.target.value })} placeholder="Ej: v2" />
               <div className="grid grid-cols-2 gap-4">

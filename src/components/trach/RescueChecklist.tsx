@@ -1,4 +1,6 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
+import { useRetry } from '../../hooks/useRetry';
+import { dismissRetry, notifyError, notifySuccess, offerRetry } from '../../utils/notify';
 import * as trachApi from '../../api/trachApi';
 import { RESCUE_ITEMS, ago } from '../../domain/services/trachDecannulation';
 import type { TrachDecannulationProcess } from '../../types';
@@ -12,15 +14,19 @@ interface RescueChecklistProps {
 /** Capacidad institucional de rescate. Cada ítem recuerda cuándo se confirmó. */
 export function RescueChecklist({ process, now, onProcessChange }: RescueChecklistProps) {
   const [busyKey, setBusyKey] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const lastToggle = useRef<{ key: string; checked: boolean }>();
+  const retry = useRetry(() => lastToggle.current && toggle(lastToggle.current.key, lastToggle.current.checked));
 
   const toggle = async (key: string, checked: boolean) => {
+    lastToggle.current = { key, checked };
+    dismissRetry(retry);
     setBusyKey(key);
-    setError(null);
     try {
       onProcessChange(await trachApi.updateRescueChecklist(process.id, { [key]: checked }));
+      notifySuccess('Checklist de rescate guardado');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'No se pudo guardar');
+      notifyError('No se pudo guardar el checklist', err);
+      offerRetry(retry);
     } finally {
       setBusyKey(null);
     }
@@ -50,7 +56,6 @@ export function RescueChecklist({ process, now, onProcessChange }: RescueCheckli
           </label>
         );
       })}
-      {error && <p className="text-sm text-red-600">{error}</p>}
     </div>
   );
 }

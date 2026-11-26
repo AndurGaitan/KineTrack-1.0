@@ -18,6 +18,7 @@ import * as settingsApi from '../api/settingsApi';
 import * as pveDecisionsApi from '../api/pveDecisionsApi';
 import type { CreatePveDecisionInput } from '../api/pveDecisionsApi';
 import * as mobilizationApi from '../api/mobilizationApi';
+import { clearNotices, notifyError } from '../utils/notify';
 import type { CreatePrestacionInput } from '../api/prestacionesApi';
 
 /** Qué partes de la app están visibles según la etapa de uso. */
@@ -35,18 +36,18 @@ export interface AppFeatures {
 
 interface AppContextType extends AppState {
   features: AppFeatures;
-  setStage: (stage: AppStage) => Promise<void>;
+  setStage: (stage: AppStage) => Promise<boolean>;
   /** Enciende o apaga los indicadores de calidad v2 (modo sombra). Solo coordinador. */
   setQualityV2Enabled: (enabled: boolean) => Promise<boolean>;
   addPveDecision: (input: CreatePveDecisionInput) => Promise<boolean>;
-  deletePveDecision: (id: string) => Promise<void>;
+  deletePveDecision: (id: string) => Promise<boolean>;
   getPatientPveDecisions: (patientId: string) => PveDecision[];
   startMobilization: (patientId: string, startedAt?: string, notes?: string) => Promise<boolean>;
-  deleteMobilizationStart: (id: string) => Promise<void>;
+  deleteMobilizationStart: (id: string) => Promise<boolean>;
   getEpisodeMobilizationStart: (episodeId: string | undefined) => MobilizationStart | undefined;
   addMobilizationContraindication: (input: mobilizationApi.CreateContraindicationInput) => Promise<boolean>;
-  liftMobilizationContraindication: (id: string, endAt?: string) => Promise<void>;
-  deleteMobilizationContraindication: (id: string) => Promise<void>;
+  liftMobilizationContraindication: (id: string, endAt?: string) => Promise<boolean>;
+  deleteMobilizationContraindication: (id: string) => Promise<boolean>;
   getPatientMobilizationContraindications: (patientId: string) => MobilizationContraindication[];
   isLoading: boolean;
   authError: string | null;
@@ -57,8 +58,8 @@ interface AppContextType extends AppState {
     patient: Omit<Patient, 'id' | 'createdAt' | 'status' | 'episodes'> & { admissionDate?: string }
   ) => Promise<boolean>;
   updatePatient: (id: string, patient: Partial<Patient> & { supportStartAt?: string }) => Promise<boolean>;
-  deletePatient: (id: string) => Promise<void>;
-  closePatient: (id: string, closure: PatientClosure) => Promise<void>;
+  deletePatient: (id: string) => Promise<boolean>;
+  closePatient: (id: string, closure: PatientClosure) => Promise<boolean>;
   changeSupportType: (
     patientId: string,
     newSupport: SupportType,
@@ -66,39 +67,39 @@ interface AppContextType extends AppState {
     date?: string,
     airwayEvent?: AirwayEventInput,
     location?: { sectorId: string; bedId: string }
-  ) => Promise<void>;
+  ) => Promise<boolean>;
   refreshSectors: () => Promise<void>;
   getActiveEpisode: (patientId: string) => any;
   getPatientEpisodes: (patientId: string) => any[];
-  addScore: (score: Omit<ScoreRecord, 'id' | 'timestamp'>) => Promise<void>;
+  addScore: (score: Omit<ScoreRecord, 'id' | 'timestamp'>) => Promise<boolean>;
   getPatientScores: (patientId: string) => ScoreRecord[];
   getSectorPatients: (sectorId: string, includeInactive?: boolean) => Patient[];
-  addVMIRecord: (record: Omit<VMIRecord, 'id' | 'timestamp'> & { timestamp?: string }) => Promise<void>;
+  addVMIRecord: (record: Omit<VMIRecord, 'id' | 'timestamp'> & { timestamp?: string }) => Promise<boolean>;
   getPatientVMIRecords: (patientId: string, episodeId?: string) => VMIRecord[];
   getVMIRecord: (id: string) => VMIRecord | undefined;
-  addNIVRecord: (record: Omit<NIVRecord, 'id' | 'timestamp'> & { timestamp?: string }) => Promise<void>;
+  addNIVRecord: (record: Omit<NIVRecord, 'id' | 'timestamp'> & { timestamp?: string }) => Promise<boolean>;
   getPatientNIVRecords: (patientId: string, episodeId?: string) => NIVRecord[];
   getNIVRecord: (id: string) => NIVRecord | undefined;
-  addHFNCRecord: (record: Omit<HFNCRecord, 'id' | 'timestamp'> & { timestamp?: string }) => Promise<void>;
+  addHFNCRecord: (record: Omit<HFNCRecord, 'id' | 'timestamp'> & { timestamp?: string }) => Promise<boolean>;
   getPatientHFNCRecords: (patientId: string, episodeId?: string) => HFNCRecord[];
   getHFNCRecord: (id: string) => HFNCRecord | undefined;
   addTrachRecord: (
     record: Omit<TrachRecord, 'id' | 'timestamp' | 'performedByUserId' | 'type' | 'alerts'> & { timestamp?: string }
-  ) => Promise<void>;
+  ) => Promise<boolean>;
   getPatientTrachRecords: (patientId: string, episodeId?: string) => TrachRecord[];
   getTrachRecord: (id: string) => TrachRecord | undefined;
   addOxygenRecord: (record: Omit<OxygenRecord, 'id' | 'timestamp' | 'performedByUserId' | 'type' | 'alerts'> & { timestamp?: string }) => Promise<boolean>;
   getPatientOxygenRecords: (patientId: string, episodeId?: string) => OxygenRecord[];
   addPrestacion: (input: CreatePrestacionInput) => Promise<void>;
   getPatientPrestaciones: (patientId: string) => Prestacion[];
-  startSVPeriod: (patientId: string, modality: SVModality, episodeId?: string) => Promise<void>;
-  closeSVPeriod: (id: string, result: { tolerated: boolean; interruptionReason?: SVInterruptionReason; endAt?: string }) => Promise<void>;
+  startSVPeriod: (patientId: string, modality: SVModality, episodeId?: string) => Promise<boolean>;
+  closeSVPeriod: (id: string, result: { tolerated: boolean; interruptionReason?: SVInterruptionReason; endAt?: string }) => Promise<boolean>;
   /** Deshace un cierre: la prueba vuelve a estar en curso. Devuelve si pudo reabrirla. */
   reopenSVPeriod: (id: string) => Promise<boolean>;
   /** Corrige una prueba (desde, hasta, resultado, dispositivo). Devuelve si pudo guardarla. */
   updateSVPeriod: (id: string, patch: spontaneousVentilationApi.UpdateSVPeriodInput) => Promise<boolean>;
-  addManualSVPeriod: (period: Omit<SpontaneousVentilationPeriod, 'id'>) => Promise<void>;
-  deleteSVPeriod: (id: string) => Promise<void>;
+  addManualSVPeriod: (period: Omit<SpontaneousVentilationPeriod, 'id'>) => Promise<boolean>;
+  deleteSVPeriod: (id: string) => Promise<boolean>;
   getPatientSVPeriods: (patientId: string) => SpontaneousVentilationPeriod[];
 }
 
@@ -143,8 +144,7 @@ function splitObservationsIntoLegacyRecords(observations: (ClinicalObservationTy
 /** Reports a failed mutation without breaking the fire-and-forget call sites that don't await these methods. */
 function reportError(action: string, error: unknown) {
   console.error(`[KineTrack] ${action} failed:`, error);
-  const message = error instanceof Error ? error.message : 'Error desconocido';
-  window.alert(`No se pudo completar la acción (${action}): ${message}`);
+  notifyError(`No se pudo ${action}`, error);
 }
 
 export function AppProvider({ children }: { children: ReactNode }) {
@@ -238,6 +238,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   };
 
   const logout = () => {
+    clearNotices();
     clearToken();
     setState(initialState);
   };
@@ -247,7 +248,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       const { user } = await authApi.updateMe(name);
       setState((prev) => ({ ...prev, user }));
     } catch (error) {
-      reportError('actualizar perfil', error);
+      reportError('actualizar el perfil', error);
       throw error;
     }
   };
@@ -272,7 +273,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setState((prev) => ({ ...prev, patients: [...prev.patients, patient] }));
       return true;
     } catch (error) {
-      reportError('crear paciente', error);
+      reportError('crear el paciente', error);
       return false;
     }
   };
@@ -296,7 +297,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setState((prev) => ({ ...prev, patients: prev.patients.map((p) => (p.id === id ? patient : p)) }));
       return true;
     } catch (error) {
-      reportError('actualizar paciente', error);
+      reportError('guardar la ficha del paciente', error);
       return false;
     }
   };
@@ -319,8 +320,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
         mobilizationStarts: prev.mobilizationStarts.filter((m) => m.patientId !== id),
         mobilizationContraindications: prev.mobilizationContraindications.filter((m) => m.patientId !== id),
       }));
+      return true;
     } catch (error) {
-      reportError('eliminar paciente', error);
+      reportError('eliminar el paciente', error);
+      return false;
     }
   };
 
@@ -328,8 +331,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
     try {
       const patient = await patientsApi.closePatient(id, closure);
       setState((prev) => ({ ...prev, patients: prev.patients.map((p) => (p.id === id ? patient : p)) }));
+      return true;
     } catch (error) {
-      reportError('cerrar caso del paciente', error);
+      reportError('cerrar el caso', error);
+      return false;
     }
   };
 
@@ -351,8 +356,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
         bedId: location?.bedId,
       });
       setState((prev) => ({ ...prev, patients: prev.patients.map((p) => (p.id === patientId ? patient : p)) }));
+      return true;
     } catch (error) {
-      reportError('cambiar tipo de soporte', error);
+      reportError('cambiar el soporte', error);
+      return false;
     }
   };
 
@@ -361,7 +368,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       const sectors = await sectorsApi.listSectors(true);
       setState((prev) => ({ ...prev, sectors }));
     } catch (error) {
-      reportError('actualizar sectores', error);
+      reportError('actualizar la lista de sectores', error);
     }
   };
 
@@ -385,8 +392,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
         inputs: score.inputs,
       });
       setState((prev) => ({ ...prev, scores: [...prev.scores, created] }));
+      return true;
     } catch (error) {
-      reportError('guardar score', error);
+      reportError('guardar el score', error);
+      return false;
     }
   };
 
@@ -406,8 +415,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
       const obs = await observationsApi.createObservation({ ...record, type: 'imv' });
       const newRecord = observationToVMIRecord(obs as Extract<ClinicalObservationType, { type: 'imv' }>);
       setState((prev) => ({ ...prev, vmiRecords: [...prev.vmiRecords, newRecord] }));
+      return true;
     } catch (error) {
-      reportError('guardar registro VMI', error);
+      reportError('guardar la monitorización VMI', error);
+      return false;
     }
   };
 
@@ -424,8 +435,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
       const obs = await observationsApi.createObservation({ ...record, type: 'niv' });
       const newRecord = observationToNIVRecord(obs as Extract<ClinicalObservationType, { type: 'niv' }>);
       setState((prev) => ({ ...prev, nivRecords: [...prev.nivRecords, newRecord] }));
+      return true;
     } catch (error) {
-      reportError('guardar registro VNI', error);
+      reportError('guardar la monitorización VMNI', error);
+      return false;
     }
   };
 
@@ -442,8 +455,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
       const obs = await observationsApi.createObservation({ ...record, type: 'hfnc' });
       const newRecord = observationToHFNCRecord(obs as Extract<ClinicalObservationType, { type: 'hfnc' }>);
       setState((prev) => ({ ...prev, hfncRecords: [...prev.hfncRecords, newRecord] }));
+      return true;
     } catch (error) {
-      reportError('guardar registro HFNC', error);
+      reportError('guardar la monitorización CAFO', error);
+      return false;
     }
   };
 
@@ -461,8 +476,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
     try {
       const obs = await observationsApi.createObservation({ ...record, type: 'traqueostomia' });
       setState((prev) => ({ ...prev, trachRecords: [...prev.trachRecords, obs as TrachRecord] }));
+      return true;
     } catch (error) {
-      reportError('guardar seguimiento de traqueostomía', error);
+      reportError('guardar el estado de la traqueostomía', error);
+      return false;
     }
   };
 
@@ -482,7 +499,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setState((prev) => ({ ...prev, oxygenRecords: [...prev.oxygenRecords, obs as OxygenRecord] }));
       return true;
     } catch (error) {
-      reportError('guardar registro de oxigenoterapia', error);
+      reportError('guardar el registro de oxígeno', error);
       return false;
     }
   };
@@ -512,8 +529,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
     try {
       const period = await spontaneousVentilationApi.createSVPeriod({ patientId, modality, episodeId });
       setState((prev) => ({ ...prev, spontaneousVentilation: [...prev.spontaneousVentilation, period] }));
+      return true;
     } catch (error) {
-      reportError('iniciar período de ventilación espontánea', error);
+      reportError('iniciar la prueba de ventilación espontánea', error);
+      return false;
     }
   };
 
@@ -528,8 +547,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
         interruptionReason: result.tolerated ? undefined : result.interruptionReason,
       });
       setState((prev) => ({ ...prev, spontaneousVentilation: prev.spontaneousVentilation.map((s) => (s.id === id ? period : s)) }));
+      return true;
     } catch (error) {
-      reportError('finalizar período de ventilación espontánea', error);
+      reportError('cerrar la prueba de ventilación espontánea', error);
+      return false;
     }
   };
 
@@ -550,7 +571,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setState((prev) => ({ ...prev, spontaneousVentilation: prev.spontaneousVentilation.map((s) => (s.id === id ? period : s)) }));
       return true;
     } catch (error) {
-      reportError('deshacer el cierre del período', error);
+      reportError('deshacer el cierre de la prueba', error);
       return false;
     }
   };
@@ -559,8 +580,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
     try {
       const period = await spontaneousVentilationApi.createSVPeriod(input);
       setState((prev) => ({ ...prev, spontaneousVentilation: [...prev.spontaneousVentilation, period] }));
+      return true;
     } catch (error) {
-      reportError('cargar período de ventilación espontánea', error);
+      reportError('cargar la prueba de ventilación espontánea', error);
+      return false;
     }
   };
 
@@ -568,8 +591,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
     try {
       await spontaneousVentilationApi.deleteSVPeriod(id);
       setState((prev) => ({ ...prev, spontaneousVentilation: prev.spontaneousVentilation.filter((s) => s.id !== id) }));
+      return true;
     } catch (error) {
-      reportError('eliminar período de ventilación espontánea', error);
+      reportError('eliminar la prueba de ventilación espontánea', error);
+      return false;
     }
   };
 
@@ -585,7 +610,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setState((prev) => ({ ...prev, qualityIndicatorsV2: result.qualityIndicatorsV2 }));
       return true;
     } catch (error) {
-      console.error('No se pudo cambiar el modo sombra de los indicadores v2:', error);
+      reportError('cambiar el modo sombra', error);
       return false;
     }
   };
@@ -595,8 +620,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
     try {
       const result = await settingsApi.updateStage(stage);
       setState((prev) => ({ ...prev, stage: result.stage }));
+      return true;
     } catch (error) {
       reportError('cambiar la etapa', error);
+      return false;
     }
   };
 
@@ -614,7 +641,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setState((prev) => ({ ...prev, pveDecisions: [...prev.pveDecisions, created] }));
       return true;
     } catch (error) {
-      reportError('guardar decisión de PVE', error);
+      reportError('guardar la decisión de PVE', error);
       return false;
     }
   };
@@ -623,8 +650,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
     try {
       await pveDecisionsApi.deletePveDecision(id);
       setState((prev) => ({ ...prev, pveDecisions: prev.pveDecisions.filter((d) => d.id !== id) }));
+      return true;
     } catch (error) {
-      reportError('eliminar decisión de PVE', error);
+      reportError('quitar la decisión de PVE', error);
+      return false;
     }
   };
 
@@ -641,7 +670,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setState((prev) => ({ ...prev, mobilizationStarts: [...prev.mobilizationStarts, created] }));
       return true;
     } catch (error) {
-      reportError('registrar inicio de movilización', error);
+      reportError('registrar el inicio de movilización', error);
       return false;
     }
   };
@@ -650,8 +679,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
     try {
       await mobilizationApi.deleteMobilizationStart(id);
       setState((prev) => ({ ...prev, mobilizationStarts: prev.mobilizationStarts.filter((m) => m.id !== id) }));
+      return true;
     } catch (error) {
-      reportError('eliminar inicio de movilización', error);
+      reportError('eliminar el inicio de movilización', error);
+      return false;
     }
   };
 
@@ -666,7 +697,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setState((prev) => ({ ...prev, mobilizationContraindications: [...prev.mobilizationContraindications, created] }));
       return true;
     } catch (error) {
-      reportError('registrar que no cumple criterios para movilizar', error);
+      reportError('registrar que no cumple criterios', error);
       return false;
     }
   };
@@ -678,8 +709,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
         ...prev,
         mobilizationContraindications: prev.mobilizationContraindications.map((c) => (c.id === id ? updated : c)),
       }));
+      return true;
     } catch (error) {
-      reportError('actualizar el registro de criterios de movilización', error);
+      reportError('actualizar el registro de criterios', error);
+      return false;
     }
   };
 
@@ -690,8 +723,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
         ...prev,
         mobilizationContraindications: prev.mobilizationContraindications.filter((c) => c.id !== id),
       }));
+      return true;
     } catch (error) {
-      reportError('eliminar el registro de criterios de movilización', error);
+      reportError('eliminar el registro de criterios', error);
+      return false;
     }
   };
 

@@ -1,4 +1,6 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
+import { useRetry } from '../../hooks/useRetry';
+import { dismissRetry, notifyError, notifySuccess, offerRetry } from '../../utils/notify';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
 import { BottomSheet } from '../ui/BottomSheet';
@@ -52,7 +54,13 @@ export function OcclusionTrialCard({ process, now, onProcessChange }: OcclusionT
 
   const [sheet, setSheet] = useState<SheetKind>(null);
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const lastAction = useRef<'start' | 'control' | 'evento' | 'end'>('start');
+  const retry = useRetry(() => {
+    const action = lastAction.current;
+    if (action === 'start') return start();
+    if (action === 'end') return finish();
+    return saveEntry(action);
+  });
   const [backdate, setBackdate] = useState(false);
   const [startAt, setStartAt] = useState(toLocalInput(now));
 
@@ -63,21 +71,25 @@ export function OcclusionTrialCard({ process, now, onProcessChange }: OcclusionT
   const [eventType, setEventType] = useState<TrachOcclusionEventType | undefined>(undefined);
   const [result, setResult] = useState<TrachOcclusionResult | undefined>(undefined);
 
-  const run = async (fn: () => Promise<TrachDecannulationProcess>, after?: () => void) => {
+  const run = async (action: typeof lastAction.current, fn: () => Promise<TrachDecannulationProcess>, success: string, after?: () => void) => {
+    lastAction.current = action;
+    dismissRetry(retry);
     setBusy(true);
-    setError(null);
     try {
       const updated = await fn();
       onProcessChange(updated);
+      notifySuccess(success);
       after?.();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'No se pudo guardar');
+      notifyError('No se pudo guardar la prueba de oclusión', err);
+      offerRetry(retry);
     } finally {
       setBusy(false);
     }
   };
 
   const closeSheet = () => {
+    dismissRetry(retry);
     setSheet(null);
     setSpo2('');
     setRr('');
@@ -85,17 +97,19 @@ export function OcclusionTrialCard({ process, now, onProcessChange }: OcclusionT
     setNotes('');
     setEventType(undefined);
     setResult(undefined);
-    setError(null);
   };
 
   const start = () =>
     run(
+      'start',
       () => trachApi.startOcclusionTrial(process.id, backdate ? new Date(startAt).toISOString() : undefined),
+      'Oclusión iniciada',
       () => setBackdate(false)
     );
 
   const saveEntry = (kind: 'control' | 'evento') =>
     run(
+      kind,
       () =>
         trachApi.addOcclusionEntry(active!.id, {
           kind,
@@ -105,10 +119,12 @@ export function OcclusionTrialCard({ process, now, onProcessChange }: OcclusionT
           eventType: kind === 'evento' ? eventType : undefined,
           notes: notes.trim() || undefined,
         }),
+      kind === 'control' ? 'Control guardado' : 'Evento guardado',
       closeSheet
     );
 
-  const finish = () => run(() => trachApi.endOcclusionTrial(active!.id, { result: result!, notes: notes.trim() || undefined }), closeSheet);
+  const finish = () =>
+    run('end', () => trachApi.endOcclusionTrial(active!.id, { result: result!, notes: notes.trim() || undefined }), 'Prueba de oclusión finalizada', closeSheet);
 
   const info = active ? occlusionInfo(active, now) : undefined;
 
@@ -181,8 +197,6 @@ export function OcclusionTrialCard({ process, now, onProcessChange }: OcclusionT
         </div>
       )}
 
-      {error && !sheet && <p className="text-sm text-red-600">{error}</p>}
-
       {sheet === 'control' && (
         <BottomSheet title="Control durante la oclusión" onClose={closeSheet}>
           <div className="space-y-4">
@@ -192,7 +206,6 @@ export function OcclusionTrialCard({ process, now, onProcessChange }: OcclusionT
               <Input label="FC" type="number" inputMode="decimal" value={hr} onChange={(e) => setHr(e.target.value)} />
             </div>
             <Input label="Nota (opcional)" value={notes} onChange={(e) => setNotes(e.target.value)} />
-            {error && <p className="text-sm text-red-600">{error}</p>}
             <Button fullWidth disabled={busy || (!spo2 && !rr && !hr && !notes.trim())} onClick={() => saveEntry('control')}>
               {busy ? 'Guardando...' : 'Guardar control'}
             </Button>
@@ -210,7 +223,6 @@ export function OcclusionTrialCard({ process, now, onProcessChange }: OcclusionT
               options={(Object.keys(EVENT_LABELS) as TrachOcclusionEventType[]).map((v) => ({ value: v, label: EVENT_LABELS[v] }))}
             />
             <Input label="Detalle (opcional)" value={notes} onChange={(e) => setNotes(e.target.value)} />
-            {error && <p className="text-sm text-red-600">{error}</p>}
             <Button fullWidth disabled={busy || !eventType} onClick={() => saveEntry('evento')}>
               {busy ? 'Guardando...' : 'Guardar evento'}
             </Button>
@@ -232,7 +244,6 @@ export function OcclusionTrialCard({ process, now, onProcessChange }: OcclusionT
               options={(Object.keys(RESULT_LABELS) as TrachOcclusionResult[]).map((v) => ({ value: v, label: RESULT_LABELS[v] }))}
             />
             <Input label="Nota (opcional)" value={notes} onChange={(e) => setNotes(e.target.value)} />
-            {error && <p className="text-sm text-red-600">{error}</p>}
             <Button fullWidth disabled={busy || !result} onClick={finish}>
               {busy ? 'Guardando...' : 'Finalizar prueba'}
             </Button>

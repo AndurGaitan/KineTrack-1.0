@@ -6,6 +6,7 @@ import { CoordinatorNav } from '../../components/CoordinatorNav';
 import { useApp } from '../../contexts/AppContext';
 import * as api from '../../api/qualityV2Api';
 import type { DefinitionDTO, PveStatus, ShadowPatientDay, ShadowSummary } from '../../api/qualityV2Api';
+import { confirmSave, notifySuccess } from '../../utils/notify';
 
 /**
  * Indicadores de calidad v2 — fase 1: PVE en MODO SOMBRA (solo coordinador).
@@ -86,7 +87,7 @@ export function QualityShadowPage() {
                 onClick={async () => {
                   if (!window.confirm('¿Activar los indicadores de calidad v2 en modo sombra? No cambia el panel actual ni los reportes.')) return;
                   setBusy(true);
-                  await setQualityV2Enabled(true);
+                  await confirmSave(() => setQualityV2Enabled(true), 'Modo sombra activado');
                   setBusy(false);
                 }}
               >
@@ -98,7 +99,7 @@ export function QualityShadowPage() {
       </div>
     );
   }
-  return <ShadowPanel onDisable={() => setQualityV2Enabled(false)} />;
+  return <ShadowPanel onDisable={() => confirmSave(() => setQualityV2Enabled(false), 'Modo sombra apagado')} />;
 }
 
 function ShadowPanel({ onDisable }: { onDisable: () => Promise<boolean> }) {
@@ -109,7 +110,6 @@ function ShadowPanel({ onDisable }: { onDisable: () => Promise<boolean> }) {
   const [filter, setFilter] = useState<PveStatus | ''>('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [message, setMessage] = useState<string | null>(null);
   const [correcting, setCorrecting] = useState<ShadowPatientDay | null>(null);
 
   const load = useCallback(async () => {
@@ -144,9 +144,8 @@ function ShadowPanel({ onDisable }: { onDisable: () => Promise<boolean> }) {
         </div>
 
         {error && <p className="text-red-600 text-sm">{error}</p>}
-        {message && <p className="text-green-700 text-sm">{message}</p>}
 
-        {compliance && <DefinitionCard def={compliance} onSaved={(m) => { setMessage(m); void load(); }} onError={setError} />}
+        {compliance && <DefinitionCard def={compliance} onSaved={(m) => { notifySuccess(m); void load(); }} onError={setError} />}
 
         <div className="flex flex-wrap items-center gap-2 text-sm">
           <input type="date" value={range.from} onChange={(e) => setRange((r) => ({ ...r, from: e.target.value }))} className="border-2 border-gray-200 rounded-lg px-2 py-1" />
@@ -155,10 +154,9 @@ function ShadowPanel({ onDisable }: { onDisable: () => Promise<boolean> }) {
           <Button
             variant="secondary"
             onClick={async () => {
-              setMessage(null);
               try {
                 await api.consolidateNow();
-                setMessage('Consolidación de hoy ejecutada (si es antes de la hora de corte, queda como provisional).');
+                notifySuccess('Consolidación de hoy ejecutada', 'Antes de la hora de corte queda como provisional');
                 await load();
               } catch (e) {
                 setError(e instanceof Error ? e.message : 'No se pudo consolidar');
@@ -300,7 +298,7 @@ function ShadowPanel({ onDisable }: { onDisable: () => Promise<boolean> }) {
           onClose={() => setCorrecting(null)}
           onDone={() => {
             setCorrecting(null);
-            setMessage('Corrección registrada y día recalculado (queda auditada).');
+            notifySuccess('Corrección registrada', 'Día recalculado; queda auditada');
             void load();
           }}
         />
