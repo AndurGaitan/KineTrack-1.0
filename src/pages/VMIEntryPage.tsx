@@ -34,6 +34,12 @@ import { ZapIcon, EditIcon } from 'lucide-react';
 import { EducationalTooltip } from '../components/ui/Tooltip';
 import { vmiEducation } from '../utils/vmiEducation';
 
+/**
+ * Sincronía paciente-ventilador: oculta por ahora (se vuelve a mostrar poniendo `true`). Mientras tanto
+ * los registros se guardan sin asincronías y los anteriores se siguen viendo.
+ */
+const showAsynchrony: boolean = false;
+
 const asynchronyTypes = [
   { value: 'ineffective-effort', label: 'Esfuerzo inefectivo', description: 'Esfuerzo sin trigger' },
   { value: 'double-trigger', label: 'Doble disparo', description: 'Dos ciclos en un esfuerzo' },
@@ -420,6 +426,103 @@ export function VMIEntryForm({ patient, onDone, onCancel, children, justSaved = 
             </CollapsibleSection>
           )}
 
+          {/* STEP 2b: Oxygenation & Acid-Base, justo debajo de los parámetros — orden de reporte de gasometría:
+              pH, PaCO₂, PaO₂, HCO₃, SatO₂, Exceso de Bases (FiO₂ ya se
+              carga en Configuración del Ventilador, arriba). */}
+          {!features.gasometry && (
+            <CollapsibleSection title="Oxigenación" subtitle="SpO₂ al momento de la monitorización">
+              <VMIField
+                label="SpO₂"
+                unit="%"
+                type="number"
+                value={formData.spo2 ?? ''}
+                onChange={e => setFormData({ ...formData, spo2: toNumberOrUndefined(e.target.value) })}
+                onBlur={e => {
+                  const n = toNumberOrUndefined(e.target.value);
+                  if (n != null) setFormData(prev => ({ ...prev, spo2: clamp(n, 0, 100) }));
+                }}
+              />
+            </CollapsibleSection>
+          )}
+          {features.gasometry && <CollapsibleSection title="Oxigenación y Equilibrio Ácido-Base" subtitle="Gasometría y parámetros de intercambio">
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                {/* pH bug fix: same clamp-on-blur pattern. */}
+                <VMIField
+                  label="pH"
+                  type="number"
+                  step="0.01"
+                  value={formData.ph ?? ''}
+                  onChange={e => setFormData({ ...formData, ph: toNumberOrUndefined(e.target.value) })}
+                  onBlur={e => {
+                    const n = toNumberOrUndefined(e.target.value);
+                    if (n != null) setFormData(prev => ({ ...prev, ph: clamp(n, 6.8, 7.8) }));
+                  }}
+                />
+                <VMIField
+                  label="PaCO₂"
+                  unit="mmHg"
+                  type="number"
+                  value={formData.paco2 ?? ''}
+                  onChange={e => setFormData({ ...formData, paco2: toNumberOrUndefined(e.target.value) })}
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <VMIField
+                  label="PaO₂"
+                  educationKey="pfRatio"
+                  unit="mmHg"
+                  type="number"
+                  value={formData.pao2 ?? ''}
+                  onChange={e => setFormData({ ...formData, pao2: toNumberOrUndefined(e.target.value) })}
+                />
+                <VMIField
+                  label="HCO₃"
+                  educationKey="hco3"
+                  unit="mEq/L"
+                  type="number"
+                  step="0.1"
+                  value={formData.hco3 ?? ''}
+                  onChange={e => setFormData({ ...formData, hco3: toNumberOrUndefined(e.target.value) })}
+                />
+              </div>
+
+              {calculations.pfRatio && (
+                <div className="p-4 rounded-xl bg-gray-50">
+                  <div className="text-sm text-gray-600 mb-1">Relación P/F</div>
+                  <div className="text-3xl font-bold text-gray-900">
+                    {calculations.pfRatio}
+                  </div>
+                </div>
+              )}
+
+              <div className="grid grid-cols-2 gap-4">
+                {/* SpO₂ bug fix: same clamp-on-blur pattern (min=0 rarely triggered
+                    the bug in practice, kept consistent anyway). */}
+                <VMIField
+                  label="SpO₂"
+                  unit="%"
+                  type="number"
+                  value={formData.spo2 ?? ''}
+                  onChange={e => setFormData({ ...formData, spo2: toNumberOrUndefined(e.target.value) })}
+                  onBlur={e => {
+                    const n = toNumberOrUndefined(e.target.value);
+                    if (n != null) setFormData(prev => ({ ...prev, spo2: clamp(n, 0, 100) }));
+                  }}
+                />
+                <VMIField
+                  label="Exceso de Bases (BE)"
+                  unit="mEq/L"
+                  type="number"
+                  step="0.1"
+                  value={formData.baseExcess ?? ''}
+                  onChange={e => setFormData({ ...formData, baseExcess: toNumberOrUndefined(e.target.value) })}
+                />
+              </div>
+            </div>
+          </CollapsibleSection>}
+
           {/* D) Destete y PVE, en un solo lugar */}
           <div className="bg-white rounded-2xl shadow-sm border border-gray-200 px-4 py-4 sm:px-6 space-y-3">
             <h3 className="text-lg font-bold text-gray-900">Destete</h3>
@@ -433,34 +536,21 @@ export function VMIEntryForm({ patient, onDone, onCancel, children, justSaved = 
             </div>
           )}
 
-          {/* STEP 3: Predicted Body Weight (PCI/PBW) */}
-          {formData.ventMode && (
-            <CollapsibleSection title="Peso Corporal Ideal (PCI)" subtitle="Se mide una sola vez en la ficha del paciente" defaultOpen={false}>
-              <div className="space-y-4">
-                <div className={`p-4 rounded-xl ${pbwOk ? 'bg-blue-50' : 'bg-gray-50'}`}>
-                  <div className="text-sm text-gray-600 mb-1">PCI / PBW (Peso Predicho)</div>
-                  <div className={`text-3xl font-bold ${pbwOk ? 'text-blue-900' : 'text-gray-400'}`}>
-                    {pbwOk ? `${formData.predictedBodyWeight} kg` : '—'}
-                  </div>
-                  {pbwOk ? (
-                    <div className="text-sm text-gray-600 mt-2">
-                      Calculado de sexo y talla ({patient.sex === 'male' ? 'Masculino' : 'Femenino'}, {patient.heightCm} cm) cargados en la
-                      ficha del paciente.
-                    </div>
-                  ) : (
-                    <div className="text-sm text-gray-600 mt-2">
-                      Este paciente no tiene sexo/talla cargados — no bloquea el guardado, pero el Vt/kg no se va a poder calcular.
-                    </div>
-                  )}
-                  <button
-                    type="button"
-                    onClick={() => navigate(`/patient/${patient.id}/edit`)}
-                    className="flex items-center gap-1.5 text-sm font-semibold text-blue-600 mt-3"
-                  >
-                    <EditIcon className="w-4 h-4" />
-                    {pbwOk ? 'Corregir en la ficha del paciente' : 'Cargar sexo y talla en la ficha del paciente'}
-                  </button>
+          {/* STEP 3: PCI/PBW — se carga una sola vez en la ficha: acá solo aparece mientras falte. */}
+          {formData.ventMode && !pbwOk && (
+            <CollapsibleSection title="Peso Corporal Ideal (PCI)" subtitle="Falta cargarlo en la ficha del paciente" defaultOpen={false}>
+              <div className="p-4 rounded-xl bg-gray-50">
+                <div className="text-sm text-gray-600">
+                  Este paciente no tiene sexo/talla cargados — no bloquea el guardado, pero el Vt/kg no se va a poder calcular.
                 </div>
+                <button
+                  type="button"
+                  onClick={() => navigate(`/patient/${patient.id}/edit`)}
+                  className="flex items-center gap-1.5 text-sm font-semibold text-blue-600 mt-3"
+                >
+                  <EditIcon className="w-4 h-4" />
+                  Cargar sexo y talla en la ficha del paciente
+                </button>
               </div>
             </CollapsibleSection>
           )}
@@ -584,7 +674,7 @@ export function VMIEntryForm({ patient, onDone, onCancel, children, justSaved = 
           )}
 
           {/* B) Synchrony */}
-          <CollapsibleSection title="Sincronía Paciente-Ventilador" subtitle="Evaluación de asincronías" defaultOpen={false}>
+          {showAsynchrony && <CollapsibleSection title="Sincronía Paciente-Ventilador" subtitle="Evaluación de asincronías" defaultOpen={false}>
             <div className="space-y-4">
               <div>
                 <label className="flex items-center gap-3 p-4 border-2 border-gray-300 rounded-xl cursor-pointer hover:bg-gray-50">
@@ -636,109 +726,12 @@ export function VMIEntryForm({ patient, onDone, onCancel, children, justSaved = 
                 </>
               )}
             </div>
-          </CollapsibleSection>
+          </CollapsibleSection>}
 
           {/* B2) Sedation / agitation (RASS) — opcional */}
           <CollapsibleSection title="Sedación y Agitación (RASS)" subtitle="Nivel de sedación del paciente (opcional)" defaultOpen={false}>
             <RassSelector value={formData.rass} onChange={rass => setFormData({ ...formData, rass })} />
           </CollapsibleSection>
-
-          {/* C) Oxygenation & Acid-Base — orden de reporte de gasometría:
-              pH, PaCO₂, PaO₂, HCO₃, SatO₂, Exceso de Bases (FiO₂ ya se
-              carga en Configuración del Ventilador, arriba). */}
-          {!features.gasometry && (
-            <CollapsibleSection title="Oxigenación" subtitle="SpO₂ al momento de la monitorización">
-              <VMIField
-                label="SpO₂"
-                unit="%"
-                type="number"
-                value={formData.spo2 ?? ''}
-                onChange={e => setFormData({ ...formData, spo2: toNumberOrUndefined(e.target.value) })}
-                onBlur={e => {
-                  const n = toNumberOrUndefined(e.target.value);
-                  if (n != null) setFormData(prev => ({ ...prev, spo2: clamp(n, 0, 100) }));
-                }}
-              />
-            </CollapsibleSection>
-          )}
-          {features.gasometry && <CollapsibleSection title="Oxigenación y Equilibrio Ácido-Base" subtitle="Gasometría y parámetros de intercambio">
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                {/* pH bug fix: same clamp-on-blur pattern. */}
-                <VMIField
-                  label="pH"
-                  type="number"
-                  step="0.01"
-                  value={formData.ph ?? ''}
-                  onChange={e => setFormData({ ...formData, ph: toNumberOrUndefined(e.target.value) })}
-                  onBlur={e => {
-                    const n = toNumberOrUndefined(e.target.value);
-                    if (n != null) setFormData(prev => ({ ...prev, ph: clamp(n, 6.8, 7.8) }));
-                  }}
-                />
-                <VMIField
-                  label="PaCO₂"
-                  unit="mmHg"
-                  type="number"
-                  value={formData.paco2 ?? ''}
-                  onChange={e => setFormData({ ...formData, paco2: toNumberOrUndefined(e.target.value) })}
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <VMIField
-                  label="PaO₂"
-                  educationKey="pfRatio"
-                  unit="mmHg"
-                  type="number"
-                  value={formData.pao2 ?? ''}
-                  onChange={e => setFormData({ ...formData, pao2: toNumberOrUndefined(e.target.value) })}
-                />
-                <VMIField
-                  label="HCO₃"
-                  educationKey="hco3"
-                  unit="mEq/L"
-                  type="number"
-                  step="0.1"
-                  value={formData.hco3 ?? ''}
-                  onChange={e => setFormData({ ...formData, hco3: toNumberOrUndefined(e.target.value) })}
-                />
-              </div>
-
-              {calculations.pfRatio && (
-                <div className="p-4 rounded-xl bg-gray-50">
-                  <div className="text-sm text-gray-600 mb-1">Relación P/F</div>
-                  <div className="text-3xl font-bold text-gray-900">
-                    {calculations.pfRatio}
-                  </div>
-                </div>
-              )}
-
-              <div className="grid grid-cols-2 gap-4">
-                {/* SpO₂ bug fix: same clamp-on-blur pattern (min=0 rarely triggered
-                    the bug in practice, kept consistent anyway). */}
-                <VMIField
-                  label="SpO₂"
-                  unit="%"
-                  type="number"
-                  value={formData.spo2 ?? ''}
-                  onChange={e => setFormData({ ...formData, spo2: toNumberOrUndefined(e.target.value) })}
-                  onBlur={e => {
-                    const n = toNumberOrUndefined(e.target.value);
-                    if (n != null) setFormData(prev => ({ ...prev, spo2: clamp(n, 0, 100) }));
-                  }}
-                />
-                <VMIField
-                  label="Exceso de Bases (BE)"
-                  unit="mEq/L"
-                  type="number"
-                  step="0.1"
-                  value={formData.baseExcess ?? ''}
-                  onChange={e => setFormData({ ...formData, baseExcess: toNumberOrUndefined(e.target.value) })}
-                />
-              </div>
-            </div>
-          </CollapsibleSection>}
 
           {/* E) Mobilization — etapa 1: se registra aparte (inicio de movilización activa) */}
           {features.mobilizationLevel && <CollapsibleSection title="Movilización y Rehabilitación" subtitle="Nivel de actividad física" defaultOpen={false}>
