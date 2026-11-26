@@ -48,9 +48,8 @@ export const pveSbtTypes: { value: PveSbtType; label: string; short: string; hin
 /** Modalidades del protocolo: PSV de bajo nivel o tubo en T (sección 5.2). */
 const pveEntrySbtTypes = pveSbtTypes.filter((t) => t.value !== 'cpap');
 
-/** Protocolo: 30 minutos como duración inicial, extensible hasta 120. */
-const pveDurationPresets = [30, 60, 120];
-const PVE_MAX_PROTOCOL_MINUTES = 120;
+/** Duraciones que se registran: 30 minutos (inicial) o 120 (extendida). */
+const pveDurationOptions = [30, 120];
 
 export const pveDecisionLabels: Record<PveDecisionKind, string> = {
   realizada: 'PVE realizada',
@@ -70,7 +69,7 @@ export interface PveDraft {
   reason: string;
   sbtType: '' | PveSbtType;
   sbtResult: '' | 'success' | 'failure';
-  /** Minutos, como texto del campo. */
+  /** Minutos elegidos ('30' o '120'). */
   duration: string;
   failureReason: string;
 }
@@ -84,18 +83,13 @@ export const emptyPveDraft: PveDraft = {
   failureReason: '',
 };
 
-const validDuration = (value: string) => {
-  const n = Number(value);
-  return Number.isInteger(n) && n >= 1 && n <= 1440;
-};
-
 /** Qué falta para poder guardar el borrador (null si está completo o si no se eligió ninguna decisión). */
 export function pveDraftError(d: PveDraft): string | null {
   if (!d.decision) return null;
   if (d.decision === 'realizada') {
     // El protocolo pide registrar modalidad, duración y resultado (sección 6).
     if (!d.sbtType) return 'Indicá la modalidad de la PVE';
-    if (!validDuration(d.duration)) return 'Indicá cuántos minutos duró la PVE';
+    if (!d.duration) return 'Indicá la duración de la PVE';
     if (!d.sbtResult) return 'Indicá el resultado de la PVE';
     return null;
   }
@@ -195,12 +189,13 @@ export function PveDecisionForm({
           </div>
           <div>
             <div className="block text-sm font-medium text-gray-700 mb-1">Duración (minutos)</div>
-            <div className="grid grid-cols-4 gap-2">
-              {pveDurationPresets.map((m) => (
+            <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label="Duración de la PVE en minutos">
+              {pveDurationOptions.map((m) => (
                 <button
                   key={m}
                   type="button"
-                  aria-pressed={value.duration === String(m)}
+                  role="radio"
+                  aria-checked={value.duration === String(m)}
                   onClick={() => onChange({ ...value, duration: String(m) })}
                   className={`min-h-[48px] border-2 rounded-xl font-semibold ${
                     value.duration === String(m) ? 'border-green-500 bg-green-50 text-gray-900' : 'border-gray-200 text-gray-700 active:bg-gray-50'
@@ -209,23 +204,7 @@ export function PveDecisionForm({
                   {m}
                 </button>
               ))}
-              <input
-                className={`${fieldClass} text-center`}
-                type="number"
-                inputMode="numeric"
-                min={1}
-                max={1440}
-                aria-label="Duración de la PVE en minutos"
-                placeholder="Min"
-                value={value.duration}
-                onChange={(e) => onChange({ ...value, duration: e.target.value })}
-              />
             </div>
-            <p className={`text-xs mt-1 ${Number(value.duration) > PVE_MAX_PROTOCOL_MINUTES ? 'text-amber-700' : 'text-gray-500'}`}>
-              {Number(value.duration) > PVE_MAX_PROTOCOL_MINUTES
-                ? 'Supera los 120 minutos que contempla el protocolo.'
-                : 'Protocolo: 30 minutos iniciales, extensible hasta 120.'}
-            </p>
           </div>
           <div>
             <div className="block text-sm font-medium text-gray-700 mb-1">Resultado</div>
