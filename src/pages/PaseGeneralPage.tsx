@@ -9,13 +9,14 @@ import * as prestacionesApi from '../api/prestacionesApi';
 import * as mrcApi from '../api/mrcApi';
 import * as trachApi from '../api/trachApi';
 import * as airwayEventsApi from '../api/airwayEventsApi';
+import * as gcsApi from '../api/gcsApi';
 import * as handoffNotesApi from '../api/handoffNotesApi';
 import { buildGeneralHandoffText, GeneralHandoffPatientInput } from '../domain/services/generalHandoffText';
 import { appendPlan, collectPatientActivity } from '../domain/services/handoffData';
 import { useHandoffPeriod } from '../hooks/useHandoffPeriod';
 import { useEditableHandoff } from '../hooks/useEditableHandoff';
 import { copyText } from '../utils/clipboard';
-import { AirwayEvent, MrcAssessment, Prestacion, TrachOverview } from '../types';
+import { AirwayEvent, GcsAssessment, MrcAssessment, Prestacion, TrachOverview } from '../types';
 import { CheckIcon, ClipboardCopyIcon, UsersIcon } from 'lucide-react';
 import { notifyError, notifySuccess } from '../utils/notify';
 
@@ -44,6 +45,7 @@ export function PaseGeneralPage() {
   const [mrc, setMrc] = useState<MrcAssessment[]>([]);
   const [trachByPatient, setTrachByPatient] = useState<Record<string, TrachOverview>>({});
   const [airwayEvents, setAirwayEvents] = useState<AirwayEvent[]>([]);
+  const [gcs, setGcs] = useState<GcsAssessment[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
@@ -63,12 +65,14 @@ export function PaseGeneralPage() {
       mrcApi.listMrcAssessments(),
       trachIds.length > 0 ? trachApi.getTrachOverview(trachIds) : Promise.resolve({} as Record<string, TrachOverview>),
       airwayEventsApi.listAirwayEvents({ from, to }),
+      gcsApi.listGcsAssessments({ from, to }),
     ])
-      .then(([prestacionesResult, mrcAll, trachResult, events]) => {
+      .then(([prestacionesResult, mrcAll, trachResult, events, gcsResult]) => {
         setPrestaciones(prestacionesResult);
         setMrc(mrcAll);
         setTrachByPatient(trachResult);
         setAirwayEvents(events);
+        setGcs(gcsResult);
       })
       .catch((err) => setError(err instanceof Error ? err.message : 'No se pudo cargar la información del período'))
       .finally(() => setLoading(false));
@@ -97,6 +101,7 @@ export function PaseGeneralPage() {
           trach: getPatientTrachRecords(patient.id),
           episodes: getPatientEpisodes(patient.id),
           mrc: mrc.filter((m) => m.patientId === patient.id),
+          gcs: gcs.filter((g) => g.patientId === patient.id),
           trachOverview: trachByPatient[patient.id] ?? null,
           airwayEvents: airwayEvents.filter((e) => e.patientId === patient.id),
           svPeriods: getPatientSVPeriods(patient.id),
@@ -117,7 +122,7 @@ export function PaseGeneralPage() {
       return bedSortOrder(a.patient, a.sector?.name) - bedSortOrder(b.patient, b.sector?.name);
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user, period, mineOnly, prestaciones, mrc, trachByPatient, airwayEvents, patients, sectors]);
+  }, [user, period, mineOnly, prestaciones, mrc, gcs, trachByPatient, airwayEvents, patients, sectors]);
 
   const included = useMemo(() => patientInputs.filter((p) => !excluded.has(p.patient.id)), [patientInputs, excluded]);
 
@@ -173,7 +178,7 @@ export function PaseGeneralPage() {
         <div className="bg-purple-50 border-2 border-purple-200 rounded-2xl p-4">
           <p className="text-sm text-purple-900">
             <strong>Pase del período:</strong> se arma solo con lo que se cargó en el período elegido (monitorizaciones,
-            prestaciones, PVE, movilización precoz, MRC, extubaciones) — lo que no se cargó no aparece. Está escrito en
+            prestaciones, PVE, movilización precoz, MRC, Glasgow, extubaciones) — lo que no se cargó no aparece. Está escrito en
             formato corto para WhatsApp: los textos entre *asteriscos* quedan en negrita al pegarlos. Podés editarlo antes de copiar.
           </p>
         </div>

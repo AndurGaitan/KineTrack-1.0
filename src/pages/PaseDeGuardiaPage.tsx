@@ -10,13 +10,14 @@ import * as prestacionesApi from '../api/prestacionesApi';
 import * as mrcApi from '../api/mrcApi';
 import * as trachApi from '../api/trachApi';
 import * as airwayEventsApi from '../api/airwayEventsApi';
+import * as gcsApi from '../api/gcsApi';
 import * as handoffNotesApi from '../api/handoffNotesApi';
 import { buildHandoffText } from '../domain/services/handoffText';
 import { collectPatientActivity } from '../domain/services/handoffData';
 import { useHandoffPeriod } from '../hooks/useHandoffPeriod';
 import { useEditableHandoff } from '../hooks/useEditableHandoff';
 import { copyText } from '../utils/clipboard';
-import { AirwayEvent, MrcAssessment, Prestacion, TrachOverview } from '../types';
+import { AirwayEvent, GcsAssessment, MrcAssessment, Prestacion, TrachOverview } from '../types';
 import { CheckIcon, ClipboardCopyIcon } from 'lucide-react';
 import { notifyError, notifySuccess } from '../utils/notify';
 
@@ -49,6 +50,7 @@ export function PaseDeGuardiaPage() {
   const [mrc, setMrc] = useState<MrcAssessment[]>([]);
   const [trachOverview, setTrachOverview] = useState<TrachOverview | null>(null);
   const [airwayEvents, setAirwayEvents] = useState<AirwayEvent[]>([]);
+  const [gcs, setGcs] = useState<GcsAssessment[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
@@ -65,12 +67,14 @@ export function PaseDeGuardiaPage() {
       mrcApi.listMrcAssessments(patient.id),
       patient.supportType === 'traqueostomia' ? trachApi.getTrachOverview([patient.id]) : Promise.resolve(undefined),
       airwayEventsApi.listAirwayEvents({ patientIds: [patient.id], from, to }),
+      gcsApi.listGcsAssessments({ patientId: patient.id, from, to }),
     ])
-      .then(([prestacionesResult, mrcResult, trachResult, events]) => {
+      .then(([prestacionesResult, mrcResult, trachResult, events, gcsResult]) => {
         setPrestaciones(prestacionesResult);
         setMrc(mrcResult);
         setTrachOverview(trachResult?.[patient.id] ?? null);
         setAirwayEvents(events);
+        setGcs(gcsResult);
       })
       .catch((err) => setError(err instanceof Error ? err.message : 'No se pudo cargar la información del período'))
       .finally(() => setLoading(false));
@@ -91,6 +95,7 @@ export function PaseDeGuardiaPage() {
         trach: getPatientTrachRecords(patient.id),
         episodes: getPatientEpisodes(patient.id),
         mrc,
+        gcs,
         trachOverview,
         airwayEvents,
         svPeriods: getPatientSVPeriods(patient.id),
@@ -102,7 +107,7 @@ export function PaseDeGuardiaPage() {
       { period, userId: user.id, mineOnly }
     );
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [patient, user, activeEpisode, prestaciones, mrc, trachOverview, airwayEvents, period, mineOnly, getPatientVMIRecords, getPatientNIVRecords, getPatientHFNCRecords, getPatientTrachRecords]);
+  }, [patient, user, activeEpisode, prestaciones, mrc, gcs, trachOverview, airwayEvents, period, mineOnly, getPatientVMIRecords, getPatientNIVRecords, getPatientHFNCRecords, getPatientTrachRecords]);
 
   const generated = useMemo(() => {
     if (!patient) return '';
@@ -114,6 +119,7 @@ export function PaseDeGuardiaPage() {
       prestaciones: activity?.prestaciones ?? [],
       periodPhrase: period.phrase,
       mrcAssessment: activity?.mrcAssessment,
+      gcsAssessment: activity?.gcsAssessment,
       trach: activity?.trach,
       daysSinceNiv: activity?.daysSinceNiv,
       vmiOff: activity?.vmiOff,

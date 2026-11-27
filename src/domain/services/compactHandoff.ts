@@ -15,6 +15,7 @@ import { oxygenDeviceInline, ktrTechniqueLabels, ktmTypeLabels } from '../../uti
 import { formatSVDuration, svInterruptionReasonLabels, svModalityShortLabels } from '../../utils/spontaneousVentilation';
 import { formatRass, weaningStatuses } from '../../utils/vmiEducation';
 import { cannulaFitOptions } from '../../utils/hfncEducation';
+import { gcsHandoffParts } from '../../utils/gcs';
 import { pveReasonLabel } from '../../components/PveDecisionForm';
 import { nivModeShort, nivUsageShort } from '../../utils/nivEducation';
 import type { GeneralHandoffPatientInput } from './generalHandoffText';
@@ -258,6 +259,8 @@ export function buildCompactPatientBlock(input: GeneralHandoffPatientInput, now:
 
   // Sin monitorización de VMI cargada en el período, igual se informan las decisiones de PVE.
   if (type !== 'imv' && pveDecisions.length > 0) lines.push(line('Destete:', ...pveDecisions.map(describePve)));
+
+  if (input.gcsAssessment) lines.push(line('Glasgow:', ...gcsHandoffParts(input.gcsAssessment)));
 
   // Movilización precoz: solo si se está haciendo o no (sin horas), solo pacientes en VMI.
   if (mobilization && activeEpisode?.supportType === 'imv') {
