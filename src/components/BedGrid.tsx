@@ -30,9 +30,10 @@ export function BedGrid({
       {beds.map(bed => {
       const patient = patients.find(p => p.bedId === bed.id);
       const isEmpty = !patient;
+      const rowStart = bed.label.endsWith(' A') ? 'col-start-1' : '';
       if (isEmpty) {
         // Empty bed - clickable to add patient
-        return <button key={bed.id} onClick={() => onBedClick(bed)} className="group min-h-[140px] rounded-2xl border-2 border-dashed border-gray-300 bg-gray-50 p-4 flex flex-col items-center justify-center gap-3 transition-all active:scale-95 hover:border-blue-400 hover:bg-blue-50">
+        return <button key={bed.id} onClick={() => onBedClick(bed)} className={`${rowStart} group min-h-[140px] rounded-2xl border-2 border-dashed border-gray-300 bg-gray-50 p-4 flex flex-col items-center justify-center gap-3 transition-all active:scale-95 hover:border-blue-400 hover:bg-blue-50`}>
               <div className="relative">
                 <BedDoubleIcon className="w-10 h-10 text-gray-400 group-hover:text-blue-500 transition-colors" />
                 <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
@@ -50,7 +51,7 @@ export function BedGrid({
       // Occupied bed - clickable to view patient
       const colorClass = supportTypeColors[patient.supportType];
       const supportLabel = supportTypeLabels[patient.supportType];
-      return <button key={bed.id} onClick={() => onBedClick(bed, patient)} className={`min-h-[140px] rounded-2xl border-2 p-4 flex flex-col gap-3 transition-all active:scale-95 ${colorClass}`}>
+      return <button key={bed.id} onClick={() => onBedClick(bed, patient)} className={`${rowStart} min-h-[140px] rounded-2xl border-2 p-4 flex flex-col gap-3 transition-all active:scale-95 ${colorClass}`}>
             <div className="flex items-start justify-between">
               <div className="flex items-center gap-2">
                 <UserIcon className="w-5 h-5" />

@@ -7,6 +7,8 @@ import { CoordinatorNav } from '../../components/CoordinatorNav';
 import { useApp } from '../../contexts/AppContext';
 import * as sectorsApi from '../../api/sectorsApi';
 import { attempt, notifyError, notifySuccess } from '../../utils/notify';
+import { parseBedLabels } from '../../utils/bedLabels';
+import { SplitRoomsPanel } from '../../components/coordinator/SplitRoomsPanel';
 
 const typeOptions = [
   { value: 'uci', label: 'UCI' },
@@ -15,25 +17,6 @@ const typeOptions = [
   { value: 'utim', label: 'UTIM' },
   { value: 'otro', label: 'Otro' },
 ];
-
-/**
- * Parses a comma-separated bed label list that also accepts numeric ranges,
- * e.g. "1,2,3,101-111,300-307" -> ["1","2","3","101",...,"111","300",...,"307"].
- */
-function parseBedLabels(input: string): string[] {
-  const labels: string[] = [];
-  for (const token of input.split(',').map((t) => t.trim()).filter(Boolean)) {
-    const rangeMatch = token.match(/^(\d+)\s*-\s*(\d+)$/);
-    if (rangeMatch) {
-      const start = Number(rangeMatch[1]);
-      const end = Number(rangeMatch[2]);
-      for (let n = start; n <= end; n++) labels.push(String(n));
-    } else {
-      labels.push(token);
-    }
-  }
-  return labels;
-}
 
 export function SectorsAdminPage() {
   const { sectors, refreshSectors } = useApp();
@@ -179,6 +162,8 @@ export function SectorsAdminPage() {
                   Agregar
                 </Button>
               </div>
+
+              {sector.type !== 'uci' && <SplitRoomsPanel sector={sector} />}
             </Card>
           ))}
         </div>
