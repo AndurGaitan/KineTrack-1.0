@@ -5,6 +5,7 @@ import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { HandoffPeriodPicker } from '../components/HandoffPeriodPicker';
 import { HandoffHistory } from '../components/HandoffHistory';
+import { WardListCard } from '../components/WardListCard';
 import * as prestacionesApi from '../api/prestacionesApi';
 import * as mrcApi from '../api/mrcApi';
 import * as trachApi from '../api/trachApi';
@@ -175,6 +176,8 @@ export function PaseGeneralPage() {
     <div className="min-h-screen bg-gray-50">
       <Header title="Pase de Guardia General" showBack />
       <main className="max-w-2xl mx-auto p-4 pb-24 space-y-6">
+        <WardListCard />
+
         <div className="bg-purple-50 border-2 border-purple-200 rounded-2xl p-4">
           <p className="text-sm text-purple-900">
             <strong>Pase del período:</strong> se arma solo con lo que se cargó en el período elegido (monitorizaciones,

@@ -10,6 +10,8 @@ import { ChangeBedModal } from '../components/ChangeBedModal';
 import { ClosePatientModal } from '../components/ClosePatientModal';
 import { ActionSheet } from '../components/ActionSheet';
 import { PatientCarePanel } from '../components/PatientCarePanel';
+import { CareFrequencyCard } from '../components/CareFrequencyCard';
+import { isWardSector } from '../utils/careFrequency';
 import { EditIcon, BedDoubleIcon, ActivityIcon, WindIcon, DropletIcon, ChevronDownIcon, ChevronUpIcon, RepeatIcon, XCircleIcon, ClipboardPlusIcon, ClipboardListIcon, DumbbellIcon, ClipboardCheckIcon, BrainIcon, TrendingUpIcon, StethoscopeIcon, EyeIcon } from 'lucide-react';
 import { SupportType, ClosureReason, AirwayEventInput } from '../types';
 import { calendarDaysBetween, daysSpanText } from '../utils/supportDays';
@@ -285,6 +287,8 @@ export function PatientDetailPage() {
           </Card>}
 
         {!isClosed && <>
+            {isWardSector(sector) && <CareFrequencyCard key={`frecuencia-${patient.id}`} patient={patient} />}
+
             <PatientCarePanel key={patient.id} patient={patient} onChangeSupport={handleStartChangeSupport} />
 
             {/* Otras prestaciones y evolución */}

@@ -1,5 +1,5 @@
 import { ReactNode, useEffect, useState, createContext, useContext } from 'react';
-import { AppState, User, Patient, ScoreRecord, VMIRecord, NIVRecord, HFNCRecord, TrachRecord, OxygenRecord, SupportType, AirwayEventInput, Prestacion, SpontaneousVentilationPeriod, SVModality, SVInterruptionReason, AppStage, PveDecision, MobilizationStart, MobilizationContraindication } from '../types';
+import { AppState, User, Patient, ScoreRecord, VMIRecord, NIVRecord, HFNCRecord, TrachRecord, OxygenRecord, SupportType, AirwayEventInput, Prestacion, SpontaneousVentilationPeriod, SVModality, SVInterruptionReason, AppStage, PveDecision, MobilizationStart, MobilizationContraindication, VisitsPerWeek } from '../types';
 import { PatientClosure, ClinicalObservationType } from '../domain/models';
 import {
   observationToVMIRecord,
@@ -69,6 +69,8 @@ interface AppContextType extends AppState {
     location?: { sectorId: string; bedId: string }
   ) => Promise<boolean>;
   refreshSectors: () => Promise<void>;
+  setCareFrequency: (patientId: string, timesPerWeek: VisitsPerWeek | null) => Promise<boolean>;
+  refreshPatients: () => Promise<boolean>;
   getActiveEpisode: (patientId: string) => any;
   getPatientEpisodes: (patientId: string) => any[];
   addScore: (score: Omit<ScoreRecord, 'id' | 'timestamp'>) => Promise<boolean>;
@@ -371,6 +373,28 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setState((prev) => ({ ...prev, sectors, patients: prev.patients.map((p) => ({ ...p, bedLabel: labels.get(p.bedId) ?? p.bedLabel })) }));
     } catch (error) {
       reportError('actualizar la lista de sectores', error);
+    }
+  };
+
+  const setCareFrequency = async (patientId: string, timesPerWeek: VisitsPerWeek | null) => {
+    try {
+      const patient = await patientsApi.setCareFrequency(patientId, timesPerWeek);
+      setState((prev) => ({ ...prev, patients: prev.patients.map((p) => (p.id === patientId ? patient : p)) }));
+      return true;
+    } catch (error) {
+      reportError('guardar la frecuencia', error);
+      return false;
+    }
+  };
+
+  const refreshPatients = async () => {
+    try {
+      const patients = await patientsApi.listPatients({ includeInactive: true });
+      setState((prev) => ({ ...prev, patients }));
+      return true;
+    } catch (error) {
+      reportError('actualizar la lista de pacientes', error);
+      return false;
     }
   };
 
@@ -766,6 +790,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
         closePatient,
         changeSupportType,
         refreshSectors,
+        setCareFrequency,
+        refreshPatients,
         getActiveEpisode,
         getPatientEpisodes,
         addScore,

@@ -1,5 +1,5 @@
 import { apiFetch } from './client';
-import type { AirwayEventInput, ClosureReason, Patient, SupportEpisode, SupportType } from '../types';
+import type { AirwayEventInput, ClosureReason, Patient, SupportEpisode, SupportType, VisitsPerWeek } from '../types';
 
 export type CreatePatientInput = {
   alias: string;
@@ -74,6 +74,10 @@ export function updatePatient(id: string, input: UpdatePatientInput) {
     method: 'PATCH',
     body: JSON.stringify(input),
   });
+}
+
+export function setCareFrequency(id: string, timesPerWeek: VisitsPerWeek | null) {
+  return apiFetch<Patient>(`/api/patients/${id}/care-frequency`, { method: 'POST', body: JSON.stringify({ timesPerWeek }) });
 }
 
 export function deletePatient(id: string) {
