@@ -131,7 +131,10 @@ export interface Patient {
   status: PatientStatus;
   closure?: PatientClosure;
   episodes: SupportEpisode[];
+  /** Frecuencia de visita vigente (pacientes de sala). Sin dato = pendiente de evaluar. */
+  careFrequency?: { timesPerWeek: VisitsPerWeek; setAt: string; setByName?: string };
 }
+export type VisitsPerWeek = 2 | 3 | 5;
 export interface ScoreRecord {
   id: string;
   patientId: string;
