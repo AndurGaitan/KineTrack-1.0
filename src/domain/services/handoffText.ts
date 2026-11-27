@@ -8,7 +8,7 @@
  * lo que se cargó en el período elegido. El pase de guardia general, en
  * cambio, es un texto corto con formato para WhatsApp (generalHandoffText.ts).
  */
-import { AirwayEvent, MobilizationContraindication, MobilizationStart, MrcAssessment, OxygenRecord, Patient, Prestacion, PveDecision, Sector, SupportEpisode } from '../../types';
+import { AirwayEvent, GcsAssessment, MobilizationContraindication, MobilizationStart, MrcAssessment, OxygenRecord, Patient, Prestacion, PveDecision, Sector, SupportEpisode } from '../../types';
 import { LatestSupportRecord, SpontaneousVentilationNarrativeInput, TrachNarrativeInput, pickLatestSupportRecord } from './clinicalNarrative';
 import { buildNarrativeEvolution } from './narrativeHandoff';
 
@@ -26,6 +26,7 @@ export interface HandoffInput {
   /** Encabezado de la oración de kinesioterapia ("En las últimas 12 horas"...). */
   periodPhrase: string;
   mrcAssessment?: MrcAssessment;
+  gcsAssessment?: GcsAssessment;
   /** Días sin VNI (si dejó la VNI hace poco). */
   daysSinceNiv?: number;
   /** Días sin VMI y cuándo terminó (si salió de la VMI hace poco). */

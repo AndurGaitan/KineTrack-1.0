@@ -9,6 +9,7 @@
  */
 import {
   AirwayEvent,
+  GcsAssessment,
   HFNCRecord,
   MobilizationContraindication,
   MobilizationStart,
@@ -156,6 +157,8 @@ export interface ActivitySources {
   /** Historial de soportes del paciente (para calcular los días sin VNI). */
   episodes?: SupportEpisode[];
   mrc: MrcAssessment[];
+  /** Valoraciones de Glasgow del paciente (se filtran al rango). */
+  gcs?: GcsAssessment[];
   trachOverview?: TrachOverview | null;
   airwayEvents: AirwayEvent[];
   /** Todos los períodos de ventilación espontánea del paciente (se filtran al rango). */
@@ -181,6 +184,8 @@ export interface PatientActivity {
   latestSupportRecord: LatestSupportRecord;
   prestaciones: Prestacion[];
   mrcAssessment?: MrcAssessment;
+  /** Última valoración de Glasgow del período. */
+  gcsAssessment?: GcsAssessment;
   trach?: TrachNarrativeInput;
   /** Días sin VNI (solo si dejó la VNI hace poco y ya no está en VNI/VMI). */
   daysSinceNiv?: number;
@@ -226,6 +231,10 @@ export function collectPatientActivity(
     .filter((m) => inPeriod(m.assessedAt) && isMine(m.evaluatedByUserId))
     .sort((a, b) => new Date(b.assessedAt).getTime() - new Date(a.assessedAt).getTime())[0];
 
+  let gcsAssessment: GcsAssessment | undefined = (src.gcs ?? [])
+    .filter((g) => inPeriod(g.assessedAt) && isMine(g.evaluatedByUserId))
+    .sort((a, b) => new Date(b.assessedAt).getTime() - new Date(a.assessedAt).getTime())[0];
+
   const recordsIn = <T extends { timestamp: string; performedByUserId?: string }>(records: T[]) =>
     records.filter((r) => inPeriod(r.timestamp) && isMine(r.performedByUserId));
   const trachInPeriod = recordsIn(src.trach);
@@ -245,6 +254,14 @@ export function collectPatientActivity(
     latestSupportRecord = candidates.sort((a, b) => new Date(b.record.timestamp).getTime() - new Date(a.record.timestamp).getTime())[0];
   }
 
+  // En traqueostomía el seguimiento tiene su propio número de Glasgow: el pase informa uno solo, el más reciente.
+  let trachRecords = trachInPeriod;
+  const looseGlasgow = patient.supportType === 'traqueostomia' ? trachInPeriod.find((r) => r.glasgow !== undefined) : undefined;
+  if (gcsAssessment && looseGlasgow) {
+    if (new Date(looseGlasgow.timestamp).getTime() > new Date(gcsAssessment.assessedAt).getTime()) gcsAssessment = undefined;
+    else trachRecords = trachInPeriod.map((r) => ({ ...r, glasgow: undefined }));
+  }
+
   let trach: TrachNarrativeInput | undefined;
   if (patient.supportType === 'traqueostomia') {
     const overview = src.trachOverview;
@@ -259,7 +276,7 @@ export function collectPatientActivity(
         ));
     if (trachInPeriod.length > 0 || aspirations.length > 0 || processActive) {
       trach = {
-        records: trachInPeriod,
+        records: trachRecords,
         overview: overview ? { ...overview, aspirations, activeProcess: processActive ? process! : null } : null,
         episode: activeEpisode,
         omitEmptyNotice: true,
@@ -296,6 +313,7 @@ export function collectPatientActivity(
   const hasActivity =
     prestaciones.length > 0 ||
     !!mrcAssessment ||
+    !!gcsAssessment ||
     !!latestSupportRecord ||
     !!trach ||
     !!oxygenRecord ||
@@ -310,6 +328,7 @@ export function collectPatientActivity(
     latestSupportRecord,
     prestaciones,
     mrcAssessment,
+    gcsAssessment,
     trach,
     daysSinceNiv: daysSinceNivEnded(src.episodes ?? [], patient.supportType),
     // Con traqueostomía el dato se informa hasta 30 días (el destete es más largo); sin ella, 7 como la VMNI.

@@ -3,7 +3,7 @@
  * (https://www.glasgowcomascale.org/, © Sir Graham Teasdale 2015), en su versión en español.
  * Donde la traducción publicada se aparta del original en inglés (M6, M5 y M4) se sigue el original.
  */
-import type { GcsFactor, GcsValue, Patient } from '../types';
+import type { GcsAssessment, GcsFactor, GcsValue, Patient } from '../types';
 
 export type GcsComponentKey = 'eye' | 'verbal' | 'motor';
 
@@ -83,6 +83,41 @@ const part = (letter: string, value: GcsValue) => (value === 'NT' ? `${letter}-N
 /** "E3 V-NT M5" */
 export function gcsSummary(eye: GcsValue, verbal: GcsValue, motor: GcsValue): string {
   return [part('E', eye), part('V', verbal), part('M', motor)].join(' ');
+}
+
+const lower = (text: string) => text.charAt(0).toLowerCase() + text.slice(1);
+const joinEs = (items: string[]) => (items.length <= 1 ? items.join('') : `${items.slice(0, -1).join(', ')} y ${items[items.length - 1]}`);
+
+/** Componentes NT con su motivo, y los factores que ese motivo no haya dicho ya. */
+function gcsContext(a: GcsAssessment) {
+  const nt = gcsComponents.filter((c) => a[c.key] === 'NT').map((c) => ({ ...c, reason: lower(a[`${c.key}NtReason`] ?? '') }));
+  const said = new Set(nt.map((c) => c.reason.toLowerCase()));
+  const factors = a.interferingFactors.map((f) => lower(gcsFactorLabel(f))).filter((label) => !said.has(label));
+  return { nt, factors, notes: a.notes?.trim().replace(/[.\s]+$/, '') };
+}
+
+/** Para la evolución (prosa): "Escala de Glasgow de 14/15 (E4 V4 M6)." */
+export function gcsSentence(a: GcsAssessment): string {
+  const { nt, factors, notes } = gcsContext(a);
+  const summary = gcsSummary(a.eye, a.verbal, a.motor);
+  const reasons = nt.map((c) => `${c.title.toLowerCase()} no evaluable${c.reason ? ` por ${c.reason}` : ''}`);
+  const main =
+    a.totalScore !== undefined
+      ? `Escala de Glasgow de ${a.totalScore}/15 (${summary}).`
+      : `Escala de Glasgow ${summary}, sin total calculable${reasons.length > 0 ? `: ${joinEs(reasons)}` : ''}.`;
+  return [main, factors.length > 0 ? `Factores de interferencia: ${joinEs(factors)}.` : '', notes ? `Observación de la valoración: ${notes}.` : ''].filter(Boolean).join(' ');
+}
+
+/** Partes de la línea del pase compacto: "14/15 (E4 V4 M6)" y, si hay, NT, factores y nota. */
+export function gcsHandoffParts(a: GcsAssessment): string[] {
+  const { nt, factors, notes } = gcsContext(a);
+  const summary = gcsSummary(a.eye, a.verbal, a.motor);
+  return [
+    ...(a.totalScore !== undefined ? [`${a.totalScore}/15 (${summary})`] : [summary, 'total no calculable']),
+    ...nt.filter((c) => c.reason).map((c) => `${c.letter}-NT por ${c.reason}`),
+    ...(factors.length > 0 ? [`factores: ${factors.join(', ')}`] : []),
+    ...(notes ? [`nota: ${notes}`] : []),
+  ];
 }
 
 /**

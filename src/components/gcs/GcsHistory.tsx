@@ -23,7 +23,7 @@ export function GcsHistory({ patientId }: { patientId: string }) {
     setItems(undefined);
     setFailed(false);
     gcsApi
-      .listGcsAssessments(patientId)
+      .listGcsAssessments({ patientId })
       .then((list) => alive && setItems(list))
       .catch(() => alive && setFailed(true));
     return () => {

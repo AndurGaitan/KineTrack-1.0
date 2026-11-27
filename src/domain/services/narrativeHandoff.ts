@@ -8,12 +8,13 @@
  * período. No incluye pendientes. De la movilización precoz solo informa si se
  * está llevando a cabo o si no cumple criterios.
  */
-import { AirwayEvent, HFNCRecord, MobilizationContraindication, MobilizationStart, MrcAssessment, NIVRecord, OxygenRecord, Patient, Prestacion, PveDecision, SupportEpisode, VMIRecord } from '../../types';
+import { AirwayEvent, GcsAssessment, HFNCRecord, MobilizationContraindication, MobilizationStart, MrcAssessment, NIVRecord, OxygenRecord, Patient, Prestacion, PveDecision, SupportEpisode, VMIRecord } from '../../types';
 import { oxygenDeviceInline, ktrTechniqueLabels, ktmTypeLabels } from '../../utils/prestacionLabels';
 import { ventilatoryMechanicsSentence } from '../../utils/ventilatoryMechanics';
 import { calendarDaysBetween, daysAgoText } from '../../utils/supportDays';
 import { dayWithWeekday } from '../../utils/vmiDays';
 import { cannulaFitOptions } from '../../utils/hfncEducation';
+import { gcsSentence } from '../../utils/gcs';
 import { formatRass, mobilizationLevels, rassLevels } from '../../utils/vmiEducation';
 import { pveReasonLabel } from '../../components/PveDecisionForm';
 import { nivModeShort, nivUsageText } from '../../utils/nivEducation';
@@ -37,6 +38,7 @@ export interface NarrativeHandoffInput {
   /** Frase que encabeza la oración de prestaciones ("Durante el turno", "En las últimas 12 horas"...). */
   periodPhrase: string;
   mrcAssessment?: MrcAssessment;
+  gcsAssessment?: GcsAssessment;
   trach?: TrachNarrativeInput;
   daysSinceNiv?: number;
   vmiOff?: { days: number; endedAt: string };
@@ -356,6 +358,7 @@ export function buildNarrativeEvolution(input: NarrativeHandoffInput, now: Date 
     ...supportSentences(input, now),
     ...(input.vmiOff ? [vmiOffSentence(input.vmiOff)] : []),
     ...(input.daysSinceNiv != null ? [`Sin ventilación no invasiva desde hace ${input.daysSinceNiv === 0 ? 'menos de un día' : input.daysSinceNiv === 1 ? '1 día' : `${input.daysSinceNiv} días`}.`] : []),
+    input.gcsAssessment ? gcsSentence(input.gcsAssessment) : undefined,
     mobilizationSentence(input),
     eventsSentence(input),
     // Si ya se informan los días sin VMI, describir además las pruebas del turno es redundante.

@@ -7,7 +7,7 @@
  * formato vive en compactHandoff.ts. La "Evolución Kinésica" individual, en
  * cambio, sigue siendo prosa para la historia clínica (handoffText.ts).
  */
-import { AirwayEvent, MobilizationContraindication, MobilizationStart, MrcAssessment, OxygenRecord, Patient, Prestacion, PveDecision, Sector, SupportEpisode } from '../../types';
+import { AirwayEvent, GcsAssessment, MobilizationContraindication, MobilizationStart, MrcAssessment, OxygenRecord, Patient, Prestacion, PveDecision, Sector, SupportEpisode } from '../../types';
 import { LatestSupportRecord, SpontaneousVentilationNarrativeInput, TrachNarrativeInput } from './clinicalNarrative';
 import { bold, buildCompactPatientBlock } from './compactHandoff';
 
@@ -20,6 +20,8 @@ export interface GeneralHandoffPatientInput {
   /** Prestaciones del período para este paciente (ya filtradas). */
   prestaciones: Prestacion[];
   mrcAssessment?: MrcAssessment;
+  /** Última valoración de Glasgow del período. */
+  gcsAssessment?: GcsAssessment;
   trach?: TrachNarrativeInput;
   /** Días sin VNI (si dejó la VNI hace poco). */
   daysSinceNiv?: number;
