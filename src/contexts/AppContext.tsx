@@ -366,7 +366,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const refreshSectors = async () => {
     try {
       const sectors = await sectorsApi.listSectors(true);
-      setState((prev) => ({ ...prev, sectors }));
+      // El nombre de la cama de cada paciente puede haber cambiado (p. ej. "1" → "1 A").
+      const labels = new Map(sectors.flatMap((s) => s.beds.map((b) => [b.id, b.label] as const)));
+      setState((prev) => ({ ...prev, sectors, patients: prev.patients.map((p) => ({ ...p, bedLabel: labels.get(p.bedId) ?? p.bedLabel })) }));
     } catch (error) {
       reportError('actualizar la lista de sectores', error);
     }
